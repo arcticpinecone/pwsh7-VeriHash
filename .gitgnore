@@ -1,0 +1,5 @@
+*.sha2_256
+*.log
+*.txt
+*.tmp
+Thumbs.db
