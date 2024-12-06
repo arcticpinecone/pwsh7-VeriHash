@@ -3,3 +3,4 @@
 *.txt
 *.tmp
 Thumbs.db
+*.sublime-*

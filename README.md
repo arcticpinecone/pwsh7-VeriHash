@@ -7,6 +7,34 @@ VeriHash is a PowerShell 7+ tool for computing and verifying SHA256 file hashes.
 
 **Note:** PowerShell 7 (also known as PowerShell Core) is different from the older Windows PowerShell (version 5.1) that comes pre-installed with Windows 10/11. 
 
+## Changelog
+Version: 1.0.3 - 2024-12-07
+   - Cleaned up the README.md
+   - Skip digital signature check if file is over 1GB. 
+   - Now prints completion and timing.
+   - Adding VeriHash to your PowerShell Profile (Super Handy!)
+
+## Table of Contents
+- [Why PowerShell 7?](#why-powershell-7)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Execution Policy (Optional)](#execution-policy-optional)
+- [Installation](#installation)
+  - [Clone the Repository](#clone-the-repository)
+- [Usage Examples](#usage-examples)
+  - [1. Compute a SHA256 Hash for a File](#1-compute-a-sha256-hash-for-a-file)
+  - [2. Verify Using a `.sha2_256` File](#2-verify-using-a-sha2_256-file)
+  - [3. Compare Against an Input Hash](#3-compare-against-an-input-hash)
+  - [4. Interactive File Selection](#4-interactive-file-selection)
+- [Use Cases](#use-cases)
+- [Speed](#speed)
+  - [Tested Approximations](#tested-approximations)
+- [Adding VeriHash to Your PowerShell Profile](#adding-verihash-to-your-powershell-profile)
+  - [On Windows 10/11](#on-windows-1011)
+  - [On macOS/Linux with PowerShell 7](#on-macoslinux-with-powershell-7)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Why PowerShell 7?
 
 - 🔁 **Modern and Cross-Platform:** PowerShell 7 runs on Windows, macOS, and Linux, making VeriHash more widely usable.
@@ -26,17 +54,24 @@ If you're new to PowerShell 7, here are some quick pointers:
    .\VeriHash.ps1
    ```
    
+   See also: [[# Adding VeriHash to Your PowerShell Profile]] for an easy way to just use it from anywhere like:
+   ```powershell
+   verihash filename.ext
+   ```
+
 3. **Secure:** 
    PowerShell 7 supports execution policies and script signing, just like the older Windows PowerShell. You remain in control of what scripts you run. VeriHash itself is a simple hashing tool with transparent source code, allowing you to inspect it before running if you like.
 
+
 ## Features
 
+- **🚀 FAST** 
 - **SHA256 Hashing:** Compute SHA256 hashes for any file.
 - **Verification from `.sha2_256`:** Verify files using automatically generated `.sha2_256` files.
 - **Input Hash Comparison:** Compare a computed hash against a provided input hash.
 - **Interactive File Selection (Windows):** If no file is given, easily select one via a file dialog.
-- **Progress Display:** For larger files, see a progress bar while verifying hashes.
 
+---
 ## Requirements
 
 - **PowerShell 7+** is required to run VeriHash.
@@ -49,11 +84,19 @@ If you're new to PowerShell 7, here are some quick pointers:
   ```
 This command allows locally created scripts like VeriHash to run without being blocked while still maintaining some security. You can always revert this by running Set-ExecutionPolicy Default.
 
+---
 ## Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://<BR>.git
+   git clone https://github.com/arcticpinecone/pwsh7-VeriHash
+   ```
+
+   **Clone the Repository** (Alternative):
+   Clone the repository into a folder named `VeriHash` for brevity:
+   
+   ```bash
+   git clone https://github.com/arcticpinecone/pwsh7-VeriHash VeriHash
    ```
    
 2. Navigate into the directory:
@@ -65,7 +108,7 @@ This command allows locally created scripts like VeriHash to run without being b
    ```powershell
    .\VeriHash.ps1
    ```
-
+---
 ## Usage Examples
 
 ### 1. Compute a SHA256 Hash for a File
@@ -88,9 +131,9 @@ If the referenced file isn't found or the hash doesn't match, you'll be notified
 
 ### 3. Compare Against an Input Hash
 
-Provide both the file and a known-good hash to verify:
+Provide both the file and a known-good hash to verify. Use the `-hash` parameter! 
 ```powershell
-.\VeriHash.ps1 "C:\path\to\yourfile.exe" -hash "ABC123456..."
+.\VeriHash.ps1 "C:\path\to\yourfile.exe" -hash "ABC123456"
 ```
 `VeriHash` will display whether the computed hash matches the input hash.
 
@@ -114,10 +157,122 @@ On other systems, you'll be prompted to type the path.
 - 💾 **Backup Integrity Checks:** 
   Generate `.sha2_256` files for backups and run periodic checks to ensure no corruption over time.
 
+## Speed
+
+Hashing speeds depend on your hardware.
+
+   - On SSDs, hashing can exceed 190 MB/second (~40 seconds for 8GB files).
+   - While HDDs may hash at ~93 MB/second (~88 seconds for 8GB files). 
+   - Smaller files are processed almost instantly, while 10GB files may take ~1-2 minutes.
+
+### Tested Approximations
+
+- **SSD Speeds:**  
+  5 seconds for 1GB, 40 seconds for 8GB, 53 seconds for 10GB.
+
+- **HDD Speeds:**  
+  11 seconds for 1GB, 88 seconds for 8GB, 110 seconds for 10GB.
+
+**💡 Tip:** 
+   - For large files, feel free to grab a ☕, 🍵, or stretch your legs. 🤸
+   - For small files (<500MB), expect the process to complete almost instantly. ⚡
+
+---
+## **Adding VeriHash to Your PowerShell Profile**
+
+You can add `VeriHash` to your PowerShell `$PROFILE` for quick and easy access from any directory. This example demonstrates how to create a custom function that wraps `VeriHash.ps1` and accepts parameters.
+
+#### **On Windows 10/11**
+
+1. **Find Your PowerShell Profile Path:**
+   Open PowerShell 7 and run:
+   ```powershell
+   $PROFILE
+   ```
+   This will return the path to your PowerShell profile file, typically:
+   ```
+   C:\Users\<YourUsername>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
+   ```
+
+2. **Edit Your Profile:**
+   Open the profile file in a text editor (create it if it doesn’t exist):
+   ```powershell
+   if (-not (Test-Path -Path $PROFILE)) {
+       New-Item -ItemType File -Path $PROFILE -Force
+   }
+   notepad $PROFILE
+   ```
+
+3. **Add a Custom `verihash` Function:**
+   Add the following function, updating the path to `VeriHash.ps1`:
+   ```powershell
+   function verihash {
+       param (
+           [string]$FilePath,
+           [string]$Hash
+       )
+       & "C:\Users\<YourUsername>\source\repos\VeriHash\VeriHash.ps1" $FilePath -hash $Hash
+   }
+   ```
+
+4. **Save and Reload Your Profile:**
+   Save the file and reload your profile:
+   ```powershell
+   . $PROFILE
+   ```
+
+5. **Usage:**
+   Now you can run `verihash` from anywhere:
+   ```powershell
+   verihash -FilePath "C:\path\to\file" -Hash "ABC123..."
+   ```
+   Or simply:
+   ```powershell
+   verihash "C:\path\to\file"
+   ```
+
+### **On macOS/Linux with PowerShell 7**
+
+For macOS/Linux, the steps are similar but paths differ. Use the following steps:
+
+1. Find your profile path:
+   ```powershell
+   $PROFILE
+   ```
+   Typical path: `~/.config/powershell/Microsoft.PowerShell_profile.ps1`
+
+2. Edit or create your profile:
+   ```powershell
+   if (-not (Test-Path -Path $PROFILE)) {
+       New-Item -ItemType File -Path $PROFILE -Force
+   }
+   nano $PROFILE
+   ```
+
+3. Add the custom `verihash` function:
+   ```powershell
+   function verihash {
+       param (
+           [string]$FilePath,
+           [string]$Hash
+       )
+       & "/path/to/VeriHash.ps1" $FilePath -hash $Hash
+   }
+   ```
+
+4. Save and reload your profile:
+   ```powershell
+   . $PROFILE
+   ```
+
+5. Use `verihash` as shown above.
+
+---
 ## Contributing
 
 Feel free to open issues, submit pull requests, or suggest enhancements.
 
+---
 ## License
 
-Choose a license (e.g., MIT, Apache 2.0). Refer to the `LICENSE` file for more details.
+Creative Commons Attribution-ShareAlike 4.0 International Public License

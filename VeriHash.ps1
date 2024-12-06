@@ -1,7 +1,8 @@
 <#   
     VeriHash.ps1
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Date:   December 06, 2024
+    Date:   December 07, 2024
+    Version: 1.0.3
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -30,14 +31,23 @@
     4. Provide a file and an input hash to compare:
        .\VeriHash.ps1 "C:\path\to\file.exe" -hash "ABC123..."
     
+        See README for more information.
+        [[# Adding VeriHash to Your PowerShell Profile]] 
+        
+        For an easy way to just use it from anywhere like:
+        ```powershell
+        verihash filename.ext
+        ```
+
+    # Example output for a known compare
     ---
-    Universal:    2024-12-06T18:20:32.208Z
-    Local Sys:    December 06, 2024 | 20:20:32
+    Universal:    2024-12-06T23:24:16.476Z
+    Local Sys:    December 07, 2024 | 01:24:16
     ---
     File selected:    PowerShell-7.4.6-win-x64.msi
     ---
     [Metadata]
-    File Path:    C:\Users\arctic\Downloads\PowerShell-7.4.6-win-x64.msi
+    File Path:    C:\Users\username\Downloads\PowerShell-7.4.6-win-x64.msi
     File Size:    104.14 MB  (109 203 456 bytes)
     Created:      December 06, 2024 | 20:18:09
     Modified:     December 06, 2024 | 20:18:22
@@ -51,6 +61,9 @@
     Input Hash:       ED331A04679B83D4C013705282D1F3F8D8300485EB04C081F36E11EAF1148BD0
     Computed Hash:    ED331A04679B83D4C013705282D1F3F8D8300485EB04C081F36E11EAF1148BD0
     Hash matches! ✅
+    Completed:    December 07, 2024 | 01:24:18
+    Hash time:    1 second(s)    (00 minutes, 00 seconds)
+    ---
 
 #>
 # Requires PowerShell 7+
@@ -92,8 +105,6 @@ function Verify-InputHash {
         [string]$ComputedHash,
         [string]$InputHash
     )
-
-    # Compare the input hash and computed hash (case-insensitive)
     if ($ComputedHash.ToUpper() -eq $InputHash.ToUpper()) {
         Write-Host "Hash matches! ✅" -ForegroundColor Green
     } else {
@@ -161,15 +172,20 @@ function Run-HashFile {
 
             Write-Host "---" -ForegroundColor Cyan
 
-            # Check digital signature
-            $signature = Get-AuthenticodeSignature -FilePath $FilePath
-            if ($signature.Status -eq 'Valid') {
-                Write-Host "Signed:       True ✅" -ForegroundColor Green
-                Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
+            # Check digital signature if file < 1GB
+            if ($fileInfo.Length -lt 1024MB) {
+                $signature = Get-AuthenticodeSignature -FilePath $FilePath
+                if ($signature.Status -eq 'Valid') {
+                    Write-Host "Signed:       True ✅" -ForegroundColor Green
+                    Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
+                } else {
+                    Write-Host "Signed:       False 🚫" -ForegroundColor Red
+                }
+                Write-Host "---" -ForegroundColor Cyan
             } else {
-                Write-Host "Signed:       False 🚫" -ForegroundColor Red
+                Write-Host "Signed:       Skipped for large files 🚫 (Hint: .iso is not generally signed, the executables inside it should be.)" -ForegroundColor Yellow
+                Write-Host "---" -ForegroundColor Cyan
             }
-            Write-Host "---" -ForegroundColor Cyan
 
             if ($InputHash -and $isVerificationFile) {
                 Write-Host "⛔ WARNING: You are attempting to verify against a .sha2_256 file by hashing it directly." -ForegroundColor Red
@@ -179,12 +195,15 @@ function Run-HashFile {
             }
 
             # Compute the hash
+            $startTime = Get-Date
             $fileHash = Get-FileHash -Path $FilePath -Algorithm $Algorithm
+            $endTime = Get-Date
+            $duration = $endTime - $startTime
+
             Write-Host "[Hash]" -ForegroundColor White
             Write-Host "Algorithm:       " -NoNewline -ForegroundColor White
             Write-Host ($fileHash.Algorithm) -ForegroundColor Green
 
-            # If InputHash is given, show side-by-side comparison
             if ($InputHash) {
                 Write-Host "Hashing file:     " -NoNewline -ForegroundColor White
                 Write-Host ($fileInfo.Name) -ForegroundColor Cyan
@@ -213,6 +232,10 @@ function Run-HashFile {
                     Write-Host "Hash saved to: $hashFilePath" -ForegroundColor Green
                 }
             }
+
+            # Print completion and timing
+            Write-Host ("Completed:    " + $endTime.ToString("MMMM dd, yyyy | HH:mm:ss")) -ForegroundColor Cyan
+            Write-Host ("Hash time:    " + "{0:N0} second(s)" -f $duration.TotalSeconds + "    (" + $duration.ToString("mm' minutes, 'ss' seconds'") + ")") -ForegroundColor Cyan
         }
 
     }
