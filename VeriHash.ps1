@@ -1,8 +1,8 @@
 <#   
     VeriHash.ps1
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Date:   December 07, 2024
-    Version: 1.0.3
+    Date:   December 08, 2024
+    Version: 1.0.4
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -172,18 +172,25 @@ function Run-HashFile {
 
             Write-Host "---" -ForegroundColor Cyan
 
-            # Check digital signature if file < 1GB
+            # Check digital signature if file < 1GB and running on Windows
             if ($fileInfo.Length -lt 1024MB) {
-                $signature = Get-AuthenticodeSignature -FilePath $FilePath
-                if ($signature.Status -eq 'Valid') {
-                    Write-Host "Signed:       True ✅" -ForegroundColor Green
-                    Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
-                } else {
-                    Write-Host "Signed:       False 🚫" -ForegroundColor Red
+                if ($RunningOnWindows) {
+                    try {
+                        $signature = Get-AuthenticodeSignature -FilePath $FilePath
+                        if ($signature.Status -eq 'Valid') {
+                            Write-Host "Signed:       True ✅" -ForegroundColor Green
+                            Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
+                        } else {
+                            Write-Host "Signed:       False 🚫" -ForegroundColor Red
+                        }
+                    }
+                    catch {
+                        Write-Host "Error retrieving signature: $_" -ForegroundColor Yellow
+                    }
                 }
-                Write-Host "---" -ForegroundColor Cyan
-            } else {
-                Write-Host "Signed:       Skipped for large files 🚫 (Hint: .iso is not generally signed, the executables inside it should be.)" -ForegroundColor Yellow
+                else {
+                    Write-Host "Signed:       Skipped (Authenticode signatures are not supported on this platform) 🚫" -ForegroundColor Yellow
+                }
                 Write-Host "---" -ForegroundColor Cyan
             }
 
