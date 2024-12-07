@@ -78,10 +78,13 @@ If you're new to PowerShell 7, here are some quick pointers:
 - Works on Windows and non-Windows platforms. On non-Windows, you'll be prompted to enter a file path manually instead of using a dialog.
 
 ## Execution Policy (Optional)
+
 - On some Windows systems, you may need to allow running this script. In PowerShell 7, run:
+
   ```bash
   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
+
 This command allows locally created scripts like VeriHash to run without being blocked while still maintaining some security. You can always revert this by running Set-ExecutionPolicy Default.
 
 ---
