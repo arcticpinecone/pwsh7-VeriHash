@@ -70,10 +70,15 @@
 param (
     [Parameter(Mandatory = $false, Position = 0)]
     [string]$FilePath,
+    
+    [Alias("InputHash")]
     [Parameter(Mandatory = $false)]
+    [ValidatePattern('^[A-Fa-f0-9]{64}$')]
     [string]$Hash,
+    
     [Parameter(Mandatory = $false)]
     [switch]$SendTo,
+    
     [Parameter(Mandatory = $false)]
     [switch]$Help
 )
@@ -118,12 +123,15 @@ if ($SendTo) {
 if ($Help) {
     Write-Host "VeriHash.ps1 - A tool to compute and verify SHA256 hashes." -ForegroundColor Green
     Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-SendTo] [-Help]" -ForegroundColor Cyan
-    return
-}
-
-# File-related operations
-if (-not $FilePath -or -not (Test-Path $FilePath)) {
-    Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists."
+    Write-Host "Parameters:" -ForegroundColor White
+    Write-Host "  FilePath         : Path to the file to hash or verify." -ForegroundColor Yellow
+    Write-Host "  -Hash, -InputHash: Provide a SHA256 hash for verification." -ForegroundColor Yellow
+    Write-Host "  -SendTo          : Creates a SendTo shortcut for easy access." -ForegroundColor Yellow
+    Write-Host "  -Help            : Displays this help message." -ForegroundColor Yellow
+    Write-Host "Examples:" -ForegroundColor White
+    Write-Host "  .\VeriHash.ps1 -FilePath 'C:\Example\file.txt'" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 -FilePath 'C:\Example\file.txt' -Hash 'YOUR_SHA256_HASH_HERE'" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 -SendTo" -ForegroundColor Cyan
     return
 }
 
@@ -175,13 +183,7 @@ if ($SendTo -and $RunningOnWindows) {
     catch {
         Write-Error "Error creating SendTo shortcut: $_"
         return
-    }
-}
-
-# Continue with file hashing logic
-if (-not $FilePath -or -not (Test-Path $FilePath)) {
-    Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists."
-    return
+        }
 }
 
 function Select-File {
@@ -262,7 +264,7 @@ function Run-HashFile {
     }
 
     if (-not $FilePath -or -not (Test-Path $FilePath)) {
-        Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists."
+        Write-Error "Invalid -FilePath parameter: The file path provided is either missing or does not exist. Ensure the path is correct and the file exists."
         if ($Host.Name -eq 'ConsoleHost') {
             Read-Host -Prompt "Press Enter to exit..."
         }
@@ -333,7 +335,7 @@ function Run-HashFile {
 
             if ($InputHash -and $isVerificationFile) {
                 Write-Host "⛔ WARNING: You are attempting to verify against a .sha2_256 file by hashing it directly." -ForegroundColor Red
-                Write-Host "Instead, you should run this tool on the original file or just the .sha2_256 file without -hash." -ForegroundColor White
+                Write-Host "Instead, you should run this tool on the original file or just the .sha2_256 file without -Hash." -ForegroundColor White
                 Write-Host "This .sha2_256 file is a verification file, not the file it references. 🤦" -ForegroundColor Blue
                 Write-Host "---" -ForegroundColor Cyan
             }
@@ -441,6 +443,15 @@ function Verify-SHA256 {
         catch {
             Write-Error "An error occurred: $_"
         }
+    }
+}
+
+# Adjusted FilePath validation
+# Only validate if FilePath is provided
+if ($FilePath) {
+    if (-not (Test-Path $FilePath)) {
+        Write-Error "Invalid -FilePath parameter: The file path provided does not exist. Ensure the path is correct."
+        return
     }
 }
 
