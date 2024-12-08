@@ -236,7 +236,7 @@ function Run-HashFile {
     }
 
     if (-not $FilePath -or -not (Test-Path $FilePath)) {
-        Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists." -ForegroundColor Red
+        Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists."
         if ($Host.Name -eq 'ConsoleHost') {
             Read-Host -Prompt "Press Enter to exit..."
         }
