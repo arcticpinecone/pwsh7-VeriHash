@@ -9,13 +9,6 @@ VeriHash is a PowerShell 7+ tool for computing and verifying SHA256 file hashes.
 
 **Note:** PowerShell 7 (also known as PowerShell Core) is different from the older Windows PowerShell (version 5.1) that comes pre-installed with Windows 10/11. 
 
-## Changelog
-Version: 1.0.3 - 2024-12-07
-   - Cleaned up the README.md
-   - Skip digital signature check if file is over 1GB. 
-   - Now prints completion and timing.
-   - Adding VeriHash to your PowerShell Profile (Super Handy!)
-
 ## Table of Contents
 - [Why PowerShell 7?](#why-powershell-7)
 - [Features](#features)
