@@ -1,8 +1,6 @@
 # VeriHash
 
-![](.\Icons\VeriHash_256.webp)
-
-
+<div align="center"><img src="https://github.com/arcticpinecone/pwsh7-VeriHash/blob/main/Icons/VeriHash_256.webp?raw=true" alt="test"></div>
 
 VeriHash is a PowerShell 7+ tool for computing and verifying SHA256 file hashes.
 
