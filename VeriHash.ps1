@@ -2,7 +2,7 @@
     VeriHash.ps1
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
     Date:   December 08, 2024
-    Version: 1.0.4
+    Version: 1.0.5
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -68,19 +68,95 @@
 #>
 # Requires PowerShell 7+
 param (
-    [Parameter(Mandatory = $false, ValueFromPipeline = $true, Position = 0)]
+    [Parameter(Mandatory = $false, Position = 0)]
     [string]$FilePath,
-
     [Parameter(Mandatory = $false)]
-    [ValidateSet("SHA256")]
-    [string]$Algorithm = "SHA256",
-
+    [string]$Hash,
     [Parameter(Mandatory = $false)]
-    [Alias("hash")]
-    [string]$InputHash
+    [switch]$SendTo,
+    [Parameter(Mandatory = $false)]
+    [switch]$Help
 )
 
+    if (-not $FilePath -and $args.Count -gt 0) {
+        $FilePath = $args[0]
+    }
+
+if ($Help) {
+    Write-Host "VeriHash.ps1 - A tool to compute and verify SHA256 hashes." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Usage:" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-SendTo] [-Help]" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Parameters:" -ForegroundColor Cyan
+    Write-Host "  FilePath    Path to the file to hash or a .sha2_256 file to verify." -ForegroundColor White
+    Write-Host "  -Hash       Provide a hash to compare against the computed hash." -ForegroundColor White
+    Write-Host "  -SendTo     Add VeriHash to the Windows SendTo menu." -ForegroundColor White
+    Write-Host "  -Help       Display this help message." -ForegroundColor White
+    return
+}
+
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
+$IsInteractive = $Host.UI.SupportsVirtualTerminal
+
+# -SendTo functionality
+if ($SendTo -and $RunningOnWindows) {
+    try {
+        # Determine the user's SendTo folder
+        $sendToPath = Join-Path $env:AppData "Microsoft\Windows\SendTo"
+        $shortcutPath = Join-Path $sendToPath "VeriHash.lnk"
+
+        # Use pwsh.exe (PowerShell Core). Modify if you use Windows PowerShell.
+        $pwshCommand = "pwsh"
+
+        # Get the full path of the current script
+        $scriptFullPath = $PSCommandPath
+        $scriptDir = Split-Path $scriptFullPath -Parent
+
+        # Arguments for the shortcut
+        $currentExecutionPolicy = Get-ExecutionPolicy
+            if ($currentExecutionPolicy -ne 'Unrestricted' -and $currentExecutionPolicy -ne 'Bypass') {
+                $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptFullPath`""
+            }
+            else {
+                $arguments = "-NoProfile -File `"$scriptFullPath`""
+            }
+
+        # Resolve the icon path relative to the script directory
+        $iconPath = Join-Path $scriptDir "Icons\VeriHash_256.ico"
+
+        # Create the shortcut
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = $pwshCommand
+        $shortcut.Arguments = $arguments
+        $shortcut.WorkingDirectory = $scriptDir
+
+        # Check if the icon exists and set it
+        if (Test-Path $iconPath) {
+            $shortcut.IconLocation = $iconPath
+        } else {
+            Write-Warning "Icon file not found: $iconPath. Shortcut will use default icon."
+        }
+
+        # Save the shortcut
+        $shortcut.Save()
+
+        Write-Host "Shortcut created at: $shortcutPath" -ForegroundColor Green
+        if ($Host.Name -eq 'ConsoleHost') {
+            Read-Host -Prompt "Press Enter to exit..."
+        }
+        return
+    }
+    catch {
+        Write-Error "Error creating SendTo shortcut: $_"
+        if ($Host.Name -eq 'ConsoleHost') {
+            Read-Host -Prompt "Press Enter to exit..."
+        }
+        return
+    }
+}
+
 
 function Select-File {
     if ($RunningOnWindows) {
@@ -112,6 +188,30 @@ function Verify-InputHash {
     }
 }
 
+function Get-ClipboardSha256 {
+    try {
+        # Retrieve the clipboard contents as text
+        $clipboard = Get-Clipboard -ErrorAction Stop
+    }
+    catch {
+        Write-Host "Failed to retrieve clipboard contents. Ensure the clipboard contains text." -ForegroundColor Yellow
+        return $null
+    }
+
+    # Define a regex pattern for a 64-char hex string (SHA256)
+    $sha256Pattern = '^[A-Fa-f0-9]{64}$'
+
+    # Check if clipboard matches the SHA256 pattern
+    if ($clipboard -match $sha256Pattern) {
+        # Return the hash in uppercase (optional)
+        return $clipboard.ToUpper()
+    } else {
+        # Return $null without writing additional messages here
+        return $null
+    }
+}
+
+
 function Run-HashFile {
     param (
         [string]$FilePath,
@@ -119,13 +219,24 @@ function Run-HashFile {
         [string]$InputHash
     )
 
+    # If InputHash is not provided, attempt to get it from clipboard
+    if (-not $InputHash) {
+        Write-Host "No InputHash provided. Checking clipboard for a valid SHA256 hash..." -ForegroundColor Cyan
+        $InputHash = Get-ClipboardSha256
+        if ($InputHash) {
+            Write-Host "Using SHA256 hash from clipboard: $InputHash" -ForegroundColor Green
+        } else {
+            Write-Host "No valid SHA256 hash found in clipboard. Proceeding without verification." -ForegroundColor Yellow
+        }
+    }
+
     # Prompt for file if not provided or invalid
     if (-not $FilePath -or -not (Test-Path $FilePath)) {
         $FilePath = Select-File
     }
 
     if (-not $FilePath -or -not (Test-Path $FilePath)) {
-        Write-Host "Invalid file path provided or no file selected." -ForegroundColor Red
+        Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists." -ForegroundColor Red
         if ($Host.Name -eq 'ConsoleHost') {
             Read-Host -Prompt "Press Enter to exit..."
         }
@@ -173,7 +284,7 @@ function Run-HashFile {
             Write-Host "---" -ForegroundColor Cyan
 
             # Check digital signature if file < 1GB and running on Windows
-            if ($fileInfo.Length -lt 1024MB) {
+            if ($fileInfo.Length -lt 1GB) {
                 if ($RunningOnWindows) {
                     try {
                         $signature = Get-AuthenticodeSignature -FilePath $FilePath
@@ -271,7 +382,7 @@ function Verify-SHA256 {
 
             $sha256Dir = Split-Path -Path $Sha256FilePath -Parent
             $content = (Get-Content -Path $Sha256FilePath -Raw).Trim()
-            $parts = $content -split '\s+'
+            $parts = $content -split '\s+(?=[A-Fa-f0-9]{64}$)'
 
             if ($parts.Count -ne 2) {
                 Write-Error "The file '$Sha256FilePath' does not have the expected 'filename hash' format."
@@ -308,4 +419,4 @@ function Verify-SHA256 {
 }
 
 # Execute the main logic
-Run-HashFile -FilePath $FilePath -Algorithm $Algorithm -InputHash $InputHash
+Run-HashFile -FilePath $FilePath -Hash $Hash -SendTo:$SendTo
