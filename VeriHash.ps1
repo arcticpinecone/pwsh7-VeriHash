@@ -1,8 +1,8 @@
 <#   
     VeriHash.ps1
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Date:   December 08, 2024
-    Version: 1.0.5
+    Date:   December 09, 2024
+    Version: 1.0.6
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -78,28 +78,56 @@ param (
     [switch]$Help
 )
 
-    if (-not $FilePath -and $args.Count -gt 0) {
-        $FilePath = $args[0]
-    }
-
-if ($Help) {
-    Write-Host "VeriHash.ps1 - A tool to compute and verify SHA256 hashes." -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Usage:" -ForegroundColor Cyan
-    Write-Host "  .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-SendTo] [-Help]" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Parameters:" -ForegroundColor Cyan
-    Write-Host "  FilePath    Path to the file to hash or a .sha2_256 file to verify." -ForegroundColor White
-    Write-Host "  -Hash       Provide a hash to compare against the computed hash." -ForegroundColor White
-    Write-Host "  -SendTo     Add VeriHash to the Windows SendTo menu." -ForegroundColor White
-    Write-Host "  -Help       Display this help message." -ForegroundColor White
-    return
-}
-
+# Initialize variables early
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
 $IsInteractive = $Host.UI.SupportsVirtualTerminal
 
-# -SendTo functionality
+if ($SendTo) {
+    # Perform SendTo shortcut creation
+    if ($RunningOnWindows) {
+        try {
+            $sendToPath = Join-Path $env:AppData "Microsoft\Windows\SendTo"
+            $shortcutPath = Join-Path $sendToPath "VeriHash.lnk"
+            $pwshCommand = "pwsh"
+            $scriptFullPath = $PSCommandPath
+            $arguments = "-NoProfile -File `"$scriptFullPath`""
+            $iconPath = Join-Path (Split-Path $scriptFullPath -Parent) "Icons\VeriHash_256.ico"
+
+            $shell = New-Object -ComObject WScript.Shell
+            $shortcut = $shell.CreateShortcut($shortcutPath)
+            $shortcut.TargetPath = $pwshCommand
+            $shortcut.Arguments = $arguments
+            $shortcut.WorkingDirectory = (Split-Path $scriptFullPath -Parent)
+            if (Test-Path $iconPath) {
+                $shortcut.IconLocation = $iconPath
+            }
+            $shortcut.Save()
+            Write-Host "Shortcut created at: $shortcutPath" -ForegroundColor Green
+        }
+        catch {
+            Write-Error "Error creating SendTo shortcut: $_"
+        }
+    } else {
+        Write-Error "SendTo is supported only on Windows systems."
+    }
+    # Exit script after processing SendTo
+    return
+}
+
+# Handle Help parameter
+if ($Help) {
+    Write-Host "VeriHash.ps1 - A tool to compute and verify SHA256 hashes." -ForegroundColor Green
+    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-SendTo] [-Help]" -ForegroundColor Cyan
+    return
+}
+
+# File-related operations
+if (-not $FilePath -or -not (Test-Path $FilePath)) {
+    Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists."
+    return
+}
+
+## Check for -SendTo flag early
 if ($SendTo -and $RunningOnWindows) {
     try {
         # Determine the user's SendTo folder
@@ -115,12 +143,11 @@ if ($SendTo -and $RunningOnWindows) {
 
         # Arguments for the shortcut
         $currentExecutionPolicy = Get-ExecutionPolicy
-            if ($currentExecutionPolicy -ne 'Unrestricted' -and $currentExecutionPolicy -ne 'Bypass') {
-                $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptFullPath`""
-            }
-            else {
-                $arguments = "-NoProfile -File `"$scriptFullPath`""
-            }
+        if ($currentExecutionPolicy -ne 'Unrestricted' -and $currentExecutionPolicy -ne 'Bypass') {
+            $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptFullPath`""
+        } else {
+            $arguments = "-NoProfile -File `"$scriptFullPath`""
+        }
 
         # Resolve the icon path relative to the script directory
         $iconPath = Join-Path $scriptDir "Icons\VeriHash_256.ico"
@@ -143,20 +170,19 @@ if ($SendTo -and $RunningOnWindows) {
         $shortcut.Save()
 
         Write-Host "Shortcut created at: $shortcutPath" -ForegroundColor Green
-        if ($Host.Name -eq 'ConsoleHost') {
-            Read-Host -Prompt "Press Enter to exit..."
-        }
         return
     }
     catch {
         Write-Error "Error creating SendTo shortcut: $_"
-        if ($Host.Name -eq 'ConsoleHost') {
-            Read-Host -Prompt "Press Enter to exit..."
-        }
         return
     }
 }
 
+# Continue with file hashing logic
+if (-not $FilePath -or -not (Test-Path $FilePath)) {
+    Write-Error "Invalid file path provided or no file selected. Ensure the path is correct and the file exists."
+    return
+}
 
 function Select-File {
     if ($RunningOnWindows) {
@@ -418,5 +444,5 @@ function Verify-SHA256 {
     }
 }
 
-# Execute the main logic
-Run-HashFile -FilePath $FilePath -Hash $Hash -SendTo:$SendTo
+# Call Run-HashFile only with valid inputs
+Run-HashFile -FilePath $FilePath -InputHash $Hash
