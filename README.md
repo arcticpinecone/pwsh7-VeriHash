@@ -40,6 +40,7 @@ Version: 1.0.3 - 2024-12-07
 - 🔁 **Modern and Cross-Platform:** PowerShell 7 runs on Windows, macOS, and Linux, making VeriHash more widely usable.
 - 🧑‍💻 **Active Development:** PowerShell 7 receives regular updates, performance improvements, and new features.
 - 🛟 **No Conflict with Windows PowerShell:** Installing PowerShell 7 does not remove or break the existing Windows PowerShell. Both can coexist, allowing you to explore this tool without losing any native capabilities.
+- **🤹🏼 Cross-Platform:** Any platform PowerShell 7 is supported. Tested with Win 10/11, Debian 12, MacOS 12.  
 
 If you're new to PowerShell 7, here are some quick pointers:
 
@@ -85,23 +86,25 @@ If you're new to PowerShell 7, here are some quick pointers:
   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
 
-This command allows locally created scripts like VeriHash to run without being blocked while still maintaining some security. You can always revert this by running Set-ExecutionPolicy Default.
+This command allows locally created scripts like VeriHash to run without being blocked while still maintaining some security. You can always revert this by running `Set-ExecutionPolicy Default`.
 
 ---
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/arcticpinecone/pwsh7-VeriHash
-   ```
+Install gh cli (fastest/easiest/most secure)
 
-   **Clone the Repository** (Alternative):
-   Clone the repository into a folder named `VeriHash` for brevity:
-   
+💡 `gh` CLI method
+
+```bash
+gh auth login
+gh repo clone arcticpinecone/pwsh7-VeriHash VeriHash
+```
+
+1. Clone the repository:
    ```bash
    git clone https://github.com/arcticpinecone/pwsh7-VeriHash VeriHash
    ```
-   
+
 2. Navigate into the directory:
    ```bash
    cd VeriHash
@@ -121,6 +124,8 @@ If the hash is SHA256 (the default), it also creates a `.sha2_256` file in the s
 
 ```powershell
 .\VeriHash.ps1 "C:\path\to\yourfile.exe"
+.\VeriHash.ps1 "/mnt/c/path/to/yourfile.exe"
+
 ```
 
 ### 2. Verify Using a `.sha2_256` File
@@ -128,6 +133,7 @@ If the hash is SHA256 (the default), it also creates a `.sha2_256` file in the s
 If you run `VeriHash` on a `.sha2_256` file:
 ```powershell
 .\VeriHash.ps1 "C:\path\to\yourfile.exe.sha2_256"
+.\VeriHash.ps1 "/mnt/c/path/to/yourfile.exe.sha2_256"
 ```
 It will verify that `yourfile.exe` matches the stored hash. 
 If the referenced file isn't found or the hash doesn't match, you'll be notified.
@@ -137,6 +143,7 @@ If the referenced file isn't found or the hash doesn't match, you'll be notified
 Provide both the file and a known-good hash to verify. Use the `-hash` parameter! 
 ```powershell
 .\VeriHash.ps1 "C:\path\to\yourfile.exe" -hash "ABC123456"
+.\VeriHash.ps1 "/mnt/c/path/to/yourfile.exe" -hash "ABC123456"
 ```
 `VeriHash` will display whether the computed hash matches the input hash.
 
@@ -147,7 +154,7 @@ Just run:
 .\VeriHash.ps1
 ```
 If no path is given, on Windows you can select a file using a GUI dialog. 
-On other systems, you'll be prompted to type the path.
+On other systems, you'll be prompted to type provide the path.
 
 ## Use Cases
 
@@ -244,7 +251,16 @@ For macOS/Linux, the steps are similar but paths differ. Use the following steps
    ```
    Typical path: `~/.config/powershell/Microsoft.PowerShell_profile.ps1`
 
-2. Edit or create your profile:
+   > The `$PROFILE` variable in PowerShell always **points to the default path** for the current user's profile file, whether or not the file (or its parent directories) actually **exists**. PowerShell assumes this file will eventually exist if the user decides to customize their environment.
+
+2. **Create the Directory (If Needed)**
+   If the parent directory doesn’t exist, create it:
+
+   ```bash
+   mkdir -p (Split-Path -Parent $PROFILE)
+   ```
+
+3. Edit or create your profile:
    ```powershell
    if (-not (Test-Path -Path $PROFILE)) {
        New-Item -ItemType File -Path $PROFILE -Force
@@ -252,7 +268,7 @@ For macOS/Linux, the steps are similar but paths differ. Use the following steps
    nano $PROFILE
    ```
 
-3. Add the custom `verihash` function:
+4. Add the custom `verihash` function:
    ```powershell
    function verihash {
        param (
@@ -263,12 +279,14 @@ For macOS/Linux, the steps are similar but paths differ. Use the following steps
    }
    ```
 
-4. Save and reload your profile:
+   > e.g. `/home/user/GitHub/VeriHash/VeriHash.ps1`
+
+5. Save and reload your profile:
    ```powershell
    . $PROFILE
    ```
 
-5. Use `verihash` as shown above.
+6. Use `verihash` as shown above.
 
 ---
 ## Contributing
