@@ -2,7 +2,7 @@
     VeriHash.ps1
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
     Date:   December 09, 2024
-    Version: 1.0.6
+    Version: 1.0.7
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -358,14 +358,14 @@ function Run-HashFile {
                 Write-Host ($InputHash.ToUpper()) -ForegroundColor Yellow
 
                 Write-Host "Computed Hash:    " -NoNewline -ForegroundColor White
-                Write-Host ($fileHash.Hash.ToUpper()) -ForegroundColor Yellow
+                Write-Host ($fileHash.Hash.ToUpper()) -ForegroundColor Magenta
 
                 # Compare input vs computed
                 Verify-InputHash -ComputedHash $fileHash.Hash -InputHash $InputHash
             } else {
                 # Just show computed hash normally
                 Write-Host "Hash data:       " -NoNewline -ForegroundColor White
-                Write-Host ($fileHash.Hash) -ForegroundColor Red
+                Write-Host ($fileHash.Hash) -ForegroundColor Magenta
 
                 # If SHA256, also save hash to a .sha2_256 file
                 if ($fileHash.Algorithm -eq "SHA256") {
