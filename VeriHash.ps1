@@ -1,8 +1,8 @@
-<#   
+<#
     VeriHash.ps1
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Date:   April 04, 2024
-    Version: 1.1.1
+    Date:   January 16, 2025
+    Version: 1.2.1
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -38,67 +38,50 @@
 param (
     [Parameter(Mandatory = $false, Position = 0)]
     [string]$FilePath,
-    
+
     [Alias("InputHash")]
     [Parameter(Mandatory = $false)]
     [string]$Hash,  # We'll validate ourselves across multiple patterns
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet('MD5', 'SHA256', 'SHA512', 'All')]
+    [string[]]$Algorithm,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$OnlyVerify,
+
+    [Parameter(Mandatory = $false)]
     [switch]$SendTo,
-    
+
     [Parameter(Mandatory = $false)]
     [switch]$Help
 )
 
 # Initialize variables early
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
-$IsInteractive    = $Host.UI.SupportsVirtualTerminal
-
-if ($SendTo) {
-    # Perform SendTo shortcut creation
-    if ($RunningOnWindows) {
-        try {
-            $sendToPath    = Join-Path $env:AppData "Microsoft\Windows\SendTo"
-            $shortcutPath  = Join-Path $sendToPath "VeriHash.lnk"
-            $pwshCommand   = "pwsh"
-            $scriptFullPath = $PSCommandPath
-            $arguments      = "-NoProfile -File `"$scriptFullPath`""
-            $iconPath       = Join-Path (Split-Path $scriptFullPath -Parent) "Icons\VeriHash_256.ico"
-
-            $shell         = New-Object -ComObject WScript.Shell
-            $shortcut      = $shell.CreateShortcut($shortcutPath)
-            $shortcut.TargetPath      = $pwshCommand
-            $shortcut.Arguments       = $arguments
-            $shortcut.WorkingDirectory = (Split-Path $scriptFullPath -Parent)
-            if (Test-Path $iconPath) {
-                $shortcut.IconLocation = $iconPath
-            }
-            $shortcut.Save()
-            Write-Host "Shortcut created at: $shortcutPath" -ForegroundColor Green
-        }
-        catch {
-            Write-Error "Error creating SendTo shortcut: $_"
-        }
-    } else {
-        Write-Error "SendTo is supported only on Windows systems."
-    }
-    # Exit script after processing SendTo
-    return
-}
 
 # Handle Help parameter
 if ($Help) {
     Write-Host "VeriHash.ps1 - A tool to compute and verify file hashes (MD5, SHA256, SHA512)." -ForegroundColor Green
-    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-SendTo] [-Help]" -ForegroundColor Cyan
+    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-SendTo] [-Help]" -ForegroundColor Cyan
+    Write-Host ""
     Write-Host "Parameters:" -ForegroundColor White
-    Write-Host "  FilePath         : Path to the file to hash or verify." -ForegroundColor Yellow
-    Write-Host "  -Hash, -InputHash: Provide a MD5, SHA256, or SHA512 hash for verification." -ForegroundColor Yellow
-    Write-Host "  -SendTo          : Creates a SendTo shortcut for easy access." -ForegroundColor Yellow
-    Write-Host "  -Help            : Displays this help message." -ForegroundColor Yellow
+    Write-Host "  FilePath          : Path to the file to hash or verify." -ForegroundColor Yellow
+    Write-Host "  -Hash, -InputHash : Provide a MD5, SHA256, or SHA512 hash for verification." -ForegroundColor Yellow
+    Write-Host "  -Algorithm        : Specify which hash(es) to compute: MD5, SHA256, SHA512, or All." -ForegroundColor Yellow
+    Write-Host "                      Can specify multiple (e.g., -Algorithm MD5,SHA512)." -ForegroundColor Yellow
+    Write-Host "                      Default: SHA256 (if no -Hash provided)" -ForegroundColor Yellow
+    Write-Host "  -OnlyVerify       : Only verify the provided hash, don't compute additional hashes." -ForegroundColor Yellow
+    Write-Host "  -SendTo           : Creates a SendTo shortcut for easy access (Windows only)." -ForegroundColor Yellow
+    Write-Host "  -Help             : Displays this help message." -ForegroundColor Yellow
+    Write-Host ""
     Write-Host "Examples:" -ForegroundColor White
-    Write-Host "  .\VeriHash.ps1 -FilePath 'C:\Example\file.txt'" -ForegroundColor Cyan
-    Write-Host "  .\VeriHash.ps1 -FilePath 'C:\Example\file.txt' -Hash 'YOUR_HASH_HERE'" -ForegroundColor Cyan
-    Write-Host "  .\VeriHash.ps1 -SendTo" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt'                              # Compute SHA256" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Hash 'ABC123...'            # Verify hash + compute SHA256" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Hash 'ABC...' -OnlyVerify  # Only verify, no extra hashing" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Algorithm MD5,SHA512       # Compute MD5 and SHA512" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Algorithm All              # Compute all hash types" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 -SendTo                                   # Install SendTo shortcut" -ForegroundColor Cyan
     return
 }
 
@@ -143,23 +126,36 @@ if ($SendTo -and $RunningOnWindows) {
 
 function Select-File {
     if ($RunningOnWindows) {
-        Add-Type -AssemblyName System.Windows.Forms
-        $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-        $openFileDialog.Filter = "All Files (*.*)|*.*"
-        $openFileDialog.Multiselect = $false
-        $dialogResult = $openFileDialog.ShowDialog()
-        if ($dialogResult -eq 'OK') {
-            return $openFileDialog.FileName
+        try {
+            Add-Type -AssemblyName System.Windows.Forms
+            $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
+            $openFileDialog.Filter = "All Files (*.*)|*.*"
+            $openFileDialog.Multiselect = $false
+            $dialogResult = $openFileDialog.ShowDialog()
+            if ($dialogResult -eq 'OK') {
+                return $openFileDialog.FileName
+            } elseif ($dialogResult -eq 'Cancel') {
+                # User explicitly cancelled - return null to exit
+                return $null
+            }
+        } catch {
+            Write-Host "Unable to display file dialog. Please enter the file path manually." -ForegroundColor Yellow
         }
+        # Fallback to manual entry if dialog failed or wasn't shown
+        Write-Host "Please enter the full path to the file (or press Enter to cancel):" -ForegroundColor Cyan
+        $inputPath = Read-Host
+        if ([string]::IsNullOrWhiteSpace($inputPath)) {
+            return $null
+        }
+        return $inputPath
     } else {
         Write-Host "Please enter the full path to the file:" -ForegroundColor Cyan
         $inputPath = Read-Host
         return $inputPath
     }
-    return $null
 }
 
-function Verify-InputHash {
+function Test-InputHash {
     param (
         [string]$ComputedHash,
         [string]$InputHash
@@ -216,7 +212,7 @@ function Get-ClipboardHash {
 # Helper to compute a file hash with a given algorithm
 # and (optionally) save to a sidecar file with a typical extension.
 ###############################################################################
-function Compute-And-SaveHash {
+function Get-And-SaveHash {
     param (
         [string]$PathToFile,
         [string]$Algorithm  # MD5 | SHA256 | SHA512
@@ -228,10 +224,10 @@ function Compute-And-SaveHash {
 
     # Decide extension
     switch ($Algorithm) {
-        'MD5'    { $ext = '.md5'       }
-        'SHA256' { $ext = '.sha2_256'  }
-        'SHA512' { $ext = '.sha2'      }
-        default  { $ext = '.unknown'   }
+        'MD5'    { $ext = '.md5'     }
+        'SHA256' { $ext = '.sha256'  }
+        'SHA512' { $ext = '.sha512'  }
+        default  { $ext = '.unknown' }
     }
 
     # Construct the sidecar name
@@ -284,9 +280,8 @@ function Compute-And-SaveHash {
                 Write-Host "Updated sidecar file with new hash." -ForegroundColor Green
             }
             '^r' {
-                # Rename old file so you don’t lose it
+                # Rename old file so you don't lose it
                 $newName = $hashFileName + ".old"
-                $backupPath = Join-Path $fileInfo.DirectoryName $newName
                 Rename-Item -Path $hashFilePath -NewName $newName -ErrorAction SilentlyContinue
                 Write-Host "Renamed existing sidecar to '$newName' and writing a new one..." -ForegroundColor Yellow
                 Set-Content -Path $hashFilePath -Value $hashContent -Force
@@ -307,13 +302,15 @@ function Compute-And-SaveHash {
 ###############################################################################
 # Main function to either verify or compute one or two hashes
 ###############################################################################
-function Run-HashFile {
+function Invoke-HashFile {
     param (
         [string]$FilePath,
-        [string]$InputHash
+        [string]$InputHash,
+        [string[]]$Algorithm,
+        [switch]$OnlyVerify
     )
 
-    # Attempt to detect from the clipboard if no InputHash provided
+    # Only check clipboard if no InputHash was explicitly provided
     [pscustomobject]$clipboardHashInfo = $null
 
     if (-not $InputHash) {
@@ -330,21 +327,22 @@ function Run-HashFile {
     # Prompt for file if not provided or invalid
     if (-not $FilePath -or -not (Test-Path $FilePath)) {
         $FilePath = Select-File
-    }
-    if (-not $FilePath -or -not (Test-Path $FilePath)) {
-        Write-Error "Invalid -FilePath parameter: The file path provided is either missing or does not exist. Ensure the path is correct and the file exists."
-        if ($Host.Name -eq 'ConsoleHost') {
-            Read-Host -Prompt "Press Enter to exit..."
+        if (-not $FilePath) {
+            Write-Host "Operation cancelled. No file was selected." -ForegroundColor Yellow
+            return
         }
-        return
+        if (-not (Test-Path $FilePath)) {
+            Write-Error "The file path provided does not exist: $FilePath"
+            return
+        }
     }
 
     # Resolve full path
     $FilePath = (Resolve-Path -Path $FilePath).Path
     $fileInfo = Get-Item $FilePath
 
-    # Check if the selected file is a .sha2_256 file
-    $isVerificationFile = $fileInfo.Extension -in ('.sha2_256', '.sha2', '.md5')
+    # Check if the selected file is a checksum file (support both old and new extensions)
+    $isVerificationFile = $fileInfo.Extension -in ('.sha256', '.sha512', '.md5', '.sha2_256', '.sha2')
 
     try {
         # Current times
@@ -355,10 +353,16 @@ function Run-HashFile {
         Write-Host "Local Sys:    $($currentLocal.ToString("MMMM dd, yyyy")) | $($currentLocal.ToString("HH:mm:ss"))" -ForegroundColor Cyan
         Write-Host "---" -ForegroundColor Cyan
 
-        # If user gave us a sidecar file to directly verify, do that
-        if ($isVerificationFile -and -not $InputHash) {
+        # If user gave us a sidecar file, verify it (regardless of -Hash parameter)
+        if ($isVerificationFile) {
+            # If they also provided -Hash, inform them we're ignoring it and doing the smart thing
+            if ($InputHash) {
+                Write-Host "📋 Detected sidecar file with -Hash parameter." -ForegroundColor Cyan
+                Write-Host "   Ignoring provided hash and verifying the referenced file instead..." -ForegroundColor Yellow
+                Write-Host "---" -ForegroundColor Cyan
+            }
             # This is a recognized sidecar, so do a verification against the referenced file
-            Verify-HashSidecar $FilePath
+            Test-HashSidecar $FilePath
         }
         else {
             # Normal file handling
@@ -398,7 +402,7 @@ function Run-HashFile {
                     }
                 }
                 else {
-                    Write-Host "Signed:       Skipped (Authenticode signatures are not supported on this platform) 🚫" -ForegroundColor Yellow
+                    Write-Host "Digitally Signed?:       Skipped (Authenticode signatures are not supported on this platform) 🚫" -ForegroundColor Yellow
                 }
                 Write-Host "---" -ForegroundColor Cyan
             }
@@ -407,58 +411,90 @@ function Run-HashFile {
             $startTime = Get-Date
 
             ###################################################################
-            # Step 1: If we recognized a hash from either the command line
-            #         or the clipboard, attempt to figure out which algorithm
-            #         it is (MD5, SHA256, or SHA512) and compare.
+            # Determine which algorithms to compute
             ###################################################################
-            $mainAlgorithm = $null
-            if ($InputHash -and (-not $clipboardHashInfo)) {
-                # If user explicitly gave -Hash on command line, we attempt to detect by length
-                switch ($InputHash.Length) {
-                    32 { $mainAlgorithm = 'MD5'   }
-                    64 { $mainAlgorithm = 'SHA256'}
-                    128{ $mainAlgorithm = 'SHA512'}
-                    default { 
-                        Write-Host "Hash length doesn't match MD5/SHA256/SHA512. Assuming SHA256 by default..." -ForegroundColor Yellow
-                        $mainAlgorithm = 'SHA256'
+            $algorithmsToCompute = @()
+
+            # Step 1: If user provided -Hash, detect and verify it
+            if ($InputHash) {
+                $detectedAlgorithm = $null
+
+                if ($clipboardHashInfo) {
+                    # We detected from clipboard
+                    $detectedAlgorithm = $clipboardHashInfo.Algorithm
+                } else {
+                    # Detect by length from command line -Hash parameter
+                    switch ($InputHash.Length) {
+                        32  { $detectedAlgorithm = 'MD5'    }
+                        64  { $detectedAlgorithm = 'SHA256' }
+                        128 { $detectedAlgorithm = 'SHA512' }
+                        default {
+                            Write-Host "Hash length doesn't match MD5/SHA256/SHA512. Assuming SHA256 by default..." -ForegroundColor Yellow
+                            $detectedAlgorithm = 'SHA256'
+                        }
                     }
                 }
-            } elseif ($clipboardHashInfo) {
-                # We got an explicit detection from the clipboard
-                $mainAlgorithm = $clipboardHashInfo.Algorithm
+
+                # Compute and verify the detected algorithm
+                Write-Host "`n[Hash Verification - $detectedAlgorithm]" -ForegroundColor White
+                Write-Host "Input Hash:     $InputHash" -ForegroundColor Yellow
+                $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm
+                Write-Host "Computed Hash:  $($resVerify.Hash)" -ForegroundColor Magenta
+                Test-InputHash -ComputedHash $resVerify.Hash -InputHash $InputHash
+                Write-Host "Saved to:       $($resVerify.Sidecar)" -ForegroundColor Green
+
+                # If -OnlyVerify is set, we're done - don't compute additional hashes
+                if ($OnlyVerify) {
+                    Write-Host "`n-OnlyVerify specified. Skipping additional hash computations." -ForegroundColor Cyan
+                    # Skip Step 2
+                } else {
+                    # Add other algorithms if user specified -Algorithm
+                    if ($Algorithm) {
+                        foreach ($alg in $Algorithm) {
+                            if ($alg -eq 'All') {
+                                $algorithmsToCompute = @('MD5', 'SHA256', 'SHA512')
+                                break
+                            }
+                            if ($alg -ne $detectedAlgorithm -and $alg -notin $algorithmsToCompute) {
+                                $algorithmsToCompute += $alg
+                            }
+                        }
+                    } else {
+                        # Default: add SHA256 if we didn't already verify it
+                        if ($detectedAlgorithm -ne 'SHA256') {
+                            $algorithmsToCompute += 'SHA256'
+                        }
+                    }
+                }
             }
-
-            $hashResults   = @()
-            $computedMatch = $false
-
-            if ($mainAlgorithm) {
-                # 1a) Compute the "main" algorithm
-                Write-Host "`n[Hash - Detected from input/clipboard]" -ForegroundColor White
-                Write-Host "Algorithm:  $mainAlgorithm" -ForegroundColor Green
-                Write-Host "Input Hash: $InputHash" -ForegroundColor Yellow
-                $resMain = Compute-And-SaveHash -PathToFile $FilePath -Algorithm $mainAlgorithm
-
-                Write-Host "Computed Hash:  $($resMain.Hash)" -ForegroundColor Magenta
-                Verify-InputHash -ComputedHash $resMain.Hash -InputHash $InputHash
-                Write-Host "Saved to:       $($resMain.Sidecar)" -ForegroundColor Green
-                $hashResults += $resMain
+            else {
+                # No hash to verify - just compute hash(es)
+                if ($Algorithm) {
+                    # User specified which algorithm(s) to compute
+                    foreach ($alg in $Algorithm) {
+                        if ($alg -eq 'All') {
+                            $algorithmsToCompute = @('MD5', 'SHA256', 'SHA512')
+                            break
+                        }
+                        if ($alg -notin $algorithmsToCompute) {
+                            $algorithmsToCompute += $alg
+                        }
+                    }
+                } else {
+                    # Default: SHA256 only
+                    $algorithmsToCompute = @('SHA256')
+                }
             }
 
             ###################################################################
-            # Step 2: Always do a SHA256, it’s best as minimum standard.
+            # Step 2: Compute additional algorithms (if any)
             ###################################################################
-            Write-Host "`n[Hash - Standard SHA256]" -ForegroundColor White
-            $res256 = Compute-And-SaveHash -PathToFile $FilePath -Algorithm 'SHA256'
-            Write-Host "SHA256 Hash:  $($res256.Hash)" -ForegroundColor Magenta
-            Write-Host "Saved to:     $($res256.Sidecar)" -ForegroundColor Green
-
-            # If the user’s input hash was also SHA256, we can do the check again:
-            if ($mainAlgorithm -eq 'SHA256') {
-                Write-Host "Verifying again with the same input SHA256..." -ForegroundColor Cyan
-                Verify-InputHash -ComputedHash $res256.Hash -InputHash $InputHash
+            foreach ($alg in $algorithmsToCompute) {
+                Write-Host "`n[Hash - $alg]" -ForegroundColor White
+                $res = Get-And-SaveHash -PathToFile $FilePath -Algorithm $alg
+                Write-Host "$alg Hash:  $($res.Hash)" -ForegroundColor Magenta
+                Write-Host "Saved to:   $($res.Sidecar)" -ForegroundColor Green
             }
-
-            $hashResults += $res256
 
             ###################################################################
             # Done computing
@@ -478,7 +514,7 @@ function Run-HashFile {
     }
 }
 
-function Verify-HashSidecar {
+function Test-HashSidecar {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -491,52 +527,82 @@ function Verify-HashSidecar {
             return
         }
 
-        # Slurp the entire sidecar contents
-        $content   = (Get-Content -Path $SidecarPath -Raw).Trim()
+        # Read all lines from the sidecar file
+        $lines = Get-Content -Path $SidecarPath | Where-Object { $_.Trim() -ne '' }
 
-        # Typically sidecar is "filename.ext  ABC123..." with whitespace in between
-        $parts = $content -split '\s+(?=[A-Fa-f0-9]+$)'
-        if ($parts.Count -lt 2) {
-            Write-Error "Sidecar '$SidecarPath' does not have the expected 'filename hash' format."
+        if ($lines.Count -eq 0) {
+            Write-Error "Sidecar '$SidecarPath' is empty."
             return
         }
 
-        $referencedFilename = $parts[0]
-        $inputHash          = $parts[1].ToUpper()
+        $sidecarDir = Split-Path -Path $SidecarPath -Parent
+        $totalFiles = $lines.Count
+        $passedFiles = 0
+        $failedFiles = 0
+        $missingFiles = 0
 
-        # Figure out which hash algorithm by length
-        switch ($inputHash.Length) {
-            32  { $algorithm = 'MD5'    }
-            64  { $algorithm = 'SHA256' }
-            128 { $algorithm = 'SHA512' }
-            default {
-                Write-Error "Unrecognized hash length '$($inputHash.Length)' in sidecar. Only MD5, SHA256, or SHA512 supported."
-                return
+        Write-Host "Checksum file:      $SidecarPath" -ForegroundColor Cyan
+        Write-Host "Total entries:      $totalFiles" -ForegroundColor Cyan
+        Write-Host "---" -ForegroundColor Cyan
+
+        foreach ($line in $lines) {
+            # Parse each line: "hash  filename" or "hash *filename"
+            # Support both two-space and space-asterisk formats
+            if ($line -match '^([A-Fa-f0-9]+)\s+\*?(.+)$') {
+                $inputHash = $matches[1].ToUpper()
+                $referencedFilename = $matches[2].Trim()
+
+                # Figure out which hash algorithm by length
+                switch ($inputHash.Length) {
+                    32  { $algorithm = 'MD5'    }
+                    64  { $algorithm = 'SHA256' }
+                    128 { $algorithm = 'SHA512' }
+                    default {
+                        Write-Warning "Unrecognized hash length '$($inputHash.Length)' for '$referencedFilename'. Skipping."
+                        continue
+                    }
+                }
+
+                # The original file should be next to the sidecar
+                $fileToCheck = Join-Path -Path $sidecarDir -ChildPath $referencedFilename
+
+                if (-not (Test-Path $fileToCheck)) {
+                    Write-Host "$referencedFilename" -NoNewline -ForegroundColor Yellow
+                    Write-Host " - MISSING ⚠️" -ForegroundColor Red
+                    $missingFiles++
+                    continue
+                }
+
+                # Compute the actual hash
+                $computedHash = (Get-FileHash -Algorithm $algorithm -Path $fileToCheck).Hash.ToUpper()
+
+                if ($computedHash -eq $inputHash) {
+                    Write-Host "$referencedFilename" -NoNewline -ForegroundColor Cyan
+                    Write-Host " - OK ✅" -ForegroundColor Green
+                    $passedFiles++
+                }
+                else {
+                    Write-Host "$referencedFilename" -NoNewline -ForegroundColor Yellow
+                    Write-Host " - FAILED 🚫" -ForegroundColor Red
+                    Write-Host "  Expected: $inputHash" -ForegroundColor DarkGray
+                    Write-Host "  Got:      $computedHash" -ForegroundColor DarkGray
+                    $failedFiles++
+                }
+            }
+            else {
+                Write-Warning "Invalid format in line: $line"
             }
         }
 
-        # The original file should be next to the sidecar
-        $sidecarDir = Split-Path -Path $SidecarPath -Parent
-        $fileToCheck = Join-Path -Path $sidecarDir -ChildPath $referencedFilename
-        if (-not (Test-Path $fileToCheck)) {
-            Write-Error "The file '$fileToCheck' (referenced by '$SidecarPath') does not exist."
-            return
+        # Summary
+        Write-Host "---" -ForegroundColor Cyan
+        Write-Host "Summary:" -ForegroundColor White
+        Write-Host "  Passed:  $passedFiles" -ForegroundColor Green
+        if ($failedFiles -gt 0) {
+            Write-Host "  Failed:  $failedFiles" -ForegroundColor Red
         }
-
-        Write-Host "Sidecar file:       $SidecarPath" -ForegroundColor Cyan
-        Write-Host "Hashing file:       $fileToCheck" -ForegroundColor Cyan
-        Write-Host "Algorithm:          $algorithm"   -ForegroundColor Yellow
-        Write-Host "Expected Hash:      $inputHash"   -ForegroundColor Yellow
-
-        # Compute the actual hash
-        $computedHash = (Get-FileHash -Algorithm $algorithm -Path $fileToCheck).Hash.ToUpper()
-        Write-Host "Computed Hash:      $computedHash" -ForegroundColor Yellow
-
-        if ($computedHash -eq $inputHash) {
-            Write-Host "`nHash matches! ✅" -ForegroundColor Green
-        }
-        else {
-            Write-Host "`nHash does not match! 🚫" -ForegroundColor Red
+        if ($missingFiles -gt 0) {
+            Write-Host "  Missing: $missingFiles" -ForegroundColor Yellow
         }
     }
 }
@@ -550,4 +616,4 @@ if ($FilePath) {
 }
 
 # Finally, run the main function
-Run-HashFile -FilePath $FilePath -InputHash $Hash
+Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify
