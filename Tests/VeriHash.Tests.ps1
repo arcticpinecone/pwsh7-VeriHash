@@ -5,6 +5,13 @@ BeforeAll {
 
     # Note: The script will try to run when we import it, so we pass a dummy filepath
     # and suppress errors. In a refactored version, you'd separate functions from execution.
+
+    # Setup test file path
+    $script:TestIconFile = Join-Path $PSScriptRoot "VeriHash_1024.ico"
+
+    # Create a temp directory for test outputs
+    $script:TestOutputDir = Join-Path $TestDrive "VeriHashTests"
+    New-Item -ItemType Directory -Path $script:TestOutputDir -Force | Out-Null
 }
 
 Describe 'Test-InputHash' {
@@ -110,6 +117,273 @@ Describe 'Get-ClipboardHash' {
 
             # Assert
             $result | Should -BeNullOrEmpty
+        }
+    }
+}
+
+Describe 'Get-And-SaveHash' {
+    AfterEach {
+        # Clean up any sidecar files created during tests
+        Get-ChildItem -Path $script:TestOutputDir -Filter "*.md5" -ErrorAction SilentlyContinue | Remove-Item -Force
+        Get-ChildItem -Path $script:TestOutputDir -Filter "*.sha256" -ErrorAction SilentlyContinue | Remove-Item -Force
+        Get-ChildItem -Path $script:TestOutputDir -Filter "*.sha512" -ErrorAction SilentlyContinue | Remove-Item -Force
+        Get-ChildItem -Path $script:TestOutputDir -Filter "*.ico" -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When computing file hashes and creating sidecar files' {
+        It 'Creates sidecar file with correct naming for SHA256' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Assert
+            $result.Algorithm | Should -Be 'SHA256'
+            $result.Sidecar | Should -Match 'VeriHash_1024\.ico\.sha256$'
+            Test-Path $result.Sidecar | Should -Be $true
+        }
+
+        It 'MD5 creates .md5 file extension' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm MD5
+
+            # Assert
+            $result.Algorithm | Should -Be 'MD5'
+            $result.Sidecar | Should -Match '\.md5$'
+            Test-Path $result.Sidecar | Should -Be $true
+        }
+
+        It 'SHA512 creates .sha512 file extension' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA512
+
+            # Assert
+            $result.Algorithm | Should -Be 'SHA512'
+            $result.Sidecar | Should -Match '\.sha512$'
+            Test-Path $result.Sidecar | Should -Be $true
+        }
+
+        It 'MD5 hash output is 32 characters (hex)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm MD5
+
+            # Assert
+            $result.Hash.Length | Should -Be 32
+            $result.Hash | Should -Match '^[A-F0-9]{32}$'
+        }
+
+        It 'SHA256 hash output is 64 characters (hex)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Assert
+            $result.Hash.Length | Should -Be 64
+            $result.Hash | Should -Match '^[A-F0-9]{64}$'
+        }
+
+        It 'SHA512 hash output is 128 characters (hex)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA512
+
+            # Assert
+            $result.Hash.Length | Should -Be 128
+            $result.Hash | Should -Match '^[A-F0-9]{128}$'
+        }
+
+        It 'Sidecar file contains correct format (filename + two spaces + hash)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Assert
+            $sidecarContent = (Get-Content $result.Sidecar -Raw).Trim()
+            # Format should be: "VeriHash_1024.ico  HASHVALUE"
+            $sidecarContent | Should -Match '^VeriHash_1024\.ico\s{2}[A-F0-9]{64}$'
+        }
+    }
+}
+
+Describe 'Test-HashSidecar' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When verifying files against sidecar checksums' {
+        It 'Detects matching hash correctly (GNU coreutils format: hash *filename)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create a sidecar file manually in GNU format (hash *filename)
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+            $sidecarPath = "$testFile.sha256"
+            # GNU format: "HASH *filename" or "HASH  filename"
+            Set-Content -Path $sidecarPath -Value "$hash *VeriHash_1024.ico"
+
+            # Act - Capture output to verify "OK" message appears
+            $output = Test-HashSidecar -SidecarPath $sidecarPath *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'OK.*✅'
+        }
+
+        It 'Detects mismatched hash correctly (GNU coreutils format)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create sidecar with incorrect hash
+            $sidecarPath = "$testFile.sha256"
+            Set-Content -Path $sidecarPath -Value "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA *VeriHash_1024.ico"
+
+            # Act
+            $output = Test-HashSidecar -SidecarPath $sidecarPath *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'FAILED.*🚫'
+        }
+
+        It 'Detects missing file correctly (GNU coreutils format)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Get hash before deleting file
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+            $sidecarPath = "$testFile.sha256"
+            Set-Content -Path $sidecarPath -Value "$hash *VeriHash_1024.ico"
+
+            # Delete the actual file (but keep sidecar)
+            Remove-Item $testFile -Force
+
+            # Act
+            $output = Test-HashSidecar -SidecarPath $sidecarPath *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'MISSING.*⚠️'
+        }
+    }
+}
+
+Describe 'Multiple Algorithm Testing' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When using -Algorithm parameter with multiple values' {
+        It 'Creates all three sidecar files when using different algorithms' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Create three separate sidecar files
+            $md5Result = Get-And-SaveHash -PathToFile $testFile -Algorithm MD5
+            $sha256Result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+            $sha512Result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA512
+
+            # Assert - All three files should exist
+            Test-Path $md5Result.Sidecar | Should -Be $true
+            Test-Path $sha256Result.Sidecar | Should -Be $true
+            Test-Path $sha512Result.Sidecar | Should -Be $true
+
+            # Verify file extensions
+            $md5Result.Sidecar | Should -Match '\.md5$'
+            $sha256Result.Sidecar | Should -Match '\.sha256$'
+            $sha512Result.Sidecar | Should -Match '\.sha512$'
+
+            # Verify hash lengths
+            $md5Result.Hash.Length | Should -Be 32
+            $sha256Result.Hash.Length | Should -Be 64
+            $sha512Result.Hash.Length | Should -Be 128
+        }
+    }
+}
+
+Describe 'Help System' {
+    Context 'When requesting help documentation' {
+        It 'Displays help with -Help flag' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -Help *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'VeriHash\.ps1'
+            $outputString | Should -Match 'Usage:'
+            $outputString | Should -Match 'Parameters:'
+            $outputString | Should -Match 'Examples:'
+        }
+
+        It 'Displays help with --help flag (Unix style)' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" --help *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'VeriHash\.ps1'
+            $outputString | Should -Match 'Usage:'
+        }
+
+        It 'Displays help with -h alias' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -h *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'VeriHash\.ps1'
+            $outputString | Should -Match 'Usage:'
+        }
+
+        It 'Displays help with /? flag (Windows CMD style)' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" /? *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'VeriHash\.ps1'
+            $outputString | Should -Match 'Usage:'
+        }
+
+        It 'Help output includes all major parameters' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -Help *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match 'FilePath'
+            $outputString | Should -Match '-Hash'
+            $outputString | Should -Match '-Algorithm'
+            $outputString | Should -Match '-OnlyVerify'
+            $outputString | Should -Match '-SendTo'
         }
     }
 }

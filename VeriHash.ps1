@@ -1,8 +1,26 @@
-<#
-    VeriHash.ps1
+﻿<#
+    VeriHash.ps1 - A cross-platform PowerShell tool for computing and verifying file hashes
+
+    Copyright (C) 2024-2025 arcticpinecone <arcticpinecone@arcticpinecone.eu>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+    ============================================================================
+
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Date:   January 16, 2025
-    Version: 1.2.1
+    Updated: November 16, 2025
+    Version: 1.2.2
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -12,7 +30,7 @@
     it's easy to install and safe to run _alongside_ your existing system.
 
     Basic Usage
-    1. Run without parameters to select a file interactively. 
+    1. Run without parameters to select a file interactively.
         - e.g., double click VeriHash.ps1 in Windows Explorer to simply launch it
             Then select a file to hash, or, a sidecar file like '.sha2' or '.md5' file to verify a hash.)
 
@@ -24,10 +42,10 @@
 
     4. Provide a file and an input hash to compare:
        .\VeriHash.ps1 "C:\path\to\file.exe" -hash "ABC123..."
-    
+
         See README for more information.
-        [[# Adding VeriHash to Your PowerShell Profile]] 
-        
+        [[# Adding VeriHash to Your PowerShell Profile]]
+
         For an easy way to just use it from anywhere like:
         ```powershell
         verihash filename.ext
@@ -53,12 +71,20 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$SendTo,
 
+    [Alias("h", "?")]
     [Parameter(Mandatory = $false)]
     [switch]$Help
 )
 
 # Initialize variables early
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
+
+# Handle common help flags (--help, -h, /?, etc.) that might have been passed as FilePath
+$helpFlags = @('--help', '--Help', '-h', '-H', '/?', '/h', '/H', 'help', 'HELP')
+if ($FilePath -in $helpFlags) {
+    $Help = $true
+    $FilePath = $null  # Clear it so it doesn't cause errors later
+}
 
 # Handle Help parameter
 if ($Help) {

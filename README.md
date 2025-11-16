@@ -4,21 +4,21 @@
 
 ## A modern, cross-platform PowerShell tool for computing and verifying file hashes
 
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
-[![License](https://img.shields.io/badge/license-CC--BY--SA--4.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
 ---
 
-## 🚀 What's New in v1.2.1
+## 🚀 What's New in v1.2.2
 
-**File extension standardization and UX improvements!**
+**Testing improvements and PowerShell 7 compatibility!**
 
-- 📦 **Standard Extensions**: Now uses `.sha256` and `.sha512` (GNU coreutils compatible)
-- ✨ **Multi-File Verification**: Verify checksum files with multiple entries (like `sha256sum -c`)
-- 🐛 **Better UX**: Fixed VSCode compatibility, clearer error messages, improved cancellation handling
-- ✅ **Backward Compatible**: Still reads old `.sha2_256` and `.sha2` files
+- ✅ **QuickHash Modernized**: Fixed deprecated `-Encoding Byte` parameter for full PowerShell 7 compatibility
+- 🧪 **Comprehensive Testing**: Added 22 Pester tests for QuickHash.ps1 (100% passing)
+- 📊 **Quality Assurance**: PSScriptAnalyzer validation ensures code quality
+- 🔧 **Test Coverage**: File hashing, string hashing, algorithm validation, error handling, and more
 
 [See full changelog](CHANGELOG.md)
 
@@ -36,7 +36,9 @@
 - [Speed Benchmarks](#-speed-benchmarks)
 - [PowerShell Profile Integration](#-powershell-profile-integration)
 - [Use Cases](#-use-cases)
+- [QuickHash](#-quickhash---lightweight-string--file-hasher)
 - [Contributing](#-contributing)
+- [Running Tests](#-running-tests)
 - [License](#-license)
 
 ---
@@ -425,6 +427,8 @@ QuickHash is designed for fast, interactive hash computation of **both text stri
 - **Interactive Prompts**: User-friendly prompt-based interface
 - **Dual Algorithm Support**: MD5 and SHA256
 - **Lightweight**: No dependencies, minimal code
+- **PowerShell 7 Compatible**: Fully updated for modern PowerShell
+- **Tested & Validated**: 22 comprehensive Pester tests ensure reliability
 
 ### 💼 QuickHash Use Cases
 
@@ -511,23 +515,81 @@ cd VeriHash
 .\VeriHash.ps1 -Help
 ```
 
+### 🧪 Running Tests
+
+VeriHash includes comprehensive Pester tests to ensure code quality and reliability.
+
+**Prerequisites**:
+
+```powershell
+# Install Pester (if not already installed)
+Install-Module -Name Pester -Force -SkipPublisherCheck
+```
+
+**Run all tests**:
+
+```powershell
+# Run VeriHash tests
+Invoke-Pester -Path "Tests\VeriHash.Tests.ps1" -Output Detailed
+
+# Run QuickHash tests
+Invoke-Pester -Path "Tests\QuickHash.Tests.ps1" -Output Detailed
+
+# Run all tests in the Tests directory
+Invoke-Pester -Path "Tests\" -Output Detailed
+```
+
+**Run PSScriptAnalyzer**:
+
+```powershell
+# Analyze VeriHash.ps1
+Invoke-ScriptAnalyzer -Path ".\VeriHash.ps1" -Settings PSGallery
+
+# Analyze QuickHash.ps1
+Invoke-ScriptAnalyzer -Path ".\QuickHash.ps1" -Settings PSGallery
+```
+
+**Test Coverage**:
+
+- **VeriHash.ps1**: Multiple test categories including hash verification, clipboard detection, sidecar files, and multi-file verification
+- **QuickHash.ps1**: 22 tests covering file hashing, string hashing, algorithm validation, and error handling
+
 ---
 
 ## 📄 License
 
-### Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+### GNU Affero General Public License v3.0 (AGPL-3.0)
 
-You are free to:
+VeriHash is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-- **Share**: Copy and redistribute the material
-- **Adapt**: Remix, transform, and build upon the material
+**Key Permissions:**
 
-Under the following terms:
+- ✅ Commercial use
+- ✅ Modification
+- ✅ Distribution
+- ✅ Patent use
+- ✅ Private use
 
-- **Attribution**: Give appropriate credit
-- **ShareAlike**: Distribute under the same license
+**Conditions:**
 
-[Full License Text](https://creativecommons.org/licenses/by-sa/4.0/)
+- 📝 License and copyright notice
+- 📝 State changes
+- 📝 Disclose source
+- 📝 Network use is distribution (AGPL-specific)
+- 📝 Same license
+
+**Limitations:**
+
+- ⚠️ Liability
+- ⚠️ Warranty
+
+**Important:** If you run a modified version of VeriHash on a network server, you must make the source code available to users of that server.
+
+[Full License Text](LICENSE.md) | [GNU AGPL-3.0 Official](https://www.gnu.org/licenses/agpl-3.0.html)
+
+Author is utilizing the Official unmodified Markdown Version
+[GNU AGPL-3.0 Official Markdown](https://www.gnu.org/licenses/agpl-3.0.md)
+Retrieved: 2025-11-16
 
 ---
 

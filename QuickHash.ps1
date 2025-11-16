@@ -1,3 +1,22 @@
+<#
+    QuickHash.ps1 - Lightweight interactive tool for quick hash calculations
+
+    Copyright (C) 2024-2025 arcticpinecone <arcticpinecone@arcticpinecone.eu>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program. If not, see <https://www.gnu.org/licenses/>.
+#>
+
 # Define the main function to calculate hash
 function Get-Hash {
     param (
@@ -16,7 +35,7 @@ function Get-Hash {
         if (Test-Path -Path $InputValue) {
             # It's a file path, compute hash of the file
             Write-Host "Input is a file. Computing hash of the file..." -ForegroundColor Green
-            $fileContent = Get-Content -Path $InputValue -Encoding Byte -ReadCount 0
+            $fileContent = Get-Content -Path $InputValue -AsByteStream -Raw
             $hash = $null
             switch ($Algorithm) {
                 "MD5" {

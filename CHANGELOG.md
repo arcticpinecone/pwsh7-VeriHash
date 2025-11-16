@@ -4,6 +4,61 @@
 
 ---
 
+### [v1.2.2]
+
+ Version: 1.2.2 - 2025-01-16
+ Testing & Quality Improvements
+
+ NEW FEATURES:
+
+- 🧪 **QuickHash Test Suite**: Added comprehensive Pester tests for QuickHash.ps1
+  - 22 test cases covering all functionality
+  - File hashing validation (MD5 & SHA256)
+  - String hashing validation (MD5 & SHA256)
+  - Known hash verification with test vectors
+  - Algorithm parameter validation
+  - Hash output format verification (32-char MD5, 64-char SHA256)
+  - Special characters and Unicode handling
+  - File vs string detection logic
+  - Error handling and edge cases
+  - Test file: `Tests/QuickHash.Tests.ps1`
+
+ BUG FIXES:
+
+- 🐛 **PowerShell 7 Compatibility**: Fixed deprecated `-Encoding Byte` parameter in QuickHash.ps1
+  - Changed to `-AsByteStream -Raw` for PowerShell 7+ compatibility
+  - QuickHash.ps1 line 19: File reading now uses modern cmdlet parameters
+  - Resolves errors when running on PowerShell 7+
+
+ CODE QUALITY:
+
+- ✅ **PSScriptAnalyzer Validation**: QuickHash.ps1 passes all PSScriptAnalyzer rules
+- ✅ **100% Test Pass Rate**: All 22 Pester tests passing
+- 📊 **Test Coverage**: Comprehensive coverage of all QuickHash functionality
+  - File hashing (5 tests)
+  - String hashing (7 tests)
+  - Algorithm validation (4 tests)
+  - Error handling (1 test)
+  - File vs string logic (2 tests)
+  - Script validation (3 tests)
+
+ COMPATIBILITY:
+
+- ✅ Fully compatible with PowerShell 7.0+
+- ✅ All existing functionality preserved
+- ✅ No breaking changes
+
+ LICENSE CHANGE:
+
+- 📜 **License Update**: Changed from CC-BY-SA-4.0 to AGPL-3.0
+  - Reason: AGPL is designed specifically for software and provides stronger copyleft protections
+  - Network copyleft: Modified versions served over a network must provide source code
+  - Previous versions (v1.2.1 and earlier) remain available under CC-BY-SA-4.0
+  - This ensures the project remains free software with proper legal protections for code
+  - Patent grant and software-specific terms now properly applied
+
+---
+
 ### [v1.0.0]
 
  Version: 1.0.0 - 2024-12-06 🎆🫡
