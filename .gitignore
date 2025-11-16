@@ -5,3 +5,8 @@
 Thumbs.db
 *.sublime-*
 *.lnk
+VeriHash.code-workspace
+.claude/settings.local.json
+.claude/*
+# Exclude test example files but keep actual test files
+Get-Planet.Tests.ps1

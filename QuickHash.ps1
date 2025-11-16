@@ -62,11 +62,6 @@ function Get-Hash {
 
 # Prompt user for input: String or file path
 $userInput = Read-Host "Please enter a string or a file path"
-if (-not (Test-Path -Path $userInput) -and $userInput -match '^[a-zA-Z0-9\s]+$') {
-    $isFile = $false
-} else {
-    $isFile = $true
-}
 
 # Request algorithm choice
 $algorithmChoice = Read-Host "Please choose an algorithm (MD5 or SHA256)"
