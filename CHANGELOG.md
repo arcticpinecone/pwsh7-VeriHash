@@ -4,6 +4,60 @@
 
 ---
 
+### [Unreleased] - v1.2.4
+
+ Version: 1.2.4 - TBD
+ Enhanced Timing Precision & Hash Comparison Clarity
+
+ NEW FEATURES:
+
+- ✨ **`-Force` parameter**: Auto-update sidecars without prompting when hash mismatches are detected
+  - Skips interactive prompt when sidecar exists but has different hash
+  - Usage: `.\VeriHash.ps1 file.exe -Force`
+  - Ideal for automation scripts and batch processing
+- ⏱️ **Millisecond precision in hash time calculations**: Now shows exact timing down to milliseconds
+  - Example: `Hash time:    0.123 second(s)  (123 ms)` for very fast operations
+  - Example: `Hash time:    2.456 second(s)  (2456 ms)` for quick operations
+  - Example: `Hash time:    83.789 second(s)  (01 minutes, 23 seconds, 789 ms)` for longer operations
+- 🕐 **ISO8601 UTC timestamps**: Added precise start/end timestamps for timing comparisons
+  - Start UTC displayed at beginning of operation
+  - End UTC displayed at completion
+  - Both use ISO8601 format with milliseconds (e.g., `2025-11-17T14:30:45.123Z`)
+
+ IMPROVEMENTS:
+
+- 📊 **Enhanced timestamp display**: Dual format for clarity
+  - ISO8601 UTC timestamps for precise timing comparisons
+  - Human-readable "Completed" date for quick reference
+- 🔍 **Improved sidecar match messaging**: Now always shows computed hash and timing, even when sidecar matches
+  - Clear display: "Computed hash: ABC123..." followed by "Sidecar hash: ABC123..."
+  - Match status clearly indicated with visual markers (✅/🚫)
+  - Hash time always displayed so user knows file was actually hashed
+- ⚠️ **Better sidecar mismatch prompts**: More informative and context-aware
+  - Clear explanation of why hashes might differ
+  - Enhanced prompt options: `[U]pdate sidecar / [K]eep existing / [R]ename old & create new / [C]ancel`
+  - Shows both computed and existing hash for comparison
+- 📋 **Clipboard + Sidecar comparison matrix**: Crystal-clear comparison when both exist
+  - File hash displayed as source of truth ("This is what the file is RIGHT NOW")
+  - Separate comparison section showing clipboard vs. sidecar results
+  - Each comparison source (clipboard/sidecar) shows clear match/no-match status
+  - Summary statement explains overall verification results
+
+ UX ENHANCEMENTS:
+
+- 💬 File hash is always labeled as the immutable source of truth
+- 💬 Comparisons are clearly separated from file hash computation
+- 💬 Not overly verbose - compact but crystal clear
+- 💬 Visual hierarchy helps users quickly understand verification results
+
+ COMPATIBILITY:
+
+- ✅ No breaking changes
+- ✅ All existing functionality preserved
+- ✅ `-Force` parameter is optional and backwards compatible
+
+---
+
 ### [v1.2.3]
 
  Version: 1.2.3 - 2025-01-17
