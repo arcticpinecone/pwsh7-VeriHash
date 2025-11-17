@@ -247,6 +247,7 @@ function Get-And-SaveHash {
     param (
         [string]$PathToFile,
         [string]$Algorithm,  # MD5 | SHA256 | SHA512
+        [string]$InputHash,  # Optional clipboard/input hash for comparison
         [switch]$Force
     )
 
@@ -342,17 +343,50 @@ function Get-And-SaveHash {
             Write-Host "  • The file has changed since the sidecar was created" -ForegroundColor Yellow
             Write-Host "  • The sidecar file is incorrect or corrupted" -ForegroundColor Yellow
             Write-Host ""
-            Write-Host "Computed hash: $hashValue" -ForegroundColor Magenta
-            Write-Host "Sidecar hash:  $oldHash" -ForegroundColor Cyan
+
+            # Show the comparison matrix (file hash as source of truth)
+            Write-Host "FILE HASH:      $hashValue  " -NoNewline -ForegroundColor Magenta
+            Write-Host "← This is what the file is RIGHT NOW" -ForegroundColor DarkGray
+            Write-Host ""
+            Write-Host "COMPARISONS:" -ForegroundColor White
+
+            # Show clipboard comparison if we have an input hash
+            if ($InputHash) {
+                Write-Host "  Clipboard:    $InputHash  " -NoNewline -ForegroundColor Yellow
+                if ($hashValue -eq $InputHash) {
+                    Write-Host "✅ Match" -ForegroundColor Green
+                } else {
+                    Write-Host "🚫 Does NOT match" -ForegroundColor Red
+                }
+            }
+
+            # Show sidecar comparison
+            Write-Host "  Sidecar:      $oldHash  " -NoNewline -ForegroundColor Cyan
+            Write-Host "🚫 Does NOT match" -ForegroundColor Red
+            Write-Host ""
+
+            # Context-aware summary
+            if ($InputHash -and ($hashValue -eq $InputHash)) {
+                Write-Host "Since clipboard hash matches the file, the sidecar appears to be wrong." -ForegroundColor Yellow
+            } elseif ($InputHash -and ($hashValue -ne $InputHash)) {
+                Write-Host "Both clipboard and sidecar differ from the file. Investigation needed." -ForegroundColor Yellow
+            }
             Write-Host ""
 
             # Prompt the user
             $userChoice = Read-Host "[U]pdate sidecar / [K]eep existing / [R]ename old & create new / [C]ancel (Use -Force to auto-update)"
+
+            # Add visual separator after user choice
+            Write-Host ""
+            Write-Host "---" -ForegroundColor Cyan
+
             switch -Regex ($userChoice) {
                 '^u' {
                     # Update/Overwrite
                     Set-Content -Path $hashFilePath -Value $hashContent -Force
                     Write-Host "✅ Updated sidecar file with new hash." -ForegroundColor Green
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
                     return [pscustomobject]@{
                         Algorithm     = $Algorithm
                         Hash          = $hashValue
@@ -369,6 +403,8 @@ function Get-And-SaveHash {
                     $newName = $hashFileName + ".old"
                     Rename-Item -Path $hashFilePath -NewName $newName -ErrorAction SilentlyContinue
                     Write-Host "📝 Renamed existing sidecar to '$newName' and created new one." -ForegroundColor Yellow
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
                     Set-Content -Path $hashFilePath -Value $hashContent -Force
                     return [pscustomobject]@{
                         Algorithm     = $Algorithm
@@ -384,6 +420,8 @@ function Get-And-SaveHash {
                 '^k' {
                     # Keep existing
                     Write-Host "Kept existing sidecar. No changes made." -ForegroundColor Cyan
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
                     return [pscustomobject]@{
                         Algorithm     = $Algorithm
                         Hash          = $hashValue
@@ -398,6 +436,8 @@ function Get-And-SaveHash {
                 default {
                     # Cancel
                     Write-Host "Cancelled. Sidecar left as-is." -ForegroundColor Cyan
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
                     return [pscustomobject]@{
                         Algorithm     = $Algorithm
                         Hash          = $hashValue
@@ -553,7 +593,7 @@ function Invoke-HashFile {
                 # Compute and verify the detected algorithm
                 Write-Host "`n[Hash Verification - $detectedAlgorithm]" -ForegroundColor White
                 Write-Host "Computing $detectedAlgorithm hash..." -ForegroundColor Cyan
-                $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm -Force:$Force
+                $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm -InputHash $InputHash -Force:$Force
 
                 # Format hash time
                 $totalMs = [int]$resVerify.Duration.TotalMilliseconds
@@ -671,6 +711,7 @@ function Invoke-HashFile {
             foreach ($alg in $algorithmsToCompute) {
                 Write-Host "`n[Hash - $alg]" -ForegroundColor White
                 Write-Host "Computing $alg hash..." -ForegroundColor Cyan
+                # Note: We don't pass InputHash here because it's for a different algorithm
                 $res = Get-And-SaveHash -PathToFile $FilePath -Algorithm $alg -Force:$Force
 
                 # Format hash time
