@@ -10,3 +10,4 @@ VeriHash.code-workspace
 .claude/*
 # Exclude test example files but keep actual test files
 Get-Planet.Tests.ps1
+tmp/*

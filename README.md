@@ -4,14 +4,73 @@
 
 ## A modern, cross-platform PowerShell tool for computing and verifying file hashes
 
-[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
 ---
 
-## 🚀 What's New in v1.2.2
+### [v1.2.3]
+
+ Version: 1.2.3 - 2025-01-17
+ Documentation & Testing Improvements
+
+ NEW FEATURES:
+
+- 🧪 **Profile & SendTo Integration Tests**: Added comprehensive test suite for user-facing features
+  - 22 Pester tests covering PowerShell Profile and Windows SendTo functionality
+  - Profile creation, loading, and function availability validation
+  - SendTo shortcut creation and properties verification
+  - Execution policy and profile access scenario testing
+  - Edge cases and troubleshooting validation
+  - Test file: `Tests/ProfileAndSendTo.Tests.ps1`
+  - 100% test pass rate (22/22 tests passing)
+
+ DOCUMENTATION IMPROVEMENTS:
+
+- 📚 **PowerShell Profile Integration Troubleshooting**: Added comprehensive troubleshooting section
+  - Command not found after adding to profile - reload solutions
+  - "Cannot find path" error when opening profile - alternative editors
+  - "Running scripts is disabled" - execution policy fixes with detailed explanations
+  - Profile exists but function doesn't work - step-by-step diagnostics
+  - 55+ lines of troubleshooting guidance
+
+- 📚 **Windows SendTo Menu Integration Documentation**: Complete new section (115+ lines)
+  - Quick automated setup instructions
+  - Detailed explanation of what gets created
+  - SendTo vs Profile comparison table
+  - Design decision documentation (-NoProfile intentional choice)
+  - Comprehensive troubleshooting for 4 common scenarios:
+    - Shortcut not appearing after creation
+    - Wrong directory issues
+    - Missing icon handling
+    - Error scenarios with solutions
+  - Recreating shortcut instructions
+
+- 📚 **Enhanced Testing Documentation**: Updated Running Tests section
+  - Added Test-All.ps1 as recommended quick method
+  - Pester version verification instructions
+  - Enhanced test coverage documentation
+  - ProfileAndSendTo.Tests.ps1 added to test file list
+  - Pester 5.x syntax troubleshooting note
+
+ TESTING INFRASTRUCTURE:
+
+- ⚙️ **Test-All.ps1 Coverage**: Automatically runs all tests including new ProfileAndSendTo tests
+- 📊 **Test Documentation**: Clear separation of quick method vs individual test methods
+- ✅ **Quality Assurance**: All edge cases documented with validation strategies
+
+ COMPATIBILITY:
+
+- ✅ No breaking changes
+- ✅ All features backwards compatible
+- ✅ Documentation follows project standards
+- ✅ 220+ lines of new user-facing guidance
+
+---
+
+## 🚀 What was new in v1.2.2?
 
 **Testing improvements and PowerShell 7 compatibility!**
 
@@ -368,6 +427,179 @@ Add VeriHash to your PowerShell profile for quick access from anywhere.
    . $PROFILE
    ```
 
+### ⚠️ Troubleshooting Profile Integration
+
+#### Problem: `verihash` command not found after adding to profile
+
+**Solution**: PowerShell only loads your profile when it starts. Make sure to reload it:
+
+```powershell
+. $PROFILE
+```
+
+Or restart your PowerShell terminal completely.
+
+#### Problem: "Cannot find path" error when trying to open profile with notepad
+
+**Solution**: Use a different editor or let PowerShell create and open it:
+
+```powershell
+# Windows - Use VSCode instead of Notepad (if installed)
+code $PROFILE
+
+# Or use PowerShell ISE
+powershell_ise $PROFILE
+
+# Or use Out-File to edit programmatically
+Add-Content -Path $PROFILE -Value @'
+function verihash {
+    & "C:\Path\To\VeriHash\VeriHash.ps1" @args
+}
+'@
+```
+
+#### Problem: "Running scripts is disabled on this system"
+
+**Solution**: Your execution policy is too restrictive. Run this ONCE to allow profile scripts:
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Explanation:**
+
+- `RemoteSigned` allows local scripts to run and downloaded scripts to run if they're signed
+- `-Scope CurrentUser` applies only to your user account, not system-wide
+- This is the recommended setting for PowerShell 7
+
+If you get an error about needing admin rights, try:
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+```
+
+#### Problem: Profile exists but `verihash` still doesn't work
+
+**Diagnostic steps:**
+
+1. Check if profile exists: `Test-Path $PROFILE`
+2. Verify profile contains the function: `Get-Content $PROFILE`
+3. Manually load profile: `. $PROFILE`
+4. Check if function was loaded: `Get-Command verihash`
+5. Verify the path in the function points to your VeriHash.ps1 location
+
+---
+
+## 🪟 Windows SendTo Menu Integration
+
+Add VeriHash directly to Windows Explorer's context menu for quick access.
+
+### Quick Setup (Automated)
+
+```powershell
+# Navigate to VeriHash directory, then run:
+.\VeriHash.ps1 -SendTo
+```
+
+That's it! Right-click any file → **Send To** → **VeriHash**
+
+### What Gets Created
+
+The `-SendTo` flag creates a shortcut at:
+
+```text
+C:\Users\YourUsername\AppData\Roaming\Microsoft\Windows\SendTo\VeriHash.lnk
+```
+
+This shortcut:
+
+- Points to PowerShell 7 (`pwsh.exe`)
+- Launches VeriHash with the selected file
+- Includes the icon from your VeriHash directory (if available)
+- Uses `-ExecutionPolicy Bypass` for reliability
+
+### ⚠️ Important: SendTo vs Profile Differences
+
+| Feature | Profile (`verihash` function) | SendTo Menu |
+|---------|-------------------------------|------------|
+| **How to use** | Type `verihash filename.exe` in PowerShell | Right-click file → Send To |
+| **Requires profile?** | ✅ Yes, must be loaded | ❌ No |
+| **Profile aliases available?** | ✅ Yes | ❌ No (`-NoProfile` mode) |
+| **Execution policy check** | Uses current policy | Includes `Bypass` flag |
+| **Good for** | Terminal users, scripting | File Explorer users |
+
+**Key Point**: SendTo uses `-NoProfile` intentionally. This means:
+
+- SendTo works even if your profile has errors
+- SendTo works even if execution policy is restrictive
+- BUT you cannot use custom profile functions or aliases through SendTo
+- This is a reliability design choice, not a limitation
+
+### Troubleshooting SendTo
+
+#### Problem: SendTo shortcut not appearing after running `-SendTo`
+
+**Solution:**
+
+1. Close and reopen Windows Explorer
+2. Navigate to any file
+3. Right-click → **Send To** → Look for **VeriHash**
+
+If still not visible:
+
+```powershell
+# Verify the shortcut was created
+Test-Path "$env:AppData\Microsoft\Windows\SendTo\VeriHash.lnk"
+
+# If it exists, try re-creating it
+.\VeriHash.ps1 -SendTo
+```
+
+#### Problem: SendTo works but opens in the wrong directory
+
+**Solution**: VeriHash uses the location of selected file automatically. The shortcut's working directory is set to the VeriHash script directory for reference.
+
+#### Problem: SendTo shortcut is missing the VeriHash icon
+
+**Solution**: This happens if the `Icons` folder is missing or moved. The script shows a warning but creates the shortcut anyway with the default icon.
+
+To fix:
+
+1. Ensure `Icons\VeriHash_256.ico` exists in your VeriHash directory
+2. Recreate the shortcut: `.\VeriHash.ps1 -SendTo`
+
+#### Problem: SendTo shortcut throws an error when clicked
+
+**Common causes:**
+
+1. VeriHash script path changed → Update the shortcut path
+2. PowerShell 7 not installed → Install from Microsoft Store or [GitHub](https://github.com/PowerShell/PowerShell)
+3. File is on network drive → Some network shares have permission issues
+
+**Solution:**
+
+```powershell
+# Recreate the shortcut (it will use current PowerShell 7 path)
+.\VeriHash.ps1 -SendTo
+
+# Verify the shortcut points to correct location
+$shell = New-Object -ComObject WScript.Shell
+$shortcut = $shell.CreateShortcut("$env:AppData\Microsoft\Windows\SendTo\VeriHash.lnk")
+Write-Host "TargetPath: $($shortcut.TargetPath)"
+Write-Host "Arguments: $($shortcut.Arguments)"
+```
+
+### Recreating the SendTo Shortcut
+
+If you move your VeriHash directory or update PowerShell, recreate the shortcut:
+
+```powershell
+cd path\to\VeriHash
+.\VeriHash.ps1 -SendTo
+```
+
+This will overwrite the old shortcut with updated paths.
+
 ---
 
 ## 💼 Use Cases
@@ -522,21 +754,40 @@ VeriHash includes comprehensive Pester tests to ensure code quality and reliabil
 **Prerequisites**:
 
 ```powershell
-# Install Pester (if not already installed)
-Install-Module -Name Pester -Force -SkipPublisherCheck
+# Install or update Pester to latest version
+Install-Module Pester -Force -SkipPublisherCheck
+
+# Import and verify version
+Import-Module Pester -PassThru
+# Should show version 5.x or higher
 ```
 
 **Run all tests**:
 
+**Quick method** (recommended):
+
 ```powershell
-# Run VeriHash tests
-Invoke-Pester -Path "Tests\VeriHash.Tests.ps1" -Output Detailed
+# Run all tests and code quality checks in one command
+.\Test-All.ps1
+```
+
+**Individual test methods**:
+
+```powershell
+# Import the latest Pester version
+Import-Module Pester -Force
+
+# Run VeriHash core functionality tests
+Invoke-Pester -Path "Tests\VeriHash.Tests.ps1"
 
 # Run QuickHash tests
-Invoke-Pester -Path "Tests\QuickHash.Tests.ps1" -Output Detailed
+Invoke-Pester -Path "Tests\QuickHash.Tests.ps1"
+
+# Run Profile & SendTo integration tests (Windows only)
+Invoke-Pester -Path "Tests\ProfileAndSendTo.Tests.ps1"
 
 # Run all tests in the Tests directory
-Invoke-Pester -Path "Tests\" -Output Detailed
+Invoke-Pester -Path "Tests\"
 ```
 
 **Run PSScriptAnalyzer**:
@@ -553,6 +804,13 @@ Invoke-ScriptAnalyzer -Path ".\QuickHash.ps1" -Settings PSGallery
 
 - **VeriHash.ps1**: Multiple test categories including hash verification, clipboard detection, sidecar files, and multi-file verification
 - **QuickHash.ps1**: 22 tests covering file hashing, string hashing, algorithm validation, and error handling
+- **ProfileAndSendTo.Tests.ps1**: Integration tests for PowerShell Profile setup and Windows SendTo menu functionality (22 tests)
+  - Profile creation, loading, and function availability
+  - SendTo shortcut creation and properties
+  - Execution policy and profile access scenarios
+  - Edge cases and troubleshooting validation
+
+**Note on Pester Version**: VeriHash uses Pester 5.x syntax. If you see errors about `BeforeAll` location, update Pester with `Install-Module Pester -Force`.
 
 ---
 

@@ -4,58 +4,62 @@
 
 ---
 
-### [v1.2.2]
+### [v1.2.3]
 
- Version: 1.2.2 - 2025-01-16
- Testing & Quality Improvements
+ Version: 1.2.3 - 2025-01-17
+ Documentation & Testing Improvements
 
  NEW FEATURES:
 
-- 🧪 **QuickHash Test Suite**: Added comprehensive Pester tests for QuickHash.ps1
-  - 22 test cases covering all functionality
-  - File hashing validation (MD5 & SHA256)
-  - String hashing validation (MD5 & SHA256)
-  - Known hash verification with test vectors
-  - Algorithm parameter validation
-  - Hash output format verification (32-char MD5, 64-char SHA256)
-  - Special characters and Unicode handling
-  - File vs string detection logic
-  - Error handling and edge cases
-  - Test file: `Tests/QuickHash.Tests.ps1`
+- 🧪 **Profile & SendTo Integration Tests**: Added comprehensive test suite for user-facing features
+  - 22 Pester tests covering PowerShell Profile and Windows SendTo functionality
+  - Profile creation, loading, and function availability validation
+  - SendTo shortcut creation and properties verification
+  - Execution policy and profile access scenario testing
+  - Edge cases and troubleshooting validation
+  - Test file: `Tests/ProfileAndSendTo.Tests.ps1`
+  - 100% test pass rate (22/22 tests passing)
 
- BUG FIXES:
+ DOCUMENTATION IMPROVEMENTS:
 
-- 🐛 **PowerShell 7 Compatibility**: Fixed deprecated `-Encoding Byte` parameter in QuickHash.ps1
-  - Changed to `-AsByteStream -Raw` for PowerShell 7+ compatibility
-  - QuickHash.ps1 line 19: File reading now uses modern cmdlet parameters
-  - Resolves errors when running on PowerShell 7+
+- 📚 **PowerShell Profile Integration Troubleshooting**: Added comprehensive troubleshooting section
+  - Command not found after adding to profile - reload solutions
+  - "Cannot find path" error when opening profile - alternative editors
+  - "Running scripts is disabled" - execution policy fixes with detailed explanations
+  - Profile exists but function doesn't work - step-by-step diagnostics
+  - 55+ lines of troubleshooting guidance
 
- CODE QUALITY:
+- 📚 **Windows SendTo Menu Integration Documentation**: Complete new section (115+ lines)
+  - Quick automated setup instructions
+  - Detailed explanation of what gets created
+  - SendTo vs Profile comparison table
+  - Design decision documentation (-NoProfile intentional choice)
+  - Comprehensive troubleshooting for 4 common scenarios:
+    - Shortcut not appearing after creation
+    - Wrong directory issues
+    - Missing icon handling
+    - Error scenarios with solutions
+  - Recreating shortcut instructions
 
-- ✅ **PSScriptAnalyzer Validation**: QuickHash.ps1 passes all PSScriptAnalyzer rules
-- ✅ **100% Test Pass Rate**: All 22 Pester tests passing
-- 📊 **Test Coverage**: Comprehensive coverage of all QuickHash functionality
-  - File hashing (5 tests)
-  - String hashing (7 tests)
-  - Algorithm validation (4 tests)
-  - Error handling (1 test)
-  - File vs string logic (2 tests)
-  - Script validation (3 tests)
+- 📚 **Enhanced Testing Documentation**: Updated Running Tests section
+  - Added Test-All.ps1 as recommended quick method
+  - Pester version verification instructions
+  - Enhanced test coverage documentation
+  - ProfileAndSendTo.Tests.ps1 added to test file list
+  - Pester 5.x syntax troubleshooting note
+
+ TESTING INFRASTRUCTURE:
+
+- ⚙️ **Test-All.ps1 Coverage**: Automatically runs all tests including new ProfileAndSendTo tests
+- 📊 **Test Documentation**: Clear separation of quick method vs individual test methods
+- ✅ **Quality Assurance**: All edge cases documented with validation strategies
 
  COMPATIBILITY:
 
-- ✅ Fully compatible with PowerShell 7.0+
-- ✅ All existing functionality preserved
 - ✅ No breaking changes
-
- LICENSE CHANGE:
-
-- 📜 **License Update**: Changed from CC-BY-SA-4.0 to AGPL-3.0
-  - Reason: AGPL is designed specifically for software and provides stronger copyleft protections
-  - Network copyleft: Modified versions served over a network must provide source code
-  - Previous versions (v1.2.1 and earlier) remain available under CC-BY-SA-4.0
-  - This ensures the project remains free software with proper legal protections for code
-  - Patent grant and software-specific terms now properly applied
+- ✅ All features backwards compatible
+- ✅ Documentation follows project standards
+- ✅ 220+ lines of new user-facing guidance
 
 ---
 
@@ -239,3 +243,60 @@
 - ✅ Fully compatible with GNU coreutils checksum file format
 - ✅ Can verify files created by `sha256sum`, `sha512sum`, and `md5sum`
 - ✅ Supports both text mode (`hash  filename`) and binary mode (`hash *filename`) formats
+
+---
+
+### [v1.2.2]
+
+ Version: 1.2.2 - 2025-01-16
+ Testing & Quality Improvements
+
+ NEW FEATURES:
+
+- 🧪 **QuickHash Test Suite**: Added comprehensive Pester tests for QuickHash.ps1
+  - 22 test cases covering all functionality
+  - File hashing validation (MD5 & SHA256)
+  - String hashing validation (MD5 & SHA256)
+  - Known hash verification with test vectors
+  - Algorithm parameter validation
+  - Hash output format verification (32-char MD5, 64-char SHA256)
+  - Special characters and Unicode handling
+  - File vs string detection logic
+  - Error handling and edge cases
+  - Test file: `Tests/QuickHash.Tests.ps1`
+
+ BUG FIXES:
+
+- 🐛 **PowerShell 7 Compatibility**: Fixed deprecated `-Encoding Byte` parameter in QuickHash.ps1
+  - Changed to `-AsByteStream -Raw` for PowerShell 7+ compatibility
+  - QuickHash.ps1 line 19: File reading now uses modern cmdlet parameters
+  - Resolves errors when running on PowerShell 7+
+
+ CODE QUALITY:
+
+- ✅ **PSScriptAnalyzer Validation**: QuickHash.ps1 passes all PSScriptAnalyzer rules
+- ✅ **100% Test Pass Rate**: All 22 Pester tests passing
+- 📊 **Test Coverage**: Comprehensive coverage of all QuickHash functionality
+  - File hashing (5 tests)
+  - String hashing (7 tests)
+  - Algorithm validation (4 tests)
+  - Error handling (1 test)
+  - File vs string logic (2 tests)
+  - Script validation (3 tests)
+
+ COMPATIBILITY:
+
+- ✅ Fully compatible with PowerShell 7.0+
+- ✅ All existing functionality preserved
+- ✅ No breaking changes
+
+ LICENSE CHANGE:
+
+- 📜 **License Update**: Changed from CC-BY-SA-4.0 to AGPL-3.0
+  - Reason: AGPL is designed specifically for software and provides stronger copyleft protections
+  - Network copyleft: Modified versions served over a network must provide source code
+  - Previous versions (v1.2.1 and earlier) remain available under CC-BY-SA-4.0
+  - This ensures the project remains free software with proper legal protections for code
+  - Patent grant and software-specific terms now properly applied
+
+---
