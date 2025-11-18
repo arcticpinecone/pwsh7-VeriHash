@@ -4,14 +4,48 @@
 
 ## A modern, cross-platform PowerShell tool for computing and verifying file hashes
 
-[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-1.2.5-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
 ---
 
-### [v1.2.4] (Current)
+### [v1.2.5] (Current)
+
+**Version: 1.2.5 - 2025-11-18**
+**Critical Bug Fixes & Enhanced Batch Wrapper**
+
+**CRITICAL BUG FIX:**
+
+- 🐛 **Fixed sidecar file format bug**: Sidecar files now use the correct standard Unix format
+  - **Before:** `filename.ext  HASHVALUE` (incorrect, caused "Invalid format" errors)
+  - **After:** `HASHVALUE  filename.ext` (correct, standard format)
+  - **Impact:** Right-click → Send To → VeriHash on `.sha256` files now works correctly!
+  - **Backward compatibility:** Can still read old-format sidecar files automatically
+
+**NEW FEATURES:**
+
+- ✨ **`-NoPause` parameter**: Skip the 'Press Enter to continue...' prompt at the end
+  - Ideal for batch file integration and automation
+  - Usage: `.\VeriHash.ps1 file.exe -NoPause`
+
+- 📂 **Enhanced batch wrapper v1.2.0**:
+  - Auto-detects hash file extensions (`.sha256`, `.md5`, `.sha512`, `.sha2`, `.sha2_256`)
+  - Automatically enables `-OnlyVerify` mode when a hash sidecar file is opened
+  - Checks PATH first for PowerShell 7 (better performance)
+  - Perfect for Windows file associations and Send To functionality
+
+**IMPROVEMENTS:**
+
+- 🔍 **Smarter sidecar parsing**: Automatically detects hash position (first or last) in sidecar files
+- 📝 **Better documentation**: Updated help text to include `-NoPause` parameter
+
+[See full changelog](CHANGELOG.md)
+
+---
+
+### [v1.2.4] (Previous)
 
 **Version: 1.2.4 - 2025-01-17**
 **Enhanced Testing, Bug Fixes, UX Improvements & Performance Analysis Tools**
