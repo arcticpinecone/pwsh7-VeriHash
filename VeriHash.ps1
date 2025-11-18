@@ -74,6 +74,9 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$Force,
 
+    [Parameter(Mandatory = $false)]
+    [switch]$SkipSignatureCheck,
+
     [Alias("h", "?")]
     [Parameter(Mandatory = $false)]
     [switch]$Help
@@ -81,6 +84,28 @@ param (
 
 # Initialize variables early
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
+
+# File extensions that support Authenticode signatures
+$script:SignableExtensions = @(
+    # Windows PE executables and libraries
+    '.exe', '.dll', '.sys', '.ocx', '.cpl', '.scr',
+
+    # Windows installers and packages
+    '.msi', '.msix', '.appx', '.cab',
+
+    # Scripts that support Authenticode
+    '.ps1', '.psm1', '.psd1', '.ps1xml',
+    '.vbs', '.vbe', '.js', '.jse', '.wsf'
+)
+
+# File extensions that CAN be signed, but NOT with Authenticode
+$script:NonAuthenticodeSignableExtensions = @(
+    '.jar',          # Java signing (jarsigner)
+    '.apk', '.aab',  # Android signing
+    '.app', '.ipa',  # Apple signing
+    '.pkg', '.dmg',  # macOS signing
+    '.pdf'           # PDF digital signatures
+)
 
 # Handle common help flags (--help, -h, /?, etc.) that might have been passed as FilePath
 $helpFlags = @('--help', '--Help', '-h', '-H', '/?', '/h', '/H', 'help', 'HELP')
@@ -92,18 +117,19 @@ if ($FilePath -in $helpFlags) {
 # Handle Help parameter
 if ($Help) {
     Write-Host "VeriHash.ps1 - A tool to compute and verify file hashes (MD5, SHA256, SHA512)." -ForegroundColor Green
-    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-Force] [-SendTo] [-Help]" -ForegroundColor Cyan
+    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-Force] [-SkipSignatureCheck] [-SendTo] [-Help]" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Parameters:" -ForegroundColor White
-    Write-Host "  FilePath          : Path to the file to hash or verify." -ForegroundColor Yellow
-    Write-Host "  -Hash, -InputHash : Provide a MD5, SHA256, or SHA512 hash for verification." -ForegroundColor Yellow
-    Write-Host "  -Algorithm        : Specify which hash(es) to compute: MD5, SHA256, SHA512, or All." -ForegroundColor Yellow
-    Write-Host "                      Can specify multiple (e.g., -Algorithm MD5,SHA512)." -ForegroundColor Yellow
-    Write-Host "                      Default: SHA256 (if no -Hash provided)" -ForegroundColor Yellow
-    Write-Host "  -OnlyVerify       : Only verify the provided hash, don't compute additional hashes." -ForegroundColor Yellow
-    Write-Host "  -Force            : Auto-update sidecars without prompting when hash mismatches detected." -ForegroundColor Yellow
-    Write-Host "  -SendTo           : Creates a SendTo shortcut for easy access (Windows only)." -ForegroundColor Yellow
-    Write-Host "  -Help             : Displays this help message." -ForegroundColor Yellow
+    Write-Host "  FilePath             : Path to the file to hash or verify." -ForegroundColor Yellow
+    Write-Host "  -Hash, -InputHash    : Provide a MD5, SHA256, or SHA512 hash for verification." -ForegroundColor Yellow
+    Write-Host "  -Algorithm           : Specify which hash(es) to compute: MD5, SHA256, SHA512, or All." -ForegroundColor Yellow
+    Write-Host "                         Can specify multiple (e.g., -Algorithm MD5,SHA512)." -ForegroundColor Yellow
+    Write-Host "                         Default: SHA256 (if no -Hash provided)" -ForegroundColor Yellow
+    Write-Host "  -OnlyVerify          : Only verify the provided hash, don't compute additional hashes." -ForegroundColor Yellow
+    Write-Host "  -Force               : Auto-update sidecars without prompting when hash mismatches detected." -ForegroundColor Yellow
+    Write-Host "  -SkipSignatureCheck  : Skip digital signature verification (faster for small files)." -ForegroundColor Yellow
+    Write-Host "  -SendTo              : Creates a SendTo shortcut for easy access (Windows only)." -ForegroundColor Yellow
+    Write-Host "  -Help                : Displays this help message." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor White
     Write-Host "  .\VeriHash.ps1 'C:\file.txt'                              # Compute SHA256" -ForegroundColor Cyan
@@ -112,6 +138,7 @@ if ($Help) {
     Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Algorithm MD5,SHA512       # Compute MD5 and SHA512" -ForegroundColor Cyan
     Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Algorithm All              # Compute all hash types" -ForegroundColor Cyan
     Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Force                      # Auto-update sidecar if mismatch" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -SkipSignatureCheck         # Skip signature check (faster)" -ForegroundColor Cyan
     Write-Host "  .\VeriHash.ps1 -SendTo                                   # Install SendTo shortcut" -ForegroundColor Cyan
     return
 }
@@ -327,8 +354,8 @@ function Get-And-SaveHash {
                 Algorithm     = $Algorithm
                 Hash          = $hashValue
                 Sidecar       = $hashFilePath
-                SidecarHash   = $oldHash
-                SidecarMatch  = $false
+                SidecarHash   = $hashValue  # Now contains the updated hash
+                SidecarMatch  = $true       # Now matches since we just updated it
                 Duration      = $hashDuration
                 SidecarExists = $true
                 ForceUpdated  = $true
@@ -391,8 +418,8 @@ function Get-And-SaveHash {
                         Algorithm     = $Algorithm
                         Hash          = $hashValue
                         Sidecar       = $hashFilePath
-                        SidecarHash   = $oldHash
-                        SidecarMatch  = $false
+                        SidecarHash   = $hashValue  # Now contains the updated hash
+                        SidecarMatch  = $true       # Now matches since we just updated it
                         Duration      = $hashDuration
                         SidecarExists = $true
                         UserUpdated   = $true
@@ -410,8 +437,8 @@ function Get-And-SaveHash {
                         Algorithm     = $Algorithm
                         Hash          = $hashValue
                         Sidecar       = $hashFilePath
-                        SidecarHash   = $oldHash
-                        SidecarMatch  = $false
+                        SidecarHash   = $hashValue  # Now contains the new hash
+                        SidecarMatch  = $true       # New sidecar matches the file hash
                         Duration      = $hashDuration
                         SidecarExists = $true
                         UserRenamed   = $true
@@ -463,7 +490,8 @@ function Invoke-HashFile {
         [string]$InputHash,
         [string[]]$Algorithm,
         [switch]$OnlyVerify,
-        [switch]$Force
+        [switch]$Force,
+        [switch]$SkipSignatureCheck
     )
 
     # Only check clipboard if no InputHash was explicitly provided
@@ -502,11 +530,14 @@ function Invoke-HashFile {
 
     try {
         # Current times
-        $currentUTC   = Get-Date -AsUTC
-        $currentLocal = Get-Date
+        $currentUTC = Get-Date -AsUTC
 
         Write-Host "Start UTC:    $($currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" -ForegroundColor Cyan
         Write-Host "---" -ForegroundColor Cyan
+
+        # Start timing immediately after displaying Start UTC
+        # This ensures "Total time" matches the Start UTC → End UTC delta
+        $startTime = Get-Date
 
         # If user gave us a sidecar file, verify it (regardless of -Hash parameter)
         if ($isVerificationFile) {
@@ -540,20 +571,33 @@ function Invoke-HashFile {
 
             Write-Host "---" -ForegroundColor Cyan
 
-            # Check digital signature if file < 1GB and running on Windows
-            if ($fileInfo.Length -lt 1GB) {
+            # Check digital signature (unless -SkipSignatureCheck is specified)
+            if (-not $SkipSignatureCheck) {
                 if ($RunningOnWindows) {
-                    try {
-                        $signature = Get-AuthenticodeSignature -FilePath $FilePath
-                        if ($signature.Status -eq 'Valid') {
-                            Write-Host "Digitally Signed?:       True ✅" -ForegroundColor Green
-                            Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
-                        } else {
-                            Write-Host "Digitally Signed?:       False 🚫" -ForegroundColor Red
+                    $fileExtension = $fileInfo.Extension.ToLower()
+
+                    if ($fileExtension -in $script:SignableExtensions) {
+                        # File supports Authenticode - check it
+                        try {
+                            $signature = Get-AuthenticodeSignature -FilePath $FilePath
+                            if ($signature.Status -eq 'Valid') {
+                                Write-Host "Digitally Signed?:       True ✅" -ForegroundColor Green
+                                Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
+                            } else {
+                                Write-Host "Digitally Signed?:       False 🚫" -ForegroundColor Red
+                            }
+                        }
+                        catch {
+                            Write-Host "Error retrieving signature: $_" -ForegroundColor Yellow
                         }
                     }
-                    catch {
-                        Write-Host "Error retrieving signature: $_" -ForegroundColor Yellow
+                    elseif ($fileExtension -in $script:NonAuthenticodeSignableExtensions) {
+                        # File can be signed, but not with Authenticode
+                        Write-Host "Digitally Signed?:       N/A (non-Authenticode signature format) ⚪" -ForegroundColor Gray
+                    }
+                    else {
+                        # File cannot be signed at all
+                        Write-Host "Digitally Signed?:       N/A (file type cannot be signed) ⚪" -ForegroundColor Gray
                     }
                 }
                 else {
@@ -561,9 +605,10 @@ function Invoke-HashFile {
                 }
                 Write-Host "---" -ForegroundColor Cyan
             }
-
-            # Start computing
-            $startTime = Get-Date
+            elseif ($SkipSignatureCheck) {
+                Write-Host "Digitally Signed?:       Skipped (SkipSignatureCheck enabled) 🚫" -ForegroundColor Yellow
+                Write-Host "---" -ForegroundColor Cyan
+            }
 
             ###################################################################
             # Determine which algorithms to compute
@@ -596,7 +641,6 @@ function Invoke-HashFile {
                 $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm -InputHash $InputHash -Force:$Force
 
                 # Format hash time
-                $totalMs = [int]$resVerify.Duration.TotalMilliseconds
                 $minutes = [int]$resVerify.Duration.TotalMinutes
                 $seconds = $resVerify.Duration.Seconds
                 $ms = $resVerify.Duration.Milliseconds
@@ -660,7 +704,12 @@ function Invoke-HashFile {
                 }
 
                 Write-Host ""
-                Write-Host "Saved to:       $($resVerify.Sidecar)" -ForegroundColor Green
+                # Show appropriate label based on whether sidecar was updated
+                if ($resVerify.SidecarMatch) {
+                    Write-Host "Sidecar path:   $($resVerify.Sidecar)" -ForegroundColor Green
+                } else {
+                    Write-Host "Saved to:       $($resVerify.Sidecar)" -ForegroundColor Green
+                }
 
                 # If -OnlyVerify is set, we're done - don't compute additional hashes
                 if ($OnlyVerify) {
@@ -715,7 +764,6 @@ function Invoke-HashFile {
                 $res = Get-And-SaveHash -PathToFile $FilePath -Algorithm $alg -Force:$Force
 
                 # Format hash time
-                $totalMs = [int]$res.Duration.TotalMilliseconds
                 $minutes = [int]$res.Duration.TotalMinutes
                 $seconds = $res.Duration.Seconds
                 $ms = $res.Duration.Milliseconds
@@ -730,14 +778,16 @@ function Invoke-HashFile {
                     Write-Host "Sidecar hash:   $($res.SidecarHash)" -ForegroundColor Cyan
                     if ($res.SidecarMatch) {
                         Write-Host "✅ Sidecar matches! No update needed." -ForegroundColor Green
+                        Write-Host "Sidecar path:   $($res.Sidecar)" -ForegroundColor Green
                     } else {
                         if ($res.ForceUpdated) {
                             Write-Host "⚡ Force mode: Automatically updated sidecar with new hash." -ForegroundColor Yellow
                         }
+                        Write-Host "Saved to:       $($res.Sidecar)" -ForegroundColor Green
                     }
+                } else {
+                    Write-Host "Saved to:       $($res.Sidecar)" -ForegroundColor Green
                 }
-
-                Write-Host "Saved to:       $($res.Sidecar)" -ForegroundColor Green
             }
 
             ###################################################################
@@ -752,7 +802,6 @@ function Invoke-HashFile {
             Write-Host "End UTC:        $($endUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" -ForegroundColor Cyan
 
             # Format total hash time with milliseconds
-            $totalMs = [int]$duration.TotalMilliseconds
             $minutes = [int]$duration.TotalMinutes
             $seconds = $duration.Seconds
             $ms = $duration.Milliseconds
@@ -870,4 +919,4 @@ if ($FilePath) {
 }
 
 # Finally, run the main function
-Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify -Force:$Force
+Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify -Force:$Force -SkipSignatureCheck:$SkipSignatureCheck

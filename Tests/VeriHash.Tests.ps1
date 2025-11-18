@@ -329,6 +329,274 @@ Describe 'Multiple Algorithm Testing' {
     }
 }
 
+Describe 'Sidecar Update and Match Detection' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When sidecar already exists and matches' {
+        It 'Returns SidecarMatch=true and does not update file' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create initial sidecar
+            $firstResult = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Act - Run again without changing the file
+            $secondResult = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Assert
+            $secondResult.SidecarMatch | Should -Be $true
+            $secondResult.SidecarExists | Should -Be $true
+            $secondResult.Hash | Should -Be $firstResult.Hash
+            $secondResult.SidecarHash | Should -Be $firstResult.Hash
+        }
+
+        It 'Does not have UserUpdated or ForceUpdated flags when sidecar matches' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create initial sidecar
+            $firstResult = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Act - Run again
+            $secondResult = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Assert
+            $secondResult.PSObject.Properties.Name | Should -Not -Contain 'UserUpdated'
+            $secondResult.PSObject.Properties.Name | Should -Not -Contain 'ForceUpdated'
+        }
+    }
+
+    Context 'When sidecar exists with wrong hash and -Force is used' {
+        It 'Auto-updates sidecar and returns SidecarMatch=true' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongHash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
+
+            # Act - Run with -Force flag
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+
+            # Assert - Should have updated the sidecar
+            $result.SidecarMatch | Should -Be $true
+            $result.ForceUpdated | Should -Be $true
+            $result.SidecarHash | Should -Be $result.Hash
+            $result.Hash | Should -Not -Be $wrongHash
+
+            # Verify file was actually updated
+            $sidecarContent = (Get-Content $sidecarPath -Raw).Trim()
+            $sidecarContent | Should -Match $result.Hash
+            $sidecarContent | Should -Not -Match $wrongHash
+        }
+
+        It 'Sets SidecarHash to new hash value after Force update' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongHash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+
+            # Assert - SidecarHash should now contain the NEW hash, not the old one
+            $result.SidecarHash | Should -Be $result.Hash
+            $result.SidecarHash | Should -Not -Be $wrongHash
+        }
+    }
+
+    Context 'When sidecar exists with wrong hash (no Force flag)' {
+        It 'Returns SidecarMatch=false and shows mismatch' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Get the real hash first
+            $realHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongHash = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
+
+            # Act - Mock Read-Host to simulate user choosing "Keep"
+            Mock Read-Host { return 'k' }
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+
+            # Assert
+            $result.SidecarMatch | Should -Be $false
+            $result.SidecarExists | Should -Be $true
+            $result.Hash | Should -Be $realHash
+            $result.SidecarHash | Should -Be $wrongHash
+            $result.UserKept | Should -Be $true
+        }
+    }
+}
+
+Describe 'Clipboard and Sidecar Interaction' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When both clipboard and sidecar contain hashes' {
+        It 'Detects when clipboard matches file but sidecar does not' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Get the real hash
+            $realHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongHash = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
+
+            # Act - Pass the correct hash as InputHash (simulating clipboard)
+            Mock Read-Host { return 'k' }  # User chooses to keep
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -InputHash $realHash
+
+            # Assert
+            $result.Hash | Should -Be $realHash
+            $result.SidecarHash | Should -Be $wrongHash
+            $result.SidecarMatch | Should -Be $false
+            # InputHash matches computed hash (would show in output)
+        }
+
+        It 'Detects when both clipboard and sidecar are wrong' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Get the real hash
+            $realHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongSidecarHash = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongSidecarHash"
+
+            # Different wrong hash for "clipboard"
+            $wrongClipboardHash = "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+
+            # Act
+            Mock Read-Host { return 'k' }  # User chooses to keep
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -InputHash $wrongClipboardHash
+
+            # Assert
+            $result.Hash | Should -Be $realHash
+            $result.Hash | Should -Not -Be $wrongClipboardHash
+            $result.SidecarHash | Should -Be $wrongSidecarHash
+            $result.SidecarMatch | Should -Be $false
+        }
+    }
+}
+
+Describe 'Force Parameter Behavior' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When using -Force with various scenarios' {
+        It 'Does not prompt user when Force is enabled' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongHash = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
+
+            # Act - Should NOT prompt user
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+
+            # Assert - Should have ForceUpdated flag
+            $result.ForceUpdated | Should -Be $true
+            $result.SidecarMatch | Should -Be $true
+        }
+
+        It 'Updates sidecar file content when Force is used' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+            $realHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $wrongHash = "0000000000000000000000000000000000000000000000000000000000000000"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
+
+            # Act
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+
+            # Assert - File should contain the real hash now
+            $sidecarContent = (Get-Content $sidecarPath -Raw).Trim()
+            $sidecarContent | Should -Match $realHash
+            $sidecarContent | Should -Not -Match $wrongHash
+        }
+    }
+}
+
+Describe 'Sidecar Match Property After Updates' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'Regression test for SidecarMatch property after user updates' {
+        It 'Returns SidecarMatch=true after Force update (not stale false value)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  BADBADBADBADBADBADBADBADBADBADBADBADBADBADBADBADBADBADBADBADBAD"
+
+            # Act - Force update
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+
+            # Assert - This was the bug: SidecarMatch was returning false even after update
+            $result.SidecarMatch | Should -Be $true
+            $result.ForceUpdated | Should -Be $true
+        }
+
+        It 'SidecarHash contains NEW hash after update, not old hash' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+            $realHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Create sidecar with wrong hash
+            $sidecarPath = "$testFile.sha256"
+            $oldHash = "1111111111111111111111111111111111111111111111111111111111111111"
+            Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $oldHash"
+
+            # Act - Force update
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+
+            # Assert - SidecarHash should be updated to match the file
+            $result.SidecarHash | Should -Be $realHash
+            $result.SidecarHash | Should -Not -Be $oldHash
+            $result.Hash | Should -Be $result.SidecarHash
+        }
+    }
+}
+
 Describe 'Help System' {
     Context 'When requesting help documentation' {
         It 'Displays help with -Help flag' {
@@ -384,6 +652,265 @@ Describe 'Help System' {
             $outputString | Should -Match '-Algorithm'
             $outputString | Should -Match '-OnlyVerify'
             $outputString | Should -Match '-SendTo'
+        }
+
+        It 'Help output includes -Force parameter' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -Help *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match '-Force'
+        }
+
+        It 'Help output includes -SkipSignatureCheck parameter' {
+            # Arrange & Act
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -Help *>&1
+
+            # Assert
+            $outputString = $output | Out-String
+            $outputString | Should -Match '-SkipSignatureCheck'
+        }
+    }
+}
+
+Describe 'SkipSignatureCheck Parameter' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When using -SkipSignatureCheck parameter' {
+        It 'Skips digital signature verification when flag is provided' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show signature was skipped
+            $outputString | Should -Match 'Skipped \(SkipSignatureCheck enabled\)'
+        }
+
+        It 'Does not skip signature check when flag is NOT provided' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show signature check happened (on Windows) or was skipped for platform reasons (non-Windows)
+            # On Windows, should show either "True" or "False" for signature
+            # On non-Windows, should show platform skip message
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'Digitally Signed\?:'
+            } else {
+                $outputString | Should -Match 'Skipped \(Authenticode signatures are not supported'
+            }
+        }
+
+        It 'Hashing still works correctly when signature check is skipped' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Get expected hash
+            $expectedHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should still compute hash correctly
+            $outputString | Should -Match $expectedHash
+            $outputString | Should -Match 'Computed hash:'
+        }
+
+        It 'SkipSignatureCheck works with other parameters' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Use with -Algorithm parameter, capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -Algorithm MD5 -SkipSignatureCheck *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert
+            $outputString | Should -Match 'Skipped \(SkipSignatureCheck enabled\)'
+            $outputString | Should -Match 'MD5'
+        }
+    }
+}
+
+Describe 'Smart Signature Detection' {
+    AfterEach {
+        # Clean up test files
+        Get-ChildItem -Path $script:TestOutputDir -ErrorAction SilentlyContinue | Remove-Item -Force
+    }
+
+    Context 'When checking Authenticode-signable files' {
+        It 'Checks signature for .exe files' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.exe"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should check signature (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'Digitally Signed\?:'
+                $outputString | Should -Not -Match 'N/A \(file type cannot be signed\)'
+                $outputString | Should -Not -Match 'N/A \(non-Authenticode signature format\)'
+            }
+        }
+
+        It 'Checks signature for .ps1 files' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.ps1"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should check signature (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'Digitally Signed\?:'
+                $outputString | Should -Not -Match 'N/A \(file type cannot be signed\)'
+                $outputString | Should -Not -Match 'N/A \(non-Authenticode signature format\)'
+            }
+        }
+
+        It 'Checks signature for .dll files' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.dll"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should check signature (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'Digitally Signed\?:'
+                $outputString | Should -Not -Match 'N/A \(file type cannot be signed\)'
+                $outputString | Should -Not -Match 'N/A \(non-Authenticode signature format\)'
+            }
+        }
+    }
+
+    Context 'When checking non-Authenticode signable files' {
+        It 'Shows N/A for .jar files (non-Authenticode format)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.jar"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show N/A for non-Authenticode (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'N/A \(non-Authenticode signature format\)'
+            }
+        }
+
+        It 'Shows N/A for .pdf files (non-Authenticode format)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.pdf"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show N/A for non-Authenticode (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'N/A \(non-Authenticode signature format\)'
+            }
+        }
+
+        It 'Shows N/A for .apk files (non-Authenticode format)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.apk"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show N/A for non-Authenticode (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'N/A \(non-Authenticode signature format\)'
+            }
+        }
+    }
+
+    Context 'When checking non-signable files' {
+        It 'Shows N/A for .txt files (cannot be signed)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.txt"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show N/A (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'N/A \(file type cannot be signed\)'
+            }
+        }
+
+        It 'Shows N/A for .json files (cannot be signed)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.json"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show N/A (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'N/A \(file type cannot be signed\)'
+            }
+        }
+
+        It 'Shows N/A for .jpg files (cannot be signed)' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.jpg"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should show N/A (on Windows)
+            if ($IsWindows -or $PSVersionTable.Platform -eq 'Win32NT') {
+                $outputString | Should -Match 'N/A \(file type cannot be signed\)'
+            }
+        }
+
+        It 'Still computes hash correctly for non-signable files' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "test.txt"
+            Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
+            $expectedHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
+
+            # Act - Capture all output streams
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $outputString = ($output | Out-String)
+
+            # Assert - Should still compute hash correctly
+            $outputString | Should -Match $expectedHash
+            $outputString | Should -Match 'Computed hash:'
         }
     }
 }
