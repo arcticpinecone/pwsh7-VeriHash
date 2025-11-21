@@ -3,25 +3,22 @@ setlocal EnableDelayedExpansion
 
 rem VeriHash-OpenWith.bat
 rem Wrapper script for VeriHash.ps1 to handle Windows Send To functionality
-rem Version 1.1.0
+rem Version 1.2.0
 
-rem Find PowerShell 7
+rem Find PowerShell 7 - Check PATH first for better performance
 set PWSH=
-if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" (
+where pwsh.exe >nul 2>&1
+if !ERRORLEVEL! == 0 (
+    set PWSH=pwsh.exe
+) else if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" (
     set PWSH="%ProgramFiles%\PowerShell\7\pwsh.exe"
 ) else if exist "%ProgramFiles(x86)%\PowerShell\7\pwsh.exe" (
     set PWSH="%ProgramFiles(x86)%\PowerShell\7\pwsh.exe"
 ) else (
-    rem Try to find pwsh in PATH
-    where pwsh.exe >nul 2>&1
-    if !ERRORLEVEL! == 0 (
-        set PWSH=pwsh.exe
-    ) else (
-        echo ERROR: PowerShell 7 not found. Please install it from:
-        echo https://github.com/PowerShell/PowerShell/releases
-        pause
-        exit /b 1
-    )
+    echo ERROR: PowerShell 7 not found. Please install it from:
+    echo https://github.com/PowerShell/PowerShell/releases
+    pause
+    exit /b 1
 )
 
 rem Get the script path
@@ -47,11 +44,20 @@ if "%FILEPATH%"=="" (
 rem Remove quotes from filepath if they exist
 set FILEPATH=%FILEPATH:"=%
 
+rem Detect hash file extensions for auto-verify mode
+set VERIFY_FLAG=
+set FILE_EXT=%~x1
+if /i "%FILE_EXT%"==".sha256" set VERIFY_FLAG=-OnlyVerify
+if /i "%FILE_EXT%"==".sha2" set VERIFY_FLAG=-OnlyVerify
+if /i "%FILE_EXT%"==".sha2_256" set VERIFY_FLAG=-OnlyVerify
+if /i "%FILE_EXT%"==".md5" set VERIFY_FLAG=-OnlyVerify
+if /i "%FILE_EXT%"==".sha512" set VERIFY_FLAG=-OnlyVerify
+
 rem Re-add quotes to handle spaces in path
 set FILEPATH="%FILEPATH%"
 
-rem Forward the file path to VeriHash.ps1 with NoPause flag
-%PWSH% -NoProfile -ExecutionPolicy Bypass -File %SCRIPT% -FilePath %FILEPATH% -NoPause
+rem Forward the file path to VeriHash.ps1 with NoPause flag and auto-verify if hash file
+%PWSH% -NoProfile -ExecutionPolicy Bypass -File %SCRIPT% -FilePath %FILEPATH% -NoPause %VERIFY_FLAG%
 
 :end
 set EXITCODE=%ERRORLEVEL%

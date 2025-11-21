@@ -19,8 +19,8 @@
     ============================================================================
 
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Updated: November 17, 2025
-    Version: 1.2.4
+    Updated: November 18, 2025
+    Version: 1.2.5
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -77,6 +77,9 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$SkipSignatureCheck,
 
+    [Parameter(Mandatory = $false)]
+    [switch]$NoPause,
+
     [Alias("h", "?")]
     [Parameter(Mandatory = $false)]
     [switch]$Help
@@ -117,7 +120,7 @@ if ($FilePath -in $helpFlags) {
 # Handle Help parameter
 if ($Help) {
     Write-Host "VeriHash.ps1 - A tool to compute and verify file hashes (MD5, SHA256, SHA512)." -ForegroundColor Green
-    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-Force] [-SkipSignatureCheck] [-SendTo] [-Help]" -ForegroundColor Cyan
+    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-Force] [-SkipSignatureCheck] [-NoPause] [-SendTo] [-Help]" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Parameters:" -ForegroundColor White
     Write-Host "  FilePath             : Path to the file to hash or verify." -ForegroundColor Yellow
@@ -128,6 +131,7 @@ if ($Help) {
     Write-Host "  -OnlyVerify          : Only verify the provided hash, don't compute additional hashes." -ForegroundColor Yellow
     Write-Host "  -Force               : Auto-update sidecars without prompting when hash mismatches detected." -ForegroundColor Yellow
     Write-Host "  -SkipSignatureCheck  : Skip digital signature verification (faster for small files)." -ForegroundColor Yellow
+    Write-Host "  -NoPause             : Skip the 'Press Enter to continue...' prompt at the end." -ForegroundColor Yellow
     Write-Host "  -SendTo              : Creates a SendTo shortcut for easy access (Windows only)." -ForegroundColor Yellow
     Write-Host "  -Help                : Displays this help message." -ForegroundColor Yellow
     Write-Host ""
@@ -304,8 +308,8 @@ function Get-And-SaveHash {
     $hashFileName = "$baseName$extension$ext"
     $hashFilePath = Join-Path -Path $fileInfo.DirectoryName -ChildPath $hashFileName
 
-    # Prepare the new content: "filename.ext  HASHVALUE"
-    $hashContent = "$($fileInfo.Name)  $hashValue"
+    # Prepare the new content: "HASHVALUE  filename.ext" (standard Unix format)
+    $hashContent = "$hashValue  $($fileInfo.Name)"
 
     # 1) If sidecar doesn't exist, just create it
     if (-not (Test-Path $hashFilePath)) {
@@ -323,12 +327,17 @@ function Get-And-SaveHash {
 
     # 2) If a sidecar *does* exist, let's see what's inside
     $oldContent = (Get-Content $hashFilePath -Raw).Trim()
-    # Typically sidecar is "filename.ext  ABC123..."
-    $oldParts = $oldContent -split '\s+(?=[A-Fa-f0-9]+$)'
-    # We'll assume the second part is the old hash
+    # Standard format is "HASHVALUE  filename.ext" (Unix style)
+    # But support legacy format "filename.ext  HASHVALUE" for backward compatibility
+    $oldParts = $oldContent -split '\s+'
     [string]$oldHash = $null
-    if ($oldParts.Count -eq 2) {
-        $oldHash = $oldParts[1].ToUpper()
+
+    # Try to find which part is the hash by checking if it's all hex
+    foreach ($part in $oldParts) {
+        if ($part -match '^[A-Fa-f0-9]{32,128}$') {
+            $oldHash = $part.ToUpper()
+            break
+        }
     }
 
     $sidecarMatches = ($oldHash -eq $hashValue)
@@ -491,7 +500,8 @@ function Invoke-HashFile {
         [string[]]$Algorithm,
         [switch]$OnlyVerify,
         [switch]$Force,
-        [switch]$SkipSignatureCheck
+        [switch]$SkipSignatureCheck,
+        [switch]$NoPause
     )
 
     # Only check clipboard if no InputHash was explicitly provided
@@ -812,7 +822,7 @@ function Invoke-HashFile {
         Write-Error "An error occurred: $_"
     }
 
-    if ($Host.Name -eq 'ConsoleHost') {
+    if (-not $NoPause -and $Host.Name -eq 'ConsoleHost') {
         Read-Host -Prompt "Press Enter to continue..."
     }
 }
@@ -919,4 +929,4 @@ if ($FilePath) {
 }
 
 # Finally, run the main function
-Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify -Force:$Force -SkipSignatureCheck:$SkipSignatureCheck
+Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify -Force:$Force -SkipSignatureCheck:$SkipSignatureCheck -NoPause:$NoPause

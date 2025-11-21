@@ -7,7 +7,61 @@
 
 ---
 
-### [v1.2.4] (Current)
+### [v1.2.5] (Current)
+
+ Version: 1.2.5 - 2025-11-18
+ Critical Bug Fixes & Enhanced Batch Wrapper
+
+ CRITICAL BUG FIX:
+
+- 🐛 **Fixed sidecar file format bug**: Sidecar files now use the correct standard Unix format
+  - **Before:** VeriHash created files in format `filename.ext  HASHVALUE` but expected to read `HASHVALUE  filename.ext`
+  - **After:** VeriHash creates files in standard format `HASHVALUE  filename.ext` (Unix/GNU coreutils compatible)
+  - **Impact:** This bug prevented proper verification when using right-click → Send To → VeriHash on `.sha256` files
+  - **Error seen:** `WARNING: Invalid format in line: VeriHash_1024.ico  3EB53E0...` followed by 0 passed files
+  - **Backward compatibility:** VeriHash can still read old-format sidecar files automatically
+  - **Fixed in:** VeriHash.ps1:312 (write format) and VeriHash.ps1:336-341 (smart parsing for both formats)
+
+ NEW FEATURES:
+
+- ✨ **`-NoPause` parameter**: Skip the 'Press Enter to continue...' prompt at the end of execution
+  - Ideal for batch file integration and automation scripts
+  - Usage: `.\VeriHash.ps1 file.exe -NoPause`
+  - Useful when called from batch wrappers or scheduled tasks
+- 📂 **Enhanced batch wrapper v1.2.0** (`VeriHash-OpenWith.bat`):
+  - **Auto-detect hash files:** Automatically recognizes `.sha256`, `.md5`, `.sha512`, `.sha2`, `.sha2_256` file extensions
+  - **Auto-verify mode:** Automatically enables `-OnlyVerify` flag when a hash sidecar file is opened
+  - **Performance optimization:** Checks PATH first for PowerShell 7 before checking Program Files locations
+  - **Better integration:** Perfect for Windows file associations and Send To functionality
+  - Now you can right-click a `.sha256` file and it will automatically verify the referenced file!
+
+ IMPROVEMENTS:
+
+- 🔍 **Smarter sidecar parsing**: Detects hash regardless of position (hash-first or filename-first) in sidecar files
+  - Uses regex pattern `^[A-Fa-f0-9]{32,128}$` to identify which part is the hash
+  - Supports both standard format (hash first) and legacy format (filename first)
+  - More robust handling of different sidecar file formats
+- 📝 **Updated help text**: Documented new `-NoPause` parameter in help output and examples
+- 🔧 **Batch wrapper integration**: VeriHash.ps1 now properly integrates with the enhanced batch wrapper
+
+ MERGE NOTES:
+
+This release represents the successful merge of two development branches:
+- Base: `claude/fix-verihash-timestamp-01BGad5gzg2VXAKJkF8ry4rN` (v1.2.4 with all advanced features)
+- Enhancements: `claude/review-batch-wrapper-01EfrB1RBhfMhnfF286DoFwD` (batch wrapper improvements)
+
+All features from v1.2.4 are preserved, including:
+- `-Force` parameter for auto-updating sidecars
+- `-SkipSignatureCheck` parameter for performance
+- Smart signature detection
+- Performance profiling tools
+- Comprehensive test suite (91 tests)
+- Millisecond-precision timing
+- ISO8601 UTC timestamps
+
+---
+
+### [v1.2.4] (Previous)
 
  Version: 1.2.4 - 2025-11-17
  Enhanced Testing, Bug Fixes, UX Improvements & Performance Analysis Tools
