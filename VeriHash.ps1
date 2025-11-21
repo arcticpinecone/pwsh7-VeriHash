@@ -19,8 +19,8 @@
     ============================================================================
 
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Updated: November 17, 2025
-    Version: 1.2.3
+    Updated: November 18, 2025
+    Version: 1.2.5
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -71,6 +71,15 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$SendTo,
 
+    [Parameter(Mandatory = $false)]
+    [switch]$Force,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$SkipSignatureCheck,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$NoPause,
+
     [Alias("h", "?")]
     [Parameter(Mandatory = $false)]
     [switch]$Help
@@ -78,6 +87,28 @@ param (
 
 # Initialize variables early
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
+
+# File extensions that support Authenticode signatures
+$script:SignableExtensions = @(
+    # Windows PE executables and libraries
+    '.exe', '.dll', '.sys', '.ocx', '.cpl', '.scr',
+
+    # Windows installers and packages
+    '.msi', '.msix', '.appx', '.cab',
+
+    # Scripts that support Authenticode
+    '.ps1', '.psm1', '.psd1', '.ps1xml',
+    '.vbs', '.vbe', '.js', '.jse', '.wsf'
+)
+
+# File extensions that CAN be signed, but NOT with Authenticode
+$script:NonAuthenticodeSignableExtensions = @(
+    '.jar',          # Java signing (jarsigner)
+    '.apk', '.aab',  # Android signing
+    '.app', '.ipa',  # Apple signing
+    '.pkg', '.dmg',  # macOS signing
+    '.pdf'           # PDF digital signatures
+)
 
 # Handle common help flags (--help, -h, /?, etc.) that might have been passed as FilePath
 $helpFlags = @('--help', '--Help', '-h', '-H', '/?', '/h', '/H', 'help', 'HELP')
@@ -89,17 +120,20 @@ if ($FilePath -in $helpFlags) {
 # Handle Help parameter
 if ($Help) {
     Write-Host "VeriHash.ps1 - A tool to compute and verify file hashes (MD5, SHA256, SHA512)." -ForegroundColor Green
-    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-SendTo] [-Help]" -ForegroundColor Cyan
+    Write-Host "Usage: .\VeriHash.ps1 [FilePath] [-Hash <Hash>] [-Algorithm <Alg>] [-OnlyVerify] [-Force] [-SkipSignatureCheck] [-NoPause] [-SendTo] [-Help]" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Parameters:" -ForegroundColor White
-    Write-Host "  FilePath          : Path to the file to hash or verify." -ForegroundColor Yellow
-    Write-Host "  -Hash, -InputHash : Provide a MD5, SHA256, or SHA512 hash for verification." -ForegroundColor Yellow
-    Write-Host "  -Algorithm        : Specify which hash(es) to compute: MD5, SHA256, SHA512, or All." -ForegroundColor Yellow
-    Write-Host "                      Can specify multiple (e.g., -Algorithm MD5,SHA512)." -ForegroundColor Yellow
-    Write-Host "                      Default: SHA256 (if no -Hash provided)" -ForegroundColor Yellow
-    Write-Host "  -OnlyVerify       : Only verify the provided hash, don't compute additional hashes." -ForegroundColor Yellow
-    Write-Host "  -SendTo           : Creates a SendTo shortcut for easy access (Windows only)." -ForegroundColor Yellow
-    Write-Host "  -Help             : Displays this help message." -ForegroundColor Yellow
+    Write-Host "  FilePath             : Path to the file to hash or verify." -ForegroundColor Yellow
+    Write-Host "  -Hash, -InputHash    : Provide a MD5, SHA256, or SHA512 hash for verification." -ForegroundColor Yellow
+    Write-Host "  -Algorithm           : Specify which hash(es) to compute: MD5, SHA256, SHA512, or All." -ForegroundColor Yellow
+    Write-Host "                         Can specify multiple (e.g., -Algorithm MD5,SHA512)." -ForegroundColor Yellow
+    Write-Host "                         Default: SHA256 (if no -Hash provided)" -ForegroundColor Yellow
+    Write-Host "  -OnlyVerify          : Only verify the provided hash, don't compute additional hashes." -ForegroundColor Yellow
+    Write-Host "  -Force               : Auto-update sidecars without prompting when hash mismatches detected." -ForegroundColor Yellow
+    Write-Host "  -SkipSignatureCheck  : Skip digital signature verification (faster for small files)." -ForegroundColor Yellow
+    Write-Host "  -NoPause             : Skip the 'Press Enter to continue...' prompt at the end." -ForegroundColor Yellow
+    Write-Host "  -SendTo              : Creates a SendTo shortcut for easy access (Windows only)." -ForegroundColor Yellow
+    Write-Host "  -Help                : Displays this help message." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor White
     Write-Host "  .\VeriHash.ps1 'C:\file.txt'                              # Compute SHA256" -ForegroundColor Cyan
@@ -107,6 +141,8 @@ if ($Help) {
     Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Hash 'ABC...' -OnlyVerify  # Only verify, no extra hashing" -ForegroundColor Cyan
     Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Algorithm MD5,SHA512       # Compute MD5 and SHA512" -ForegroundColor Cyan
     Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Algorithm All              # Compute all hash types" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -Force                      # Auto-update sidecar if mismatch" -ForegroundColor Cyan
+    Write-Host "  .\VeriHash.ps1 'C:\file.txt' -SkipSignatureCheck         # Skip signature check (faster)" -ForegroundColor Cyan
     Write-Host "  .\VeriHash.ps1 -SendTo                                   # Install SendTo shortcut" -ForegroundColor Cyan
     return
 }
@@ -241,12 +277,21 @@ function Get-ClipboardHash {
 function Get-And-SaveHash {
     param (
         [string]$PathToFile,
-        [string]$Algorithm  # MD5 | SHA256 | SHA512
+        [string]$Algorithm,  # MD5 | SHA256 | SHA512
+        [string]$InputHash,  # Optional clipboard/input hash for comparison
+        [switch]$Force
     )
+
+    # Start timing
+    $hashStartTime = Get-Date
 
     # Use built-in Get-FileHash
     $fileHash = Get-FileHash -Path $PathToFile -Algorithm $Algorithm
     $hashValue = $fileHash.Hash.ToUpper()
+
+    # End timing
+    $hashEndTime = Get-Date
+    $hashDuration = $hashEndTime - $hashStartTime
 
     # Decide extension
     switch ($Algorithm) {
@@ -263,65 +308,185 @@ function Get-And-SaveHash {
     $hashFileName = "$baseName$extension$ext"
     $hashFilePath = Join-Path -Path $fileInfo.DirectoryName -ChildPath $hashFileName
 
-    # Prepare the new content: "filename.ext  HASHVALUE"
-    $hashContent = "$($fileInfo.Name)  $hashValue"
+    # Prepare the new content: "HASHVALUE  filename.ext" (standard Unix format)
+    $hashContent = "$hashValue  $($fileInfo.Name)"
 
     # 1) If sidecar doesn't exist, just create it
     if (-not (Test-Path $hashFilePath)) {
         Set-Content -Path $hashFilePath -Value $hashContent -Force
         return [pscustomobject]@{
-            Algorithm = $Algorithm
-            Hash      = $hashValue
-            Sidecar   = $hashFilePath
+            Algorithm     = $Algorithm
+            Hash          = $hashValue
+            Sidecar       = $hashFilePath
+            SidecarHash   = $null
+            SidecarMatch  = $null
+            Duration      = $hashDuration
+            SidecarExists = $false
         }
     }
 
     # 2) If a sidecar *does* exist, let's see what's inside
     $oldContent = (Get-Content $hashFilePath -Raw).Trim()
-    # Typically sidecar is "filename.ext  ABC123..."
-    $oldParts = $oldContent -split '\s+(?=[A-Fa-f0-9]+$)'
-    # We'll assume the second part is the old hash
+    # Standard format is "HASHVALUE  filename.ext" (Unix style)
+    # But support legacy format "filename.ext  HASHVALUE" for backward compatibility
+    $oldParts = $oldContent -split '\s+'
     [string]$oldHash = $null
-    if ($oldParts.Count -eq 2) {
-        $oldHash = $oldParts[1].ToUpper()
-    }
 
-    if ($oldHash -eq $hashValue) {
-        # The existing sidecar already has the same hash
-        Write-Host "Sidecar file '$hashFileName' already matches the computed hash. No update needed." -ForegroundColor Cyan
-    }
-    else {
-        # There's a mismatch
-        Write-Warning "Sidecar file '$hashFileName' already exists but has a different hash!"
-        Write-Host "Existing hash: $oldHash"
-        Write-Host "New hash:      $hashValue"
-        Write-Host ""
-
-        # Prompt the user
-        $userChoice = Read-Host "Overwrite existing sidecar? [Y]es/[N]o/[R]ename"
-        switch -Regex ($userChoice) {
-            '^y' {
-                # Overwrite
-                Set-Content -Path $hashFilePath -Value $hashContent -Force
-                Write-Host "Updated sidecar file with new hash." -ForegroundColor Green
-            }
-            '^r' {
-                # Rename old file so you don't lose it
-                $newName = $hashFileName + ".old"
-                Rename-Item -Path $hashFilePath -NewName $newName -ErrorAction SilentlyContinue
-                Write-Host "Renamed existing sidecar to '$newName' and writing a new one..." -ForegroundColor Yellow
-                Set-Content -Path $hashFilePath -Value $hashContent -Force
-            }
-            default {
-                Write-Host "Skipping overwrite. Sidecar left as-is." -ForegroundColor Cyan
-            }
+    # Try to find which part is the hash by checking if it's all hex
+    foreach ($part in $oldParts) {
+        if ($part -match '^[A-Fa-f0-9]{32,128}$') {
+            $oldHash = $part.ToUpper()
+            break
         }
     }
 
-    return [pscustomobject]@{
-        Algorithm = $Algorithm
-        Hash      = $hashValue
-        Sidecar   = $hashFilePath
+    $sidecarMatches = ($oldHash -eq $hashValue)
+
+    if ($sidecarMatches) {
+        # The existing sidecar already has the same hash - no update needed
+        return [pscustomobject]@{
+            Algorithm     = $Algorithm
+            Hash          = $hashValue
+            Sidecar       = $hashFilePath
+            SidecarHash   = $oldHash
+            SidecarMatch  = $true
+            Duration      = $hashDuration
+            SidecarExists = $true
+        }
+    }
+    else {
+        # There's a mismatch
+        if ($Force) {
+            # Auto-update without prompting
+            Set-Content -Path $hashFilePath -Value $hashContent -Force
+            return [pscustomobject]@{
+                Algorithm     = $Algorithm
+                Hash          = $hashValue
+                Sidecar       = $hashFilePath
+                SidecarHash   = $hashValue  # Now contains the updated hash
+                SidecarMatch  = $true       # Now matches since we just updated it
+                Duration      = $hashDuration
+                SidecarExists = $true
+                ForceUpdated  = $true
+            }
+        }
+        else {
+            # Prompt the user with enhanced options
+            Write-Host ""
+            Write-Warning "Sidecar hash differs from computed hash!"
+            Write-Host ""
+            Write-Host "This means either:" -ForegroundColor Yellow
+            Write-Host "  • The file has changed since the sidecar was created" -ForegroundColor Yellow
+            Write-Host "  • The sidecar file is incorrect or corrupted" -ForegroundColor Yellow
+            Write-Host ""
+
+            # Show the comparison matrix (file hash as source of truth)
+            Write-Host "FILE HASH:      $hashValue  " -NoNewline -ForegroundColor Magenta
+            Write-Host "← This is what the file is RIGHT NOW" -ForegroundColor DarkGray
+            Write-Host ""
+            Write-Host "COMPARISONS:" -ForegroundColor White
+
+            # Show clipboard comparison if we have an input hash
+            if ($InputHash) {
+                Write-Host "  Clipboard:    $InputHash  " -NoNewline -ForegroundColor Yellow
+                if ($hashValue -eq $InputHash) {
+                    Write-Host "✅ Match" -ForegroundColor Green
+                } else {
+                    Write-Host "🚫 Does NOT match" -ForegroundColor Red
+                }
+            }
+
+            # Show sidecar comparison
+            Write-Host "  Sidecar:      $oldHash  " -NoNewline -ForegroundColor Cyan
+            Write-Host "🚫 Does NOT match" -ForegroundColor Red
+            Write-Host ""
+
+            # Context-aware summary
+            if ($InputHash -and ($hashValue -eq $InputHash)) {
+                Write-Host "Since clipboard hash matches the file, the sidecar appears to be wrong." -ForegroundColor Yellow
+            } elseif ($InputHash -and ($hashValue -ne $InputHash)) {
+                Write-Host "Both clipboard and sidecar differ from the file. Investigation needed." -ForegroundColor Yellow
+            }
+            Write-Host ""
+
+            # Prompt the user
+            $userChoice = Read-Host "[U]pdate sidecar / [K]eep existing / [R]ename old & create new / [C]ancel (Use -Force to auto-update)"
+
+            # Add visual separator after user choice
+            Write-Host ""
+            Write-Host "---" -ForegroundColor Cyan
+
+            switch -Regex ($userChoice) {
+                '^u' {
+                    # Update/Overwrite
+                    Set-Content -Path $hashFilePath -Value $hashContent -Force
+                    Write-Host "✅ Updated sidecar file with new hash." -ForegroundColor Green
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
+                    return [pscustomobject]@{
+                        Algorithm     = $Algorithm
+                        Hash          = $hashValue
+                        Sidecar       = $hashFilePath
+                        SidecarHash   = $hashValue  # Now contains the updated hash
+                        SidecarMatch  = $true       # Now matches since we just updated it
+                        Duration      = $hashDuration
+                        SidecarExists = $true
+                        UserUpdated   = $true
+                    }
+                }
+                '^r' {
+                    # Rename old file so you don't lose it
+                    $newName = $hashFileName + ".old"
+                    Rename-Item -Path $hashFilePath -NewName $newName -ErrorAction SilentlyContinue
+                    Write-Host "📝 Renamed existing sidecar to '$newName' and created new one." -ForegroundColor Yellow
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
+                    Set-Content -Path $hashFilePath -Value $hashContent -Force
+                    return [pscustomobject]@{
+                        Algorithm     = $Algorithm
+                        Hash          = $hashValue
+                        Sidecar       = $hashFilePath
+                        SidecarHash   = $hashValue  # Now contains the new hash
+                        SidecarMatch  = $true       # New sidecar matches the file hash
+                        Duration      = $hashDuration
+                        SidecarExists = $true
+                        UserRenamed   = $true
+                    }
+                }
+                '^k' {
+                    # Keep existing
+                    Write-Host "Kept existing sidecar. No changes made." -ForegroundColor Cyan
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
+                    return [pscustomobject]@{
+                        Algorithm     = $Algorithm
+                        Hash          = $hashValue
+                        Sidecar       = $hashFilePath
+                        SidecarHash   = $oldHash
+                        SidecarMatch  = $false
+                        Duration      = $hashDuration
+                        SidecarExists = $true
+                        UserKept      = $true
+                    }
+                }
+                default {
+                    # Cancel
+                    Write-Host "Cancelled. Sidecar left as-is." -ForegroundColor Cyan
+                    Write-Host "---" -ForegroundColor Cyan
+                    Write-Host ""
+                    return [pscustomobject]@{
+                        Algorithm     = $Algorithm
+                        Hash          = $hashValue
+                        Sidecar       = $hashFilePath
+                        SidecarHash   = $oldHash
+                        SidecarMatch  = $false
+                        Duration      = $hashDuration
+                        SidecarExists = $true
+                        UserCancelled = $true
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -333,7 +498,10 @@ function Invoke-HashFile {
         [string]$FilePath,
         [string]$InputHash,
         [string[]]$Algorithm,
-        [switch]$OnlyVerify
+        [switch]$OnlyVerify,
+        [switch]$Force,
+        [switch]$SkipSignatureCheck,
+        [switch]$NoPause
     )
 
     # Only check clipboard if no InputHash was explicitly provided
@@ -372,12 +540,14 @@ function Invoke-HashFile {
 
     try {
         # Current times
-        $currentUTC   = Get-Date -AsUTC
-        $currentLocal = Get-Date
+        $currentUTC = Get-Date -AsUTC
 
-        Write-Host "Universal:    $($currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" -ForegroundColor Cyan
-        Write-Host "Local Sys:    $($currentLocal.ToString("MMMM dd, yyyy")) | $($currentLocal.ToString("HH:mm:ss"))" -ForegroundColor Cyan
+        Write-Host "Start UTC:    $($currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" -ForegroundColor Cyan
         Write-Host "---" -ForegroundColor Cyan
+
+        # Start timing immediately after displaying Start UTC
+        # This ensures "Total time" matches the Start UTC → End UTC delta
+        $startTime = Get-Date
 
         # If user gave us a sidecar file, verify it (regardless of -Hash parameter)
         if ($isVerificationFile) {
@@ -411,20 +581,33 @@ function Invoke-HashFile {
 
             Write-Host "---" -ForegroundColor Cyan
 
-            # Check digital signature if file < 1GB and running on Windows
-            if ($fileInfo.Length -lt 1GB) {
+            # Check digital signature (unless -SkipSignatureCheck is specified)
+            if (-not $SkipSignatureCheck) {
                 if ($RunningOnWindows) {
-                    try {
-                        $signature = Get-AuthenticodeSignature -FilePath $FilePath
-                        if ($signature.Status -eq 'Valid') {
-                            Write-Host "Digitally Signed?:       True ✅" -ForegroundColor Green
-                            Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
-                        } else {
-                            Write-Host "Digitally Signed?:       False 🚫" -ForegroundColor Red
+                    $fileExtension = $fileInfo.Extension.ToLower()
+
+                    if ($fileExtension -in $script:SignableExtensions) {
+                        # File supports Authenticode - check it
+                        try {
+                            $signature = Get-AuthenticodeSignature -FilePath $FilePath
+                            if ($signature.Status -eq 'Valid') {
+                                Write-Host "Digitally Signed?:       True ✅" -ForegroundColor Green
+                                Write-Host ("Signer:       " + $signature.SignerCertificate.Subject) -ForegroundColor Magenta
+                            } else {
+                                Write-Host "Digitally Signed?:       False 🚫" -ForegroundColor Red
+                            }
+                        }
+                        catch {
+                            Write-Host "Error retrieving signature: $_" -ForegroundColor Yellow
                         }
                     }
-                    catch {
-                        Write-Host "Error retrieving signature: $_" -ForegroundColor Yellow
+                    elseif ($fileExtension -in $script:NonAuthenticodeSignableExtensions) {
+                        # File can be signed, but not with Authenticode
+                        Write-Host "Digitally Signed?:       N/A (non-Authenticode signature format) ⚪" -ForegroundColor Gray
+                    }
+                    else {
+                        # File cannot be signed at all
+                        Write-Host "Digitally Signed?:       N/A (file type cannot be signed) ⚪" -ForegroundColor Gray
                     }
                 }
                 else {
@@ -432,9 +615,10 @@ function Invoke-HashFile {
                 }
                 Write-Host "---" -ForegroundColor Cyan
             }
-
-            # Start computing
-            $startTime = Get-Date
+            elseif ($SkipSignatureCheck) {
+                Write-Host "Digitally Signed?:       Skipped (SkipSignatureCheck enabled) 🚫" -ForegroundColor Yellow
+                Write-Host "---" -ForegroundColor Cyan
+            }
 
             ###################################################################
             # Determine which algorithms to compute
@@ -463,11 +647,79 @@ function Invoke-HashFile {
 
                 # Compute and verify the detected algorithm
                 Write-Host "`n[Hash Verification - $detectedAlgorithm]" -ForegroundColor White
-                Write-Host "Input Hash:     $InputHash" -ForegroundColor Yellow
-                $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm
-                Write-Host "Computed Hash:  $($resVerify.Hash)" -ForegroundColor Magenta
-                Test-InputHash -ComputedHash $resVerify.Hash -InputHash $InputHash
-                Write-Host "Saved to:       $($resVerify.Sidecar)" -ForegroundColor Green
+                Write-Host "Computing $detectedAlgorithm hash..." -ForegroundColor Cyan
+                $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm -InputHash $InputHash -Force:$Force
+
+                # Format hash time
+                $minutes = [int]$resVerify.Duration.TotalMinutes
+                $seconds = $resVerify.Duration.Seconds
+                $ms = $resVerify.Duration.Milliseconds
+                $hashTimeStr = "{0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $resVerify.Duration.TotalSeconds, $minutes, $seconds, $ms
+                Write-Host "Hash time:      $hashTimeStr" -ForegroundColor Cyan
+                Write-Host ""
+
+                # Display file hash as source of truth
+                Write-Host "FILE HASH:      $($resVerify.Hash)  " -NoNewline -ForegroundColor Magenta
+                Write-Host "← This is what the file is RIGHT NOW" -ForegroundColor DarkGray
+                Write-Host ""
+
+                # Display comparisons
+                Write-Host "COMPARISONS:" -ForegroundColor White
+
+                # Clipboard comparison
+                Write-Host "  Clipboard:    $InputHash  " -NoNewline -ForegroundColor Yellow
+                if ($resVerify.Hash -eq $InputHash) {
+                    Write-Host "✅ Match" -ForegroundColor Green
+                } else {
+                    Write-Host "🚫 Does NOT match" -ForegroundColor Red
+                }
+
+                # Sidecar comparison (if exists)
+                if ($resVerify.SidecarExists) {
+                    Write-Host "  Sidecar:      $($resVerify.SidecarHash)  " -NoNewline -ForegroundColor Cyan
+                    if ($resVerify.SidecarMatch) {
+                        Write-Host "✅ Match" -ForegroundColor Green
+                    } else {
+                        Write-Host "🚫 Does NOT match" -ForegroundColor Red
+                    }
+                }
+
+                Write-Host ""
+
+                # Summary statement
+                $clipboardMatch = ($resVerify.Hash -eq $InputHash)
+                if ($resVerify.SidecarExists) {
+                    if ($clipboardMatch -and $resVerify.SidecarMatch) {
+                        Write-Host "✅ All verifications passed!" -ForegroundColor Green
+                    } elseif (-not $clipboardMatch -and -not $resVerify.SidecarMatch) {
+                        Write-Host "⚠️  WARNING: File hash differs from BOTH clipboard and sidecar!" -ForegroundColor Red
+                        Write-Host "   The file appears to have changed." -ForegroundColor Yellow
+                        if ($resVerify.ForceUpdated) {
+                            Write-Host "   ⚡ Force mode: Automatically updated sidecar with new hash." -ForegroundColor Yellow
+                        }
+                    } elseif ($clipboardMatch -and -not $resVerify.SidecarMatch) {
+                        Write-Host "⚠️  Clipboard hash matches, but sidecar does not." -ForegroundColor Yellow
+                        if ($resVerify.ForceUpdated) {
+                            Write-Host "   ⚡ Force mode: Automatically updated sidecar with new hash." -ForegroundColor Yellow
+                        }
+                    } else {
+                        Write-Host "⚠️  Sidecar matches, but clipboard hash does not!" -ForegroundColor Yellow
+                    }
+                } else {
+                    if ($clipboardMatch) {
+                        Write-Host "✅ Clipboard hash matches!" -ForegroundColor Green
+                    } else {
+                        Write-Host "⚠️  Clipboard hash does NOT match the file!" -ForegroundColor Red
+                    }
+                }
+
+                Write-Host ""
+                # Show appropriate label based on whether sidecar was updated
+                if ($resVerify.SidecarMatch) {
+                    Write-Host "Sidecar path:   $($resVerify.Sidecar)" -ForegroundColor Green
+                } else {
+                    Write-Host "Saved to:       $($resVerify.Sidecar)" -ForegroundColor Green
+                }
 
                 # If -OnlyVerify is set, we're done - don't compute additional hashes
                 if ($OnlyVerify) {
@@ -517,25 +769,60 @@ function Invoke-HashFile {
             ###################################################################
             foreach ($alg in $algorithmsToCompute) {
                 Write-Host "`n[Hash - $alg]" -ForegroundColor White
-                $res = Get-And-SaveHash -PathToFile $FilePath -Algorithm $alg
-                Write-Host "$alg Hash:  $($res.Hash)" -ForegroundColor Magenta
-                Write-Host "Saved to:   $($res.Sidecar)" -ForegroundColor Green
+                Write-Host "Computing $alg hash..." -ForegroundColor Cyan
+                # Note: We don't pass InputHash here because it's for a different algorithm
+                $res = Get-And-SaveHash -PathToFile $FilePath -Algorithm $alg -Force:$Force
+
+                # Format hash time
+                $minutes = [int]$res.Duration.TotalMinutes
+                $seconds = $res.Duration.Seconds
+                $ms = $res.Duration.Milliseconds
+                $hashTimeStr = "{0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $res.Duration.TotalSeconds, $minutes, $seconds, $ms
+                Write-Host "Hash time:      $hashTimeStr" -ForegroundColor Cyan
+                Write-Host ""
+
+                Write-Host "Computed hash:  $($res.Hash)" -ForegroundColor Magenta
+
+                # Show sidecar status
+                if ($res.SidecarExists) {
+                    Write-Host "Sidecar hash:   $($res.SidecarHash)" -ForegroundColor Cyan
+                    if ($res.SidecarMatch) {
+                        Write-Host "✅ Sidecar matches! No update needed." -ForegroundColor Green
+                        Write-Host "Sidecar path:   $($res.Sidecar)" -ForegroundColor Green
+                    } else {
+                        if ($res.ForceUpdated) {
+                            Write-Host "⚡ Force mode: Automatically updated sidecar with new hash." -ForegroundColor Yellow
+                        }
+                        Write-Host "Saved to:       $($res.Sidecar)" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host "Saved to:       $($res.Sidecar)" -ForegroundColor Green
+                }
             }
 
             ###################################################################
             # Done computing
             ###################################################################
             $endTime  = Get-Date
+            $endUTC   = Get-Date -AsUTC
             $duration = $endTime - $startTime
-            Write-Host "`nCompleted:    $($endTime.ToString("MMMM dd, yyyy | HH:mm:ss"))" -ForegroundColor Cyan
-            Write-Host ("Hash time:    {0:N0} second(s)  ({1})" -f $duration.TotalSeconds, $duration.ToString("mm' minutes, 'ss' seconds'")) -ForegroundColor Cyan
+
+            Write-Host "`n---" -ForegroundColor Cyan
+            Write-Host "Completed:      $($endTime.ToString("MMMM dd, yyyy | HH:mm:ss"))" -ForegroundColor Cyan
+            Write-Host "End UTC:        $($endUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" -ForegroundColor Cyan
+
+            # Format total hash time with milliseconds
+            $minutes = [int]$duration.TotalMinutes
+            $seconds = $duration.Seconds
+            $ms = $duration.Milliseconds
+            Write-Host ("Total time:     {0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $duration.TotalSeconds, $minutes, $seconds, $ms) -ForegroundColor Cyan
         }
     }
     catch {
         Write-Error "An error occurred: $_"
     }
 
-    if ($Host.Name -eq 'ConsoleHost') {
+    if (-not $NoPause -and $Host.Name -eq 'ConsoleHost') {
         Read-Host -Prompt "Press Enter to continue..."
     }
 }
@@ -642,4 +929,4 @@ if ($FilePath) {
 }
 
 # Finally, run the main function
-Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify
+Invoke-HashFile -FilePath $FilePath -InputHash $Hash -Algorithm $Algorithm -OnlyVerify:$OnlyVerify -Force:$Force -SkipSignatureCheck:$SkipSignatureCheck -NoPause:$NoPause

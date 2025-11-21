@@ -1,4 +1,7 @@
 *.sha2_256
+*.sha256
+*.sha512
+*.md5
 *.log
 *.txt
 *.tmp
@@ -11,3 +14,7 @@ VeriHash.code-workspace
 # Exclude test example files but keep actual test files
 Get-Planet.Tests.ps1
 tmp/*
+# Exclude test-generated sidecar files
+Tests/*.sha256
+Tests/*.sha512
+Tests/*.md5
