@@ -96,6 +96,7 @@ Understanding where your time goes:
 | Metadata & I/O | ~50ms (29%) | Negligible |
 
 **Smart Detection Benefits:**
+
 - `.txt`, `.json`, `.jpg` files: **~65% faster** (no signature check needed)
 - `.jar`, `.pdf`, `.apk` files: **~65% faster** (non-Authenticode format auto-detected)
 - `.exe`, `.dll`, `.ps1` files: Normal speed (signature check still performed as intended)
@@ -115,7 +116,6 @@ Understanding where your time goes:
 - 🔍 **Enhanced output clarity**: Better messaging for sidecar matches and updates
 
 [See full changelog](CHANGELOG.md)
-
 
 ---
 
