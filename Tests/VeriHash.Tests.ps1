@@ -212,7 +212,7 @@ Describe 'Get-And-SaveHash' {
             $result.Hash | Should -Match '^[A-F0-9]{128}$'
         }
 
-        It 'Sidecar file contains correct format (filename + two spaces + hash)' {
+        It 'Sidecar file contains correct format (hash + two spaces + filename)' {
             # Arrange
             $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
@@ -222,8 +222,8 @@ Describe 'Get-And-SaveHash' {
 
             # Assert
             $sidecarContent = (Get-Content $result.Sidecar -Raw).Trim()
-            # Format should be: "VeriHash_1024.ico  HASHVALUE"
-            $sidecarContent | Should -Match '^VeriHash_1024\.ico\s{2}[A-F0-9]{64}$'
+            # Format should be: "HASHVALUE  VeriHash_1024.ico" (GNU coreutils format)
+            $sidecarContent | Should -Match '^[A-F0-9]{64}\s{2}VeriHash_1024\.ico$'
         }
     }
 }
@@ -360,7 +360,7 @@ Describe 'Sidecar Update and Match Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Create initial sidecar
-            $firstResult = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
+            Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 | Out-Null
 
             # Act - Run again
             $secondResult = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
@@ -541,7 +541,7 @@ Describe 'Force Parameter Behavior' {
             Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
 
             # Act
-            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+            Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force | Out-Null
 
             # Assert - File should contain the real hash now
             $sidecarContent = (Get-Content $sidecarPath -Raw).Trim()

@@ -1,17 +1,11 @@
 BeforeAll {
     # Import the function we want to test from QuickHash.ps1
     # We use dot-sourcing to load the script
-    $script:QuickHashScriptPath = Join-Path $PSScriptRoot ".." "QuickHash.ps1"
+    $script:QuickHashScriptPath = Join-Path -Path $PSScriptRoot -ChildPath ".." | Join-Path -ChildPath "QuickHash.ps1"
 
     # We need to source the script to get the Get-Hash function
-    # Since the script has interactive prompts at the end, we'll source just the function
-    # by reading and executing only the function definition
-    $scriptContent = Get-Content $script:QuickHashScriptPath -Raw
-
-    # Extract just the Get-Hash function definition
-    if ($scriptContent -match '(?s)(function Get-Hash \{.*?\n\})') {
-        Invoke-Expression $matches[1]
-    }
+    # Dot-source the script to load the function
+    . $script:QuickHashScriptPath
 
     # Setup test file paths
     $script:TestOutputDir = Join-Path $TestDrive "QuickHashTests"
