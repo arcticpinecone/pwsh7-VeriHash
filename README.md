@@ -4,71 +4,94 @@
 
 ## A modern, cross-platform PowerShell tool for computing and verifying file hashes
 
-[![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
 ---
 
-### [v1.2.3]
+### [v1.2.4] (Current)
 
- Version: 1.2.3 - 2025-01-17
- Documentation & Testing Improvements
+**Version: 1.2.4 - 2025-01-17**
+**Enhanced Testing, Bug Fixes, UX Improvements & Performance Analysis Tools**
 
- NEW FEATURES:
+**NEW FEATURES:**
 
-- 🧪 **Profile & SendTo Integration Tests**: Added comprehensive test suite for user-facing features
-  - 22 Pester tests covering PowerShell Profile and Windows SendTo functionality
-  - Profile creation, loading, and function availability validation
-  - SendTo shortcut creation and properties verification
-  - Execution policy and profile access scenario testing
-  - Edge cases and troubleshooting validation
-  - Test file: `Tests/ProfileAndSendTo.Tests.ps1`
-  - 100% test pass rate (22/22 tests passing)
+- ✨ **`-Force` parameter**: Auto-update sidecars without prompting
+  - Ideal for automation scripts and batch processing
+  - Usage: `.\VeriHash.ps1 file.exe -Force`
 
- DOCUMENTATION IMPROVEMENTS:
+- ⚡ **`-SkipSignatureCheck` parameter**: Skip digital signature verification for faster execution
+  - **Why?** Digital signature checks consume ~65% of execution time for small files (typically 110ms overhead)
+  - **When to use:** Batch processing, repeated hashing, automation scripts where speed is critical
+  - **When NOT to use:** When verifying software authenticity is important
+  - Usage: `.\VeriHash.ps1 file.exe -SkipSignatureCheck`
 
-- 📚 **PowerShell Profile Integration Troubleshooting**: Added comprehensive troubleshooting section
-  - Command not found after adding to profile - reload solutions
-  - "Cannot find path" error when opening profile - alternative editors
-  - "Running scripts is disabled" - execution policy fixes with detailed explanations
-  - Profile exists but function doesn't work - step-by-step diagnostics
-  - 55+ lines of troubleshooting guidance
+- 🧠 **Smart signature detection**: Automatically optimizes performance for non-Authenticode files
+  - Intelligently skips signature checks on files that don't support Authenticode signatures
+  - Three categories: ✅ Authenticode-signable (.exe, .dll, .ps1) | ⚪ Non-Authenticode (.jar, .pdf, .apk) | ⚪ Non-signable (.txt, .jpg, .json)
+  - Saves ~110ms per file for non-Authenticode files (65% faster)
+  - Educational: Shows users when files use other signing methods
+  - Works automatically - no configuration needed
 
-- 📚 **Windows SendTo Menu Integration Documentation**: Complete new section (115+ lines)
-  - Quick automated setup instructions
-  - Detailed explanation of what gets created
-  - SendTo vs Profile comparison table
-  - Design decision documentation (-NoProfile intentional choice)
-  - Comprehensive troubleshooting for 4 common scenarios:
-    - Shortcut not appearing after creation
-    - Wrong directory issues
-    - Missing icon handling
-    - Error scenarios with solutions
-  - Recreating shortcut instructions
+- 🔍 **Performance profiling tool**: `Profile-VeriHashTiming.ps1` analyzes execution overhead
+  - Shows exactly where time is spent during hash computation
+  - Returns structured data for programmatic access (Pester testing)
+  - Useful for understanding performance characteristics
+  - Example: `.\Profile-VeriHashTiming.ps1 -FilePath file.exe -Algorithm SHA256`
 
-- 📚 **Enhanced Testing Documentation**: Updated Running Tests section
-  - Added Test-All.ps1 as recommended quick method
-  - Pester version verification instructions
-  - Enhanced test coverage documentation
-  - ProfileAndSendTo.Tests.ps1 added to test file list
-  - Pester 5.x syntax troubleshooting note
+- ⏱️ **Millisecond-precision timing**: Exact hash computation times
+- 🕐 **ISO8601 UTC timestamps**: Start/end timestamps for precise timing comparisons
 
- TESTING INFRASTRUCTURE:
+**BUG FIXES:**
 
-- ⚙️ **Test-All.ps1 Coverage**: Automatically runs all tests including new ProfileAndSendTo tests
-- 📊 **Test Documentation**: Clear separation of quick method vs individual test methods
-- ✅ **Quality Assurance**: All edge cases documented with validation strategies
+- 🐛 **Fixed confusing "Saved to:" text** when sidecar already matched
+- 🐛 **Fixed cached comparison data** after sidecar updates
+- 🐛 **Removed 1GB signature check limit** - Now always checks signatures regardless of file size (unless `-SkipSignatureCheck` is used)
+- 🐛 **Code quality improvements**: Removed unused variables flagged by PSScriptAnalyzer
 
- COMPATIBILITY:
+**PERFORMANCE INSIGHTS:**
 
-- ✅ No breaking changes
-- ✅ All features backwards compatible
-- ✅ Documentation follows project standards
-- ✅ 220+ lines of new user-facing guidance
+Understanding where your time goes:
+
+| Operation | Small Files (< 1KB) | Large Files (> 1GB) |
+|-----------|---------------------|---------------------|
+| Digital Signature Check | ~110ms (65%) | ~110ms (negligible %) |
+| Hash Computation | ~10ms (6%) | Dominant (linear with size) |
+| Metadata & I/O | ~50ms (29%) | Negligible |
+
+**Smart Detection Benefits:**
+- `.txt`, `.json`, `.jpg` files: **~65% faster** (no signature check needed)
+- `.jar`, `.pdf`, `.apk` files: **~65% faster** (non-Authenticode format auto-detected)
+- `.exe`, `.dll`, `.ps1` files: Normal speed (signature check still performed as intended)
+
+**Recommendation:** Smart detection now handles most performance optimization automatically. For Authenticode-compatible files where you still want to skip signature checks, use `-SkipSignatureCheck`. For large files (> 1GB), signature overhead is already negligible.
+
+**TESTING:**
+
+- 🧪 **91 comprehensive tests** (added 32 new tests)
+- ✅ **100% test pass rate** + **PSScriptAnalyzer clean**
+- 📊 **Full coverage** of performance profiling, signature checks, smart detection, and sidecar updates
+
+**IMPROVEMENTS:**
+
+- ⏱️ **Improved timing accuracy**: "Total time" now accurately matches Start UTC → End UTC delta
+- 📊 **Better performance visibility**: Users can understand where execution time is spent
+- 🔍 **Enhanced output clarity**: Better messaging for sidecar matches and updates
+
+[See full changelog](CHANGELOG.md)
+
 
 ---
+
+## 🚀 What was new in v1.2.3?
+
+**Documentation improvements and comprehensive testing!**
+
+- 📚 **Enhanced Documentation**: 220+ lines of troubleshooting guidance
+- 🧪 **Profile & SendTo Tests**: 22 new integration tests for user-facing features
+- ⚙️ **Test-All.ps1**: One command to run all tests and code quality checks
 
 ## 🚀 What was new in v1.2.2?
 
@@ -315,6 +338,8 @@ Summary:
 | `-Hash` / `-InputHash` | String | Hash to verify against |
 | `-Algorithm` | String[] | Algorithms to compute: `MD5`, `SHA256`, `SHA512`, `All` |
 | `-OnlyVerify` | Switch | Only verify provided hash (no extra computations) |
+| `-Force` | Switch | Auto-update sidecars without prompting when mismatches detected |
+| `-SkipSignatureCheck` | Switch | Skip digital signature verification (faster for small files) |
 | `-SendTo` | Switch | Install Windows "Send To" menu shortcut |
 | `-Help` | Switch | Display detailed help message |
 
@@ -329,6 +354,12 @@ Summary:
 
 # Verify without extra hashing
 .\VeriHash.ps1 "firmware.bin" -Hash "E3B0C44..." -OnlyVerify
+
+# Fast hashing for small files (skip signature check)
+.\VeriHash.ps1 "config.json" -SkipSignatureCheck
+
+# Batch processing with Force and SkipSignatureCheck for maximum speed
+.\VeriHash.ps1 "data.csv" -Force -SkipSignatureCheck
 ```
 
 ---
@@ -802,13 +833,21 @@ Invoke-ScriptAnalyzer -Path ".\QuickHash.ps1" -Settings PSGallery
 
 **Test Coverage**:
 
-- **VeriHash.ps1**: Multiple test categories including hash verification, clipboard detection, sidecar files, and multi-file verification
+- **VeriHash.ps1**: 52 tests covering core functionality including:
+  - Hash verification and clipboard detection
+  - Sidecar file creation and verification
+  - Multi-file checksum verification
+  - Sidecar update and match detection (8 tests)
+  - Clipboard + Sidecar interaction (2 tests)
+  - Force parameter behavior (2 tests)
+  - SkipSignatureCheck parameter behavior (5 tests)
+  - Smart signature detection (10 tests)
+  - Regression tests for cached comparison data (2 tests)
+  - Help system validation
 - **QuickHash.ps1**: 22 tests covering file hashing, string hashing, algorithm validation, and error handling
-- **ProfileAndSendTo.Tests.ps1**: Integration tests for PowerShell Profile setup and Windows SendTo menu functionality (22 tests)
-  - Profile creation, loading, and function availability
-  - SendTo shortcut creation and properties
-  - Execution policy and profile access scenarios
-  - Edge cases and troubleshooting validation
+- **Profile-VeriHashTiming.ps1**: 17 tests covering performance profiling, measurement accuracy, and timing analysis
+- **ProfileAndSendTo.Tests.ps1**: 22 tests covering PowerShell Profile and Windows SendTo functionality
+- **Total: 91 comprehensive tests** ensuring reliability and performance
 
 **Note on Pester Version**: VeriHash uses Pester 5.x syntax. If you see errors about `BeforeAll` location, update Pester with `Install-Module Pester -Force`.
 
