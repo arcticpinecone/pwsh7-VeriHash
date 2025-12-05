@@ -1008,6 +1008,17 @@ function Invoke-HashFile {
                 $ms = $resVerify.Duration.Milliseconds
                 $hashTimeStr = "{0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $resVerify.Duration.TotalSeconds, $minutes, $seconds, $ms
                 Write-Host "Hash time:      $hashTimeStr" -ForegroundColor Cyan
+
+                # Calculate and display hash speed (only if duration is meaningful)
+                if ($resVerify.Duration.TotalSeconds -ge 0.001) {
+                    $speedMBps = $fileInfo.Length / $resVerify.Duration.TotalSeconds / 1MB
+                    if ($speedMBps -ge 1000) {
+                        $speedStr = "{0:N2} GB/s" -f ($speedMBps / 1024)
+                    } else {
+                        $speedStr = "{0:N2} MB/s" -f $speedMBps
+                    }
+                    Write-Host "Hash speed:     $speedStr" -ForegroundColor Cyan
+                }
                 Write-Host ""
 
                 # Display file hash as source of truth
@@ -1131,6 +1142,17 @@ function Invoke-HashFile {
                 $ms = $res.Duration.Milliseconds
                 $hashTimeStr = "{0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $res.Duration.TotalSeconds, $minutes, $seconds, $ms
                 Write-Host "Hash time:      $hashTimeStr" -ForegroundColor Cyan
+
+                # Calculate and display hash speed (only if duration is meaningful)
+                if ($res.Duration.TotalSeconds -ge 0.001) {
+                    $speedMBps = $fileInfo.Length / $res.Duration.TotalSeconds / 1MB
+                    if ($speedMBps -ge 1000) {
+                        $speedStr = "{0:N2} GB/s" -f ($speedMBps / 1024)
+                    } else {
+                        $speedStr = "{0:N2} MB/s" -f $speedMBps
+                    }
+                    Write-Host "Hash speed:     $speedStr" -ForegroundColor Cyan
+                }
                 Write-Host ""
 
                 Write-Host "Computed hash:  $($res.Hash)" -ForegroundColor Magenta

@@ -33,6 +33,12 @@ Version: 1.3.0 - 2025-11-29
 
 **IMPROVEMENTS:**
 
+- ⚡ **Hash processing speed display**: Now shows real-time throughput (MB/s or GB/s) after each hash computation
+  - Example: `Hash speed:     175.25 MB/s` for a 3.7 GB file hashed in 21 seconds
+  - Auto-scales to GB/s for very fast operations (≥ 1000 MB/s)
+  - Helps users understand actual disk/hashing performance
+  - Displayed alongside hash time for all algorithms (MD5, SHA256, SHA512)
+
 - 🏗️ **Refactored -SendTo logic**: Platform-specific handlers for better maintainability
   - Windows: `Install-WindowsSendTo` function
   - Linux: `Install-LinuxContextMenu` → `Install-KDEContextMenu`
