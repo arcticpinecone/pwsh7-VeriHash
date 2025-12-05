@@ -4,10 +4,27 @@
 
 ## A modern, cross-platform PowerShell tool for computing and verifying file hashes
 
-[![Version](https://img.shields.io/badge/version-1.2.6-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
+
+---
+
+**Version: 1.3.0 - 2025-11-29**
+**Linux Desktop Integration & Cross-Platform Enhancements**
+
+**NEW FEATURES:**
+
+- 🐧 **Linux context menu integration**: Right-click files in Dolphin to compute/verify hashes
+  - ✅ **KDE Plasma/Dolphin support**: Native .desktop service menu integration
+  - 📂 **User-level & system-wide installation**: `./VeriHash.ps1 -SendTo` or with `-SystemWide` flag
+  - 🎨 **Icon integration**: VeriHash icon appears in context menu
+  - 🔧 **Two actions**: "Compute Hash" and "Verify Hash" (with -OnlyVerify)
+  - 🖥️ **Terminal window output**: Opens in Konsole/xterm for visual feedback
+  - 🚀 **Extensible architecture**: Easy to add GNOME, XFCE support in future
+
+[See full changelog](CHANGELOG.md)
 
 ---
 
@@ -184,6 +201,13 @@ Copy a hash to your clipboard, then:
 ```
 
 **Behavior**: Automatically detects and verifies the hash from clipboard
+
+**Cross-Platform Support**:
+- **Windows**: Built-in clipboard support
+- **Linux**: Requires clipboard tool
+  - Wayland: `sudo pacman -S wl-clipboard` (or `sudo apt install wl-clipboard`)
+  - X11: `sudo pacman -S xclip` (or `sudo apt install xclip`)
+- **macOS**: Built-in clipboard support
 
 ---
 
@@ -535,6 +559,171 @@ cd path\to\VeriHash
 ```
 
 This will overwrite the old shortcut with updated paths.
+
+---
+
+## 🐧 Linux Context Menu Integration (KDE/Dolphin)
+
+Add VeriHash directly to your Linux file manager's context menu for quick access.
+
+### Quick Setup (Automated)
+
+```bash
+# User-level installation (recommended)
+pwsh -File VeriHash.ps1 -SendTo
+
+# System-wide installation (requires sudo)
+sudo pwsh -File VeriHash.ps1 -SendTo -SystemWide
+```
+
+That's it! Right-click any file in Dolphin → **Actions** → **Compute Hash (VeriHash)** or **Verify Hash (VeriHash)**
+
+### Supported Desktop Environments
+
+- ✅ **KDE Plasma (Dolphin)** - Fully supported
+- 🚧 **GNOME (Nautilus)** - Planned for future release
+- 🚧 **XFCE (Thunar)** - Planned for future release
+
+### What Gets Created (User-Level)
+
+The `-SendTo` flag creates these files:
+
+```text
+~/.local/share/kio/servicemenus/verihash.desktop
+~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+**System-Wide Installation** (with `-SystemWide` flag):
+
+```text
+/usr/share/kio/servicemenus/verihash.desktop
+/usr/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+### Using in Dolphin
+
+1. Right-click any file in Dolphin file manager
+2. Select **Actions** submenu
+3. Choose one of:
+   - **Compute Hash (VeriHash)** - Calculate and save hashes
+   - **Verify Hash (VeriHash)** - Verify against existing sidecar (auto-enables `-OnlyVerify`)
+
+### Uninstalling
+
+**User-Level:**
+```bash
+rm ~/.local/share/kio/servicemenus/verihash.desktop
+rm ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+**System-Wide:**
+```bash
+sudo rm /usr/share/kio/servicemenus/verihash.desktop
+sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+### Troubleshooting Linux Context Menu
+
+#### Problem: Context menu integration not installing
+
+**Solution:**
+
+1. Verify PowerShell 7 is installed:
+   ```bash
+   pwsh --version
+   ```
+
+2. Install if needed:
+   ```bash
+   # Arch/Garuda/Manjaro
+   sudo pacman -S powershell
+
+   # Ubuntu/Debian
+   sudo apt install powershell
+
+   # Fedora
+   sudo dnf install powershell
+   ```
+
+3. Verify desktop environment is KDE:
+   ```bash
+   echo $XDG_CURRENT_DESKTOP  # Should show "KDE"
+   ```
+
+#### Problem: Context menu entries don't appear in Dolphin
+
+**Solution:**
+
+1. Restart Dolphin:
+   ```bash
+   killall dolphin
+   dolphin &
+   ```
+
+2. Verify the `.desktop` file was created:
+   ```bash
+   cat ~/.local/share/kio/servicemenus/verihash.desktop
+   ```
+
+3. Check KDE service menu directory permissions:
+   ```bash
+   ls -la ~/.local/share/kio/servicemenus/
+   ```
+
+#### Problem: "Could not detect desktop environment" error
+
+**Cause**: You're running a desktop environment other than KDE, or environment variables aren't set.
+
+**Solution**:
+
+Check your desktop environment:
+```bash
+echo "XDG_CURRENT_DESKTOP: $XDG_CURRENT_DESKTOP"
+echo "DESKTOP_SESSION: $DESKTOP_SESSION"
+```
+
+Current supported environments:
+- KDE Plasma (detected via `XDG_CURRENT_DESKTOP=KDE` or `plasma`)
+
+For other desktop environments, please open an issue on GitHub with your `$XDG_CURRENT_DESKTOP` value.
+
+#### Problem: Icons not showing in context menu
+
+**Solution:**
+
+1. Verify icon was copied:
+   ```bash
+   ls -la ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
+   ```
+
+2. If missing, reinstall:
+   ```bash
+   pwsh -File VeriHash.ps1 -SendTo
+   ```
+
+3. Update icon cache (may help):
+   ```bash
+   gtk-update-icon-cache ~/.local/share/icons/hicolor/ -f
+   ```
+
+### Recreating the Context Menu
+
+If you move your VeriHash directory or update PowerShell, recreate the integration:
+
+```bash
+cd /path/to/VeriHash
+pwsh -File VeriHash.ps1 -SendTo
+```
+
+This will overwrite the old `.desktop` file with updated paths.
+
+#### When to Reinstall:
+
+- ✅ **After updating PowerShell** (e.g., switching from pacman to manual install)
+- ✅ **After moving VeriHash directory**
+- ✅ **If context menu shows errors** about missing pwsh
+
+The installer automatically detects the current `pwsh` location and updates all paths.
 
 ---
 

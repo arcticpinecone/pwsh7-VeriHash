@@ -8,12 +8,14 @@
 Thumbs.db
 *.sublime-*
 *.lnk
-VeriHash.code-workspace
+*.code-workspace
 .claude/settings.local.json
 .claude/*
+
 # Exclude test example files but keep actual test files
 Get-Planet.Tests.ps1
 tmp/*
+
 # Exclude test-generated sidecar files
 Tests/*.sha256
 Tests/*.sha512
