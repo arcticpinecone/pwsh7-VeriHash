@@ -28,14 +28,15 @@ $measurements['Get-Item'] = $sw.Elapsed.TotalMilliseconds
 # 2. File size formatting
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $sizeBytes = $fileItem.Length
+# Suppress unused variable warning - we're measuring the operation, not using the result
 if ($sizeBytes -ge 1GB) {
-    $sizeFormatted = "{0:N2} GB" -f ($sizeBytes / 1GB)
+    $null = "{0:N2} GB" -f ($sizeBytes / 1GB)
 } elseif ($sizeBytes -ge 1MB) {
-    $sizeFormatted = "{0:N2} MB" -f ($sizeBytes / 1MB)
+    $null = "{0:N2} MB" -f ($sizeBytes / 1MB)
 } elseif ($sizeBytes -ge 1KB) {
-    $sizeFormatted = "{0:N2} KB" -f ($sizeBytes / 1KB)
+    $null = "{0:N2} KB" -f ($sizeBytes / 1KB)
 } else {
-    $sizeFormatted = "$sizeBytes bytes"
+    $null = "$sizeBytes bytes"
 }
 $sw.Stop()
 $measurements['Size Formatting'] = $sw.Elapsed.TotalMilliseconds
@@ -43,14 +44,22 @@ $measurements['Size Formatting'] = $sw.Elapsed.TotalMilliseconds
 # 3. Date/Time operations
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $currentUTC = (Get-Date).ToUniversalTime()
-$utcString = $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+# Suppress unused variable warning - we're measuring the operation, not using the result
+$null = $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 $sw.Stop()
 $measurements['DateTime Operations'] = $sw.Elapsed.TotalMilliseconds
 
-# 4. Digital signature check
+# 4. Digital signature check (Windows only)
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-$signature = Get-AuthenticodeSignature -LiteralPath $FilePath -ErrorAction SilentlyContinue
-$isSigned = $signature -and $signature.Status -eq 'Valid'
+if ($IsWindows) {
+    $signature = Get-AuthenticodeSignature -LiteralPath $FilePath -ErrorAction SilentlyContinue
+    # Suppress unused variable warning - we're measuring the operation, not using the result
+    $null = $signature -and $signature.Status -eq 'Valid'
+} else {
+    # On Linux/macOS, Get-AuthenticodeSignature doesn't exist
+    # Just assign null to simulate the operation without doing anything
+    $signature = $null
+}
 $sw.Stop()
 $measurements['Digital Signature Check'] = $sw.Elapsed.TotalMilliseconds
 
@@ -83,6 +92,7 @@ try {
     Clear-Host
 } catch {
     # Clear-Host fails in non-interactive contexts (like Pester tests), silently ignore
+    $null = $_
 }
 
 # Calculate totals and percentages

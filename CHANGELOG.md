@@ -9,8 +9,8 @@
 
 ### [v1.3.0] (Current)
 
-**Version: 1.3.0 - 2025-11-29**
-**Linux Desktop Integration & Cross-Platform Enhancements**
+Version: 1.3.0 - 2025-11-29
+> Linux Desktop Integration & Cross-Platform Enhancements
 
 **NEW FEATURES:**
 
@@ -61,6 +61,28 @@
 - KDE integration: Creates `.desktop` file in `~/.local/share/kio/servicemenus/` or `/usr/share/kio/servicemenus/`
 - Icon handling: Copies PNG icon to Linux icon directories with proper fallback
 
+**TESTING (Linux Compatibility):**
+
+- 🧪 **Fixed all 16 Linux test failures**: All 91 tests now pass on Linux
+  - **Profile-VeriHashTiming.ps1**: Added platform-aware `Get-AuthenticodeSignature` handling
+    - Windows: Uses Authenticode signature checks (significant overhead)
+    - Linux/macOS: Skips unavailable cmdlet gracefully (instant check)
+  - **Clipboard test mocks**: Platform-specific mocking for Linux clipboard tools
+    - Mocks `wl-paste`, `xclip`, `xsel` only if they exist on the system
+    - Prevents "CommandNotFoundException" errors in Pester tests
+  - **Sidecar format test**: Updated regex to expect Unix format (`HASH  filename`)
+  - **Performance tests**: Platform-aware expectations for signature check overhead
+- ✅ **100% test pass rate** on both Windows 11 and Linux (Garuda Linux verified)
+- ✅ **Cross-platform test suite**: Tests adapt to platform capabilities automatically
+
+**CODE QUALITY:**
+
+- 🔧 **Profile-VeriHashTiming.ps1 cleanup**: Fixed PSScriptAnalyzer warnings
+  - Removed 3 unused variable assignments (`$sizeFormatted`, `$utcString`, `$isSigned`)
+  - Variables now use `$null =` pattern since we're measuring operations, not using results
+  - Fixed empty catch block warning (added comment + `$null = $_` statement)
+  - All 91 tests continue to pass after cleanup
+
 **INSTALLATION:**
 
 ```bash
@@ -78,8 +100,8 @@ sudo pwsh -File VeriHash.ps1 -SendTo -SystemWide
 
 ### [v1.2.6] (Previous)
 
-**Version: 1.2.6 - 2025-12-05**
-**Critical Bug Fix - Duration Display Rounding Error**
+Version: 1.2.6 - 2025-12-05
+> Critical Bug Fix - Duration Display Rounding Error
 
 **CRITICAL BUG FIX:**
 
@@ -102,8 +124,8 @@ sudo pwsh -File VeriHash.ps1 -SendTo -SystemWide
 
 ### [v1.2.5]
 
-**Version: 1.2.5 - 2025-11-18**
-**Critical Bug Fixes & Enhanced Batch Wrapper**
+Version: 1.2.5 - 2025-11-18
+> Critical Bug Fixes & Enhanced Batch Wrapper
 
  CRITICAL BUG FIX:
 
@@ -194,8 +216,8 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.2.3]
 
-**Version: 1.2.3 - 2025-11-17**
-**Documentation & Testing Improvements**
+Version: 1.2.3 - 2025-11-17
+> Documentation & Testing Improvements
 
 **NEW FEATURES:**
 
@@ -218,8 +240,8 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.2.2]
 
-**Version: 1.2.2 - 2025-01-16**
-**Testing & Quality Improvements**
+Version: 1.2.2 - 2025-01-16
+> Testing & Quality Improvements
 
 **NEW FEATURES:**
 
@@ -273,8 +295,8 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.2.1]
 
-**Version: 1.2.1 - 2025-01-16**
-**File Extension Standardization & UX Improvements**
+Version: 1.2.1 - 2025-01-16
+> File Extension Standardization & UX Improvements
 
 **BREAKING CHANGES:**
 
@@ -284,7 +306,7 @@ All features from v1.2.4 are preserved, including:
   - `.md5` remains unchanged
 - ⚠️ **Backward compatibility**: VeriHash still recognizes and verifies old `.sha2_256` and `.sha2` files
 
-**NEW FEATURES:**
+ NEW FEATURES:
 
 - ✨ **Multi-file checksum verification**: Can now verify checksum files containing multiple entries
   - Example: `checksums.sha256` with multiple `hash  filename` lines
@@ -294,7 +316,7 @@ All features from v1.2.4 are preserved, including:
   - Auto-falls back to manual path entry if Windows Forms dialog doesn't appear
   - Clear prompts with cancellation option
 
-**BUG FIXES:**
+ BUG FIXES:
 
 - 🐛 Fixed confusing error message when cancelling file selection dialog
   - Now shows: "Operation cancelled. No file was selected." instead of file path error
@@ -303,14 +325,14 @@ All features from v1.2.4 are preserved, including:
 - 🐛 Improved VSCode integrated terminal compatibility
   - File dialog failures now gracefully fall back to manual entry
 
-**UX IMPROVEMENTS:**
+ UX IMPROVEMENTS:
 
 - 💬 Clearer cancellation messages throughout the tool
 - 💬 Better error messages that show the actual invalid path
 - 💬 Friendlier prompts with explicit cancellation instructions
 - 🎨 Multi-file verification output shows per-file status (OK ✅ / FAILED 🚫 / MISSING ⚠️)
 
-**COMPATIBILITY:**
+ COMPATIBILITY:
 
 - ✅ Fully compatible with GNU coreutils checksum file format
 - ✅ Can verify files created by `sha256sum`, `sha512sum`, and `md5sum`
@@ -320,10 +342,10 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.2.0] 🎉
 
-**Version: 1.2.0 - 2025-01-16**
-**Major Feature Release & Code Quality Improvements**
+ Version: 1.2.0 - 2025-01-16
+ > Major Feature Release & Code Quality Improvements
 
-**NEW FEATURES:**
+ NEW FEATURES:
 
 - ✨ `-Algorithm` parameter: Choose which hash(es) to compute (MD5, SHA256, SHA512, or All)
    Example: `.\VeriHash.ps1 file.exe -Algorithm MD5,SHA512`
@@ -333,7 +355,7 @@ All features from v1.2.4 are preserved, including:
    Now intelligently handles `.sha2_256`, `.sha2`, and `.md5` files
 - ✨ Flexible hashing workflow: Users have full control over which algorithms run
 
-**BUG FIXES:**
+ BUG FIXES:
 
 - 🐛 Fixed double-hashing bug (SHA256 was computed twice in some scenarios)
 - 🐛 Removed duplicate -SendTo logic (was defined twice)
@@ -341,7 +363,7 @@ All features from v1.2.4 are preserved, including:
 - 🐛 Fixed inconsistent signature labels across platforms
 - 🐛 Removed unused variables: $computedMatch, $backupPath, $IsInteractive
 
-**CODE QUALITY:**
+ CODE QUALITY:
 
 - 📝 All functions renamed to use PowerShell approved verbs:
    • Verify-InputHash → Test-InputHash
@@ -351,11 +373,11 @@ All features from v1.2.4 are preserved, including:
 - 📝 Comprehensive help text with detailed examples
 - 📝 Cleaner, more maintainable code structure
 
-**BREAKING CHANGES:**
+ BREAKING CHANGES:
 
 - None (internal function names changed, but user-facing behavior is backwards compatible)
 
-**UPGRADE NOTES:**
+ UPGRADE NOTES:
 
 - Default behavior unchanged: Running without parameters still computes SHA256
 - New parameters are optional and enhance existing functionality
@@ -365,17 +387,15 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.1.1]
 
-**Version: 1.1.1 - 2024-04-04**
+ Version: 1.1.1 - 2024-04-04
 
 - General improvements and bug fixes
 - Enhanced sidecar file handling
 - Cross-platform compatibility improvements
 
----
-
 ### [v1.0.7]
 
-**Version: 1.0.7 - 2024-12-09**
+ Version: 1.0.7 - 2024-12-09
 
 - ADD - WEBP VeriHash logo to Readme
 - CHANGE - Color of computed hash to Magenta, better stand out from all other text.
@@ -386,8 +406,8 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.0.6]
 
-**Version: 1.0.6 - 2024-12-08**
-**Stable version**
+ Version: 1.0.6 - 2024-12-08
+ Stable version
 
 - Better file path validation
 - PowerShell $PROFILE information added (example).
@@ -399,8 +419,8 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.0.5]
 
-**Version: 1.0.5 - 2024-12-08**
-**SendTo functionality and icon support**
+ Version: 1.0.5 - 2024-12-08
+ SendTo functionality and icon support
 
 - Implemented functionality, to create shortcut in user right-click, Send To menu. (Windows)
 - Added support for icons, using `Icons\VeriHash_256.ico`.
@@ -416,38 +436,35 @@ All features from v1.2.4 are preserved, including:
 
 ### [v1.0.4]
 
-**Version: 1.0.4 - 2024-12-08**
-**Enhancements:**
-- Skipping digital signature checks for large files.
-- Better timing, completion messages, and metadata display.
-
-**Notes:**
-- Conditional Check: if it's running on Windows.
-- Error Handling: to handle any unexpected errors gracefully.
-- User Feedback: If not on Windows, inform user signature verification is skipped on the current platform.
+ Version: 1.0.4 - 2024-12-08
+    Enhancements:
+        Skipping digital signature checks for large files.
+        Better timing, completion messages, and metadata display.
+    Notes:
+    - Conditional Check: if it's running on Windows.
+    - Error Handling: to handle any unexpected errors gracefully.
+    - User Feedback: If not on Windows, inform user signature verification is skipped on the current platform.
 
 ---
 
 ### [v1.0.3]
 
-**Version: 1.0.3 - 2024-12-07**
-
-- Cleaned up the README.md
-- Skip digital signature check if file is over 1GB.
-- Now prints completion and timing.
-- Adding VeriHash to your PowerShell Profile (Super Handy!)
-- 1.0.1 + 1.02 got the 'a bunch of stuff is fixed' and shoved into 1.0.3 release.
+ Version: 1.0.3 - 2024-12-07
+    - Cleaned up the README.md
+    - Skip digital signature check if file is over 1GB.
+    - Now prints completion and timing.
+    - Adding VeriHash to your PowerShell Profile (Super Handy!)
+    - 1.0.1 + 1.02 got the 'a bunch of stuff is fixed' and shoved into 1.0.3 release.
 
 ---
 
 ### [v1.0.0]
 
-**Version: 1.0.0 - 2024-12-06 🎆🫡**
-**Initial Release:**
-
-- Core functionality to compute and verify SHA256 file hashes.
-- Supports interactive file selection for non-Windows platforms.
-- Handles file metadata display (size, creation, and modification times).
-- Includes digital signature validation for files.
-- Option to compare computed hash with input hash.
-- Automatic generation of .sha2_256 verification files.
+ Version: 1.0.0 - 2024-12-06 🎆🫡
+    Initial Release:
+        - Core functionality to compute and verify SHA256 file hashes.
+        - Supports interactive file selection for non-Windows platforms.
+        - Handles file metadata display (size, creation, and modification times).
+        - Includes digital signature validation for files.
+        - Option to compare computed hash with input hash.
+        - Automatic generation of .sha2_256 verification files.

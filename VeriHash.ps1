@@ -19,8 +19,8 @@
     ============================================================================
 
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Updated: December 5, 2025
-    Version: 1.2.6
+    Updated: December 6, 2025
+    Version: 1.3.0
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.

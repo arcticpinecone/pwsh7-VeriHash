@@ -161,9 +161,15 @@ Describe 'Timing Profiler Performance Insights' {
             $sigTime = $result.Measurements['Digital Signature Check']
             $sigPercentage = ($sigTime / $result.Total) * 100
 
-            # Assert - For small files, signature check should be a significant portion
-            # Based on our profiling, it's typically 50-70% for small files
-            $sigPercentage | Should -BeGreaterThan 10  # At least 10% of total time
+            # Assert - Platform-specific expectations
+            if ($IsWindows) {
+                # On Windows, signature check should be a significant portion for small files
+                # Based on our profiling, it's typically 50-70% for small files
+                $sigPercentage | Should -BeGreaterThan 10  # At least 10% of total time
+            } else {
+                # On Linux/macOS, Get-AuthenticodeSignature doesn't exist, so check is instant
+                $sigPercentage | Should -BeLessThan 5   # Should be negligible
+            }
         }
 
         It 'Shows hash computation is relatively fast for small files' {
@@ -174,8 +180,14 @@ Describe 'Timing Profiler Performance Insights' {
             $hashTime = $result.Measurements['Hash Computation']
             $hashPercentage = ($hashTime / $result.Total) * 100
 
-            # Assert - For small files (1KB), hashing should be < 30% of total time
-            $hashPercentage | Should -BeLessThan 30
+            # Assert - Platform-specific expectations
+            if ($IsWindows) {
+                # On Windows, signature check dominates, so hashing should be < 30% of total time
+                $hashPercentage | Should -BeLessThan 30
+            } else {
+                # On Linux/macOS, signature check is instant, so hashing becomes dominant
+                $hashPercentage | Should -BeGreaterThan 30  # Should be significant portion
+            }
         }
 
         It 'Measurements are sorted by time (descending)' {

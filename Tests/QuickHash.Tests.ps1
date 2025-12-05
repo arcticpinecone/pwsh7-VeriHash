@@ -1,7 +1,45 @@
+# Check if Pester is installed before running tests
+if (-not (Get-Module -ListAvailable -Name Pester)) {
+    Write-Host "`n===========================================" -ForegroundColor Yellow
+    Write-Host "  Pester Testing Framework Not Found" -ForegroundColor Yellow
+    Write-Host "===========================================" -ForegroundColor Yellow
+    Write-Host "`nPester is required to run these tests but is not currently installed." -ForegroundColor White
+    Write-Host "`nWould you like to install Pester now? (Y/N): " -ForegroundColor Cyan -NoNewline
+    $installChoice = Read-Host
+
+    if ($installChoice -match '^[Yy]') {
+        Write-Host "`nPlease select installation scope:" -ForegroundColor Cyan
+        Write-Host "  [1] CurrentUser  - Install for your user account only (no admin required)" -ForegroundColor White
+        Write-Host "  [2] AllUsers     - Install system-wide for all users (requires admin)" -ForegroundColor White
+        Write-Host "`nEnter choice (1 or 2) [default: 1]: " -ForegroundColor Cyan -NoNewline
+        $scopeChoice = Read-Host
+
+        $scope = if ($scopeChoice -eq '2') { 'AllUsers' } else { 'CurrentUser' }
+
+        Write-Host "`nInstalling Pester module (Scope: $scope)..." -ForegroundColor Green
+        try {
+            Install-Module -Name Pester -Force -SkipPublisherCheck -Scope $scope
+            Write-Host "Pester installed successfully!" -ForegroundColor Green
+            Write-Host "Please re-run this test file.`n" -ForegroundColor Cyan
+        }
+        catch {
+            Write-Host "`nError installing Pester: $_" -ForegroundColor Red
+            Write-Host "You can manually install it with:" -ForegroundColor Yellow
+            Write-Host "  Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser`n" -ForegroundColor White
+        }
+    }
+    else {
+        Write-Host "`nTests cannot run without Pester. Please install it manually with:" -ForegroundColor Yellow
+        Write-Host "  Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser`n" -ForegroundColor White
+    }
+
+    exit 1
+}
+
 BeforeAll {
     # Import the function we want to test from QuickHash.ps1
     # We use dot-sourcing to load the script
-    $script:QuickHashScriptPath = Join-Path $PSScriptRoot ".." "QuickHash.ps1"
+    $script:QuickHashScriptPath = Join-Path -Path $PSScriptRoot -ChildPath ".." -AdditionalChildPath "QuickHash.ps1"
 
     # We need to source the script to get the Get-Hash function
     # Since the script has interactive prompts at the end, we'll source just the function
@@ -10,18 +48,19 @@ BeforeAll {
 
     # Extract just the Get-Hash function definition
     if ($scriptContent -match '(?s)(function Get-Hash \{.*?\n\})') {
-        Invoke-Expression $matches[1]
+        $tempModule = New-Module -ScriptBlock ([scriptblock]::Create($matches[1]))
+        $tempModule | Import-Module -Global
     }
 
     # Setup test file paths
-    $script:TestOutputDir = Join-Path $TestDrive "QuickHashTests"
+    $script:TestOutputDir = Join-Path -Path $TestDrive -ChildPath "QuickHashTests"
     New-Item -ItemType Directory -Path $script:TestOutputDir -Force | Out-Null
 
     # Create test files with known content
-    $script:TestFile1 = Join-Path $script:TestOutputDir "testfile1.txt"
+    $script:TestFile1 = Join-Path -Path $script:TestOutputDir -ChildPath "testfile1.txt"
     Set-Content -Path $script:TestFile1 -Value "Hello, World!" -NoNewline
 
-    $script:TestFile2 = Join-Path $script:TestOutputDir "testfile2.txt"
+    $script:TestFile2 = Join-Path -Path $script:TestOutputDir -ChildPath "testfile2.txt"
     Set-Content -Path $script:TestFile2 -Value "The quick brown fox jumps over the lazy dog" -NoNewline
 
     # Known hash values for our test files
@@ -72,7 +111,7 @@ Describe 'Get-Hash Function' {
 
         It 'Handles non-existent file gracefully' {
             # Arrange
-            $nonExistentFile = Join-Path $script:TestOutputDir "does-not-exist.txt"
+            $nonExistentFile = Join-Path -Path $script:TestOutputDir -ChildPath "does-not-exist.txt"
 
             # Act & Assert
             # Should not throw, but will treat as string and hash the path

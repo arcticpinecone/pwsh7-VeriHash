@@ -203,6 +203,7 @@ Copy a hash to your clipboard, then:
 **Behavior**: Automatically detects and verifies the hash from clipboard
 
 **Cross-Platform Support**:
+
 - **Windows**: Built-in clipboard support
 - **Linux**: Requires clipboard tool
   - Wayland: `sudo pacman -S wl-clipboard` (or `sudo apt install wl-clipboard`)
@@ -566,7 +567,7 @@ This will overwrite the old shortcut with updated paths.
 
 Add VeriHash directly to your Linux file manager's context menu for quick access.
 
-### Quick Setup (Automated)
+### Quick Setup (Linux Automated)
 
 ```bash
 # User-level installation (recommended)
@@ -611,12 +612,14 @@ The `-SendTo` flag creates these files:
 ### Uninstalling
 
 **User-Level:**
+
 ```bash
 rm ~/.local/share/kio/servicemenus/verihash.desktop
 rm ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
 ```
 
 **System-Wide:**
+
 ```bash
 sudo rm /usr/share/kio/servicemenus/verihash.desktop
 sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
@@ -629,11 +632,13 @@ sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
 **Solution:**
 
 1. Verify PowerShell 7 is installed:
+
    ```bash
    pwsh --version
    ```
 
 2. Install if needed:
+
    ```bash
    # Arch/Garuda/Manjaro
    sudo pacman -S powershell
@@ -646,6 +651,7 @@ sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
    ```
 
 3. Verify desktop environment is KDE:
+
    ```bash
    echo $XDG_CURRENT_DESKTOP  # Should show "KDE"
    ```
@@ -655,17 +661,20 @@ sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
 **Solution:**
 
 1. Restart Dolphin:
+
    ```bash
    killall dolphin
    dolphin &
    ```
 
 2. Verify the `.desktop` file was created:
+
    ```bash
    cat ~/.local/share/kio/servicemenus/verihash.desktop
    ```
 
 3. Check KDE service menu directory permissions:
+
    ```bash
    ls -la ~/.local/share/kio/servicemenus/
    ```
@@ -677,12 +686,14 @@ sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
 **Solution**:
 
 Check your desktop environment:
+
 ```bash
 echo "XDG_CURRENT_DESKTOP: $XDG_CURRENT_DESKTOP"
 echo "DESKTOP_SESSION: $DESKTOP_SESSION"
 ```
 
 Current supported environments:
+
 - KDE Plasma (detected via `XDG_CURRENT_DESKTOP=KDE` or `plasma`)
 
 For other desktop environments, please open an issue on GitHub with your `$XDG_CURRENT_DESKTOP` value.
@@ -692,16 +703,19 @@ For other desktop environments, please open an issue on GitHub with your `$XDG_C
 **Solution:**
 
 1. Verify icon was copied:
+
    ```bash
    ls -la ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
    ```
 
 2. If missing, reinstall:
+
    ```bash
    pwsh -File VeriHash.ps1 -SendTo
    ```
 
 3. Update icon cache (may help):
+
    ```bash
    gtk-update-icon-cache ~/.local/share/icons/hicolor/ -f
    ```
@@ -717,7 +731,7 @@ pwsh -File VeriHash.ps1 -SendTo
 
 This will overwrite the old `.desktop` file with updated paths.
 
-#### When to Reinstall:
+#### When to Reinstall
 
 - ✅ **After updating PowerShell** (e.g., switching from pacman to manual install)
 - ✅ **After moving VeriHash directory**
