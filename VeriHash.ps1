@@ -19,8 +19,8 @@
     ============================================================================
 
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Updated: November 18, 2025
-    Version: 1.2.5
+    Updated: December 5, 2025
+    Version: 1.2.6
 
     Description:
     VeriHash is a PowerShell tool for computing and verifying SHA256 file hashes.
@@ -651,7 +651,7 @@ function Invoke-HashFile {
                 $resVerify = Get-And-SaveHash -PathToFile $FilePath -Algorithm $detectedAlgorithm -InputHash $InputHash -Force:$Force
 
                 # Format hash time
-                $minutes = [int]$resVerify.Duration.TotalMinutes
+                $minutes = [Math]::Floor($resVerify.Duration.TotalMinutes)
                 $seconds = $resVerify.Duration.Seconds
                 $ms = $resVerify.Duration.Milliseconds
                 $hashTimeStr = "{0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $resVerify.Duration.TotalSeconds, $minutes, $seconds, $ms
@@ -774,7 +774,7 @@ function Invoke-HashFile {
                 $res = Get-And-SaveHash -PathToFile $FilePath -Algorithm $alg -Force:$Force
 
                 # Format hash time
-                $minutes = [int]$res.Duration.TotalMinutes
+                $minutes = [Math]::Floor($res.Duration.TotalMinutes)
                 $seconds = $res.Duration.Seconds
                 $ms = $res.Duration.Milliseconds
                 $hashTimeStr = "{0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $res.Duration.TotalSeconds, $minutes, $seconds, $ms
@@ -812,7 +812,7 @@ function Invoke-HashFile {
             Write-Host "End UTC:        $($endUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))" -ForegroundColor Cyan
 
             # Format total hash time with milliseconds
-            $minutes = [int]$duration.TotalMinutes
+            $minutes = [Math]::Floor($duration.TotalMinutes)
             $seconds = $duration.Seconds
             $ms = $duration.Milliseconds
             Write-Host ("Total time:     {0:N3} second(s)  ({1:00} minutes, {2:00} seconds, {3:000} ms)" -f $duration.TotalSeconds, $minutes, $seconds, $ms) -ForegroundColor Cyan
