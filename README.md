@@ -263,7 +263,7 @@ Summary:
 ### All Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --------- | ---- | ----------- |
 | `FilePath` | String | Path to file (or sidecar file) |
 | `-Hash` / `-InputHash` | String | Hash to verify against |
 | `-Algorithm` | String[] | Algorithms to compute: `MD5`, `SHA256`, `SHA512`, `All` |
@@ -301,7 +301,7 @@ Hash computation speed varies by hardware and file size.
 ### Tested Performance (SHA256)
 
 | Storage Type | Speed | 1 GB | 8 GB | 10 GB |
-|-------------|-------|------|------|-------|
+| ----------- | ----- | ---- | ---- | ----- |
 | **SSD** | ~190 MB/s | 5s | 40s | 53s |
 | **HDD** | ~93 MB/s | 11s | 88s | 110s |
 
@@ -482,7 +482,7 @@ This shortcut:
 ### ⚠️ Important: SendTo vs Profile Differences
 
 | Feature | Profile (`verihash` function) | SendTo Menu |
-|---------|-------------------------------|------------|
+| ------- | ----------------------------- | ---------- |
 | **How to use** | Type `verihash filename.exe` in PowerShell | Right-click file → Send To |
 | **Requires profile?** | ✅ Yes, must be loaded | ❌ No |
 | **Profile aliases available?** | ✅ Yes | ❌ No (`-NoProfile` mode) |

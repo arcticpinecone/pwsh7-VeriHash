@@ -10,12 +10,16 @@ param(
     [string]$FilePath,
 
     [ValidateSet('SHA256', 'MD5', 'SHA512')]
-    [string]$Algorithm = 'SHA256'
+    [string]$Algorithm = 'SHA256',
+
+    [switch]$Quiet
 )
 
-Write-Host "`n=== VeriHash Performance Profiler ===" -ForegroundColor Cyan
-Write-Host "File: $FilePath" -ForegroundColor Cyan
-Write-Host "Algorithm: $Algorithm`n" -ForegroundColor Cyan
+if (-not $Quiet) {
+    Write-Host "`n=== VeriHash Performance Profiler ===" -ForegroundColor Cyan
+    Write-Host "File: $FilePath" -ForegroundColor Cyan
+    Write-Host "Algorithm: $Algorithm`n" -ForegroundColor Cyan
+}
 
 $measurements = @{}
 
@@ -80,19 +84,31 @@ $measurements['Sidecar File Write'] = $sw.Elapsed.TotalMilliseconds
 Remove-Item -Path $tempSidecar -Force -ErrorAction SilentlyContinue
 
 # 7. Console output overhead (10 Write-Host calls)
+# Measures real Write-Host overhead - this can be significant in scripts
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-for ($i = 1; $i -le 10; $i++) {
-    Write-Host "Test output line $i" -ForegroundColor Gray | Out-Null
+if ($Quiet) {
+    # In Quiet mode, use Out-String to simulate formatting overhead without console output
+    # This measures the string formatting work, though actual host I/O is skipped
+    for ($i = 1; $i -le 10; $i++) {
+        "Test output line $i" | Out-String | Out-Null
+    }
+} else {
+    for ($i = 1; $i -le 10; $i++) {
+        Write-Host "Test output line $i" -ForegroundColor Gray
+    }
 }
 $sw.Stop()
 $measurements['Console Output (10 lines)'] = $sw.Elapsed.TotalMilliseconds
 
-# Clear the test output
-try {
-    Clear-Host
-} catch {
-    # Clear-Host fails in non-interactive contexts (like Pester tests), silently ignore
-    $null = $_
+# Clear the test output (only in interactive mode, not when called from Test-All or with -Quiet)
+# Skip clearing if VERIHASH_TEST_MODE is set or if -Quiet is specified
+if (-not $Quiet -and $env:VERIHASH_TEST_MODE -ne '1' -and -not $env:VERIHASH_NO_CLEAR) {
+    try {
+        Clear-Host
+    } catch {
+        # Clear-Host fails in non-interactive contexts, silently ignore
+        $null = $_
+    }
 }
 
 # Calculate totals and percentages
@@ -108,42 +124,44 @@ $resultObject = [PSCustomObject]@{
     SortedMeasurements = $sortedMeasurements
 }
 
-# Display results for human consumption
-Write-Host "`n=== VeriHash Performance Profiler ===" -ForegroundColor Cyan
-Write-Host "File: $FilePath" -ForegroundColor Cyan
-Write-Host "Algorithm: $Algorithm`n" -ForegroundColor Cyan
+# Display results for human consumption (skip in Quiet mode)
+if (-not $Quiet) {
+    Write-Host "`n=== VeriHash Performance Profiler ===" -ForegroundColor Cyan
+    Write-Host "File: $FilePath" -ForegroundColor Cyan
+    Write-Host "Algorithm: $Algorithm`n" -ForegroundColor Cyan
 
-Write-Host "Performance Breakdown:" -ForegroundColor Yellow
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host "Performance Breakdown:" -ForegroundColor Yellow
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
 
-foreach ($entry in $sortedMeasurements) {
-    $name = $entry.Key
-    $ms = $entry.Value
+    foreach ($entry in $sortedMeasurements) {
+        $name = $entry.Key
+        $ms = $entry.Value
 
-    # Color code by time
-    $color = if ($ms -gt 10) { 'Red' } elseif ($ms -gt 5) { 'Yellow' } elseif ($ms -gt 1) { 'Cyan' } else { 'Gray' }
+        # Color code by time
+        $color = if ($ms -gt 10) { 'Red' } elseif ($ms -gt 5) { 'Yellow' } elseif ($ms -gt 1) { 'Cyan' } else { 'Gray' }
 
-    Write-Host ("{0,-30} : {1,7:N2} ms" -f $name, $ms) -ForegroundColor $color
+        Write-Host ("{0,-30} : {1,7:N2} ms" -f $name, $ms) -ForegroundColor $color
+    }
+
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host ("{0,-30} : {1,7:N2} ms" -f "TOTAL", $total) -ForegroundColor Green
+
+    # Calculate percentages
+    Write-Host "`nPercentage Breakdown:" -ForegroundColor Yellow
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+
+    foreach ($entry in $sortedMeasurements) {
+        $name = $entry.Key
+        $ms = $entry.Value
+        $percentage = ($ms / $total) * 100
+
+        $color = if ($percentage -gt 25) { 'Red' } elseif ($percentage -gt 10) { 'Yellow' } else { 'Gray' }
+
+        Write-Host ("{0,-30} : {1,6:N2}%" -f $name, $percentage) -ForegroundColor $color
+    }
+
+    Write-Host ""
 }
-
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-Write-Host ("{0,-30} : {1,7:N2} ms" -f "TOTAL", $total) -ForegroundColor Green
-
-# Calculate percentages
-Write-Host "`nPercentage Breakdown:" -ForegroundColor Yellow
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-
-foreach ($entry in $sortedMeasurements) {
-    $name = $entry.Key
-    $ms = $entry.Value
-    $percentage = ($ms / $total) * 100
-
-    $color = if ($percentage -gt 25) { 'Red' } elseif ($percentage -gt 10) { 'Yellow' } else { 'Gray' }
-
-    Write-Host ("{0,-30} : {1,6:N2}%" -f $name, $percentage) -ForegroundColor $color
-}
-
-Write-Host ""
 
 # Return the result object for programmatic access (Pester tests can use this!)
 return $resultObject
