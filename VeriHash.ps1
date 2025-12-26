@@ -19,7 +19,7 @@
     ============================================================================
 
     Author: arcticpinecone | arcticpinecone@arcticpinecone.eu
-    Updated: December 6, 2025
+    Updated: December 27, 2025
     Version: 1.3.0
 
     Description:

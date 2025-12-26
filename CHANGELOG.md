@@ -3,13 +3,13 @@
 ## Version History
 
 - Current Feature/Release info is shown first: [v1.3.0]
-- Version Release History contains older release notes.
+-- Version Release History contains older release notes.
 
 ---
 
 ### [v1.3.0] (Current)
 
-Version: 1.3.0 - 2025-11-29
+Version: 1.3.0 - 2025-12-27
 > Linux Desktop Integration & Cross-Platform Enhancements
 
 **NEW FEATURES:**
@@ -73,6 +73,20 @@ Version: 1.3.0 - 2025-11-29
   - **Profile-VeriHashTiming.ps1**: Added platform-aware `Get-AuthenticodeSignature` handling
     - Windows: Uses Authenticode signature checks (significant overhead)
     - Linux/macOS: Skips unavailable cmdlet gracefully (instant check)
+  - **Profile-VeriHashTiming.ps1**: New `-Quiet` parameter for cleaner test integration
+    - Suppresses console output for programmatic use
+    - Returns structured result object for Pester tests
+    - Platform-aware Clear-Host handling
+  - **VeriHash.Timing.Tests.ps1**: Optimized "hash once, test many" pattern
+    - Replaces old Profile-VeriHashTiming.Tests.ps1 with performance-optimized version
+    - Profiles large files only 3 times (once per algorithm) in BeforeAll
+    - Reuses cached results across all test cases (3x faster execution)
+    - Maintains full test coverage with zero redundant hashing
+  - **Test-All.ps1**: Enhanced with integrated performance profiler summary
+    - Shows quick overhead breakdown for small files
+    - Provides throughput insights without verbose output
+    - New `-SkipProfiler` parameter for flexibility
+    - Improved visual formatting with Unicode box-drawing characters
   - **Clipboard test mocks**: Platform-specific mocking for Linux clipboard tools
     - Mocks `wl-paste`, `xclip`, `xsel` only if they exist on the system
     - Prevents "CommandNotFoundException" errors in Pester tests

@@ -11,7 +11,7 @@
 
 ---
 
-**Version: 1.3.0 - 2025-11-29**
+**Version: 1.3.0 - 2025-12-27**
 **Linux Desktop Integration & Cross-Platform Enhancements**
 
 **NEW FEATURES:**
