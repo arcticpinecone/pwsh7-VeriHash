@@ -616,7 +616,7 @@ Describe 'Force Parameter Behavior' {
             Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
 
             # Act
-            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
+            Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force | Out-Null
 
             # Assert - File should contain the real hash now
             $result.Hash | Should -Be $realHash
