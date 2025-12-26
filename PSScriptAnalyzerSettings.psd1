@@ -15,7 +15,13 @@
         # 1. It's designed to run interactively in a PowerShell console
         # 2. The colored output is a core feature, not an afterthought
         # 3. It's not a module that needs to be pipeline-friendly
-        'PSAvoidUsingWriteHost'
+        'PSAvoidUsingWriteHost',
+
+        # MD5 algorithm is tested for legacy compatibility and backward support
+        # of existing .md5 sidecar files. The test suite includes a warning that
+        # MD5 is cryptographically broken (collision-prone) and recommends SHA256+.
+        # See Tests/VeriHash.Tests.ps1 for details.
+        'PSAvoidUsingBrokenHashAlgorithms'
     )
 
     # Custom rule arguments (optional)

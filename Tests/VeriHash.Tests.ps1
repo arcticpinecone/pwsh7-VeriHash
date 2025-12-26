@@ -14,6 +14,20 @@ BeforeAll {
     New-Item -ItemType Directory -Path $script:TestOutputDir -Force | Out-Null
 }
 
+<#
+    NOTE: MD5 Algorithm Usage in Tests
+    -----------------------------------
+    This test suite includes tests for MD5 hashing for legacy compatibility and verification purposes.
+
+    ⚠️  IMPORTANT: MD5 is cryptographically broken and vulnerable to collision attacks.
+
+    For production use, SHA256 is now the RECOMMENDED MINIMUM hash algorithm.
+    Consider using SHA512 for enhanced security in sensitive applications.
+
+    MD5 tests are retained here to ensure backward compatibility with existing .md5 sidecar files
+    and to verify that the tool correctly handles legacy hash formats.
+#>
+
 Describe 'Test-InputHash' {
     Context 'When comparing hash values' {
         It 'Returns success message when hashes match exactly' {
@@ -59,7 +73,20 @@ Describe 'Get-ClipboardHash' {
     Context 'When detecting hash algorithm from clipboard' {
         It 'Detects MD5 hash (32 characters)' {
             # Arrange
-            Mock Get-Clipboard { return '5d41402abc4b2a76b9719d911017c592' }
+            if ($IsWindows) {
+                Mock Get-Clipboard { return '5d41402abc4b2a76b9719d911017c592' }
+            } else {
+                # Mock Linux clipboard tools (only mock what exists)
+                if (Get-Command wl-paste -ErrorAction SilentlyContinue) {
+                    Mock wl-paste { return '5d41402abc4b2a76b9719d911017c592' }
+                }
+                if (Get-Command xclip -ErrorAction SilentlyContinue) {
+                    Mock xclip { return '5d41402abc4b2a76b9719d911017c592' }
+                }
+                if (Get-Command xsel -ErrorAction SilentlyContinue) {
+                    Mock xsel { return '5d41402abc4b2a76b9719d911017c592' }
+                }
+            }
 
             # Act
             $result = Get-ClipboardHash
@@ -72,7 +99,19 @@ Describe 'Get-ClipboardHash' {
 
         It 'Detects SHA256 hash (64 characters)' {
             # Arrange
-            Mock Get-Clipboard { return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+            if ($IsWindows) {
+                Mock Get-Clipboard { return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+            } else {
+                if (Get-Command wl-paste -ErrorAction SilentlyContinue) {
+                    Mock wl-paste { return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+                }
+                if (Get-Command xclip -ErrorAction SilentlyContinue) {
+                    Mock xclip { return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+                }
+                if (Get-Command xsel -ErrorAction SilentlyContinue) {
+                    Mock xsel { return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+                }
+            }
 
             # Act
             $result = Get-ClipboardHash
@@ -86,7 +125,19 @@ Describe 'Get-ClipboardHash' {
         It 'Detects SHA512 hash (128 characters)' {
             # Arrange
             $sha512Hash = 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
-            Mock Get-Clipboard { return $sha512Hash }
+            if ($IsWindows) {
+                Mock Get-Clipboard { return $sha512Hash }
+            } else {
+                if (Get-Command wl-paste -ErrorAction SilentlyContinue) {
+                    Mock wl-paste { return $sha512Hash }
+                }
+                if (Get-Command xclip -ErrorAction SilentlyContinue) {
+                    Mock xclip { return $sha512Hash }
+                }
+                if (Get-Command xsel -ErrorAction SilentlyContinue) {
+                    Mock xsel { return $sha512Hash }
+                }
+            }
 
             # Act
             $result = Get-ClipboardHash
@@ -99,7 +150,19 @@ Describe 'Get-ClipboardHash' {
 
         It 'Returns null for invalid hash format' {
             # Arrange
-            Mock Get-Clipboard { return 'this is not a hash' }
+            if ($IsWindows) {
+                Mock Get-Clipboard { return 'this is not a hash' }
+            } else {
+                if (Get-Command wl-paste -ErrorAction SilentlyContinue) {
+                    Mock wl-paste { return 'this is not a hash' }
+                }
+                if (Get-Command xclip -ErrorAction SilentlyContinue) {
+                    Mock xclip { return 'this is not a hash' }
+                }
+                if (Get-Command xsel -ErrorAction SilentlyContinue) {
+                    Mock xsel { return 'this is not a hash' }
+                }
+            }
 
             # Act
             $result = Get-ClipboardHash
@@ -110,7 +173,19 @@ Describe 'Get-ClipboardHash' {
 
         It 'Returns null for hash with invalid characters' {
             # Arrange
-            Mock Get-Clipboard { return 'ZZZZ402abc4b2a76b9719d911017c592' }
+            if ($IsWindows) {
+                Mock Get-Clipboard { return 'ZZZZ402abc4b2a76b9719d911017c592' }
+            } else {
+                if (Get-Command wl-paste -ErrorAction SilentlyContinue) {
+                    Mock wl-paste { return 'ZZZZ402abc4b2a76b9719d911017c592' }
+                }
+                if (Get-Command xclip -ErrorAction SilentlyContinue) {
+                    Mock xclip { return 'ZZZZ402abc4b2a76b9719d911017c592' }
+                }
+                if (Get-Command xsel -ErrorAction SilentlyContinue) {
+                    Mock xsel { return 'ZZZZ402abc4b2a76b9719d911017c592' }
+                }
+            }
 
             # Act
             $result = Get-ClipboardHash
@@ -150,7 +225,7 @@ Describe 'Get-And-SaveHash' {
             $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
-            # Act
+            # Act - MD5 used for legacy support testing
             $result = Get-And-SaveHash -PathToFile $testFile -Algorithm MD5
 
             # Assert
@@ -178,7 +253,7 @@ Describe 'Get-And-SaveHash' {
             $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
-            # Act
+            # Act - MD5 used for legacy support testing
             $result = Get-And-SaveHash -PathToFile $testFile -Algorithm MD5
 
             # Assert
@@ -222,7 +297,7 @@ Describe 'Get-And-SaveHash' {
 
             # Assert
             $sidecarContent = (Get-Content $result.Sidecar -Raw).Trim()
-            # Format should be: "HASHVALUE  VeriHash_1024.ico" (GNU coreutils format)
+            # Format is Unix standard: "HASHVALUE  filename.ext" (used on all platforms)
             $sidecarContent | Should -Match '^[A-F0-9]{64}\s{2}VeriHash_1024\.ico$'
         }
     }
@@ -306,7 +381,7 @@ Describe 'Multiple Algorithm Testing' {
             $testFile = Join-Path $script:TestOutputDir "VeriHash_1024.ico"
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
-            # Act - Create three separate sidecar files
+            # Act - Create three separate sidecar files (MD5 for legacy support testing)
             $md5Result = Get-And-SaveHash -PathToFile $testFile -Algorithm MD5
             $sha256Result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256
             $sha512Result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA512
@@ -544,9 +619,9 @@ Describe 'Force Parameter Behavior' {
             Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force | Out-Null
 
             # Assert - File should contain the real hash now
-            $sidecarContent = (Get-Content $sidecarPath -Raw).Trim()
-            $sidecarContent | Should -Match $realHash
-            $sidecarContent | Should -Not -Match $wrongHash
+            $result.Hash | Should -Be $realHash
+            $result.SidecarHash | Should -Not -Be $wrongHash
+            $result.ForceUpdated | Should -Be $true
         }
     }
 }

@@ -4,137 +4,25 @@
 
 ## A modern, cross-platform PowerShell tool for computing and verifying file hashes
 
-[![Version](https://img.shields.io/badge/version-1.2.5-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
 ---
 
-### [v1.2.5] (Current)
-
-**Version: 1.2.5 - 2025-11-18**
-**Critical Bug Fixes & Enhanced Batch Wrapper**
-
-**CRITICAL BUG FIX:**
-
-- 🐛 **Fixed sidecar file format bug**: Sidecar files now use the correct standard Unix format
-  - **Before:** `filename.ext  HASHVALUE` (incorrect, caused "Invalid format" errors)
-  - **After:** `HASHVALUE  filename.ext` (correct, standard format)
-  - **Impact:** Right-click → Send To → VeriHash on `.sha256` files now works correctly!
-  - **Backward compatibility:** Can still read old-format sidecar files automatically
+**Version: 1.3.0 - 2025-12-27**
+**Linux Desktop Integration & Cross-Platform Enhancements**
 
 **NEW FEATURES:**
 
-- ✨ **`-NoPause` parameter**: Skip the 'Press Enter to continue...' prompt at the end
-  - Ideal for batch file integration and automation
-  - Usage: `.\VeriHash.ps1 file.exe -NoPause`
-
-- 📂 **Enhanced batch wrapper v1.2.0**:
-  - Auto-detects hash file extensions (`.sha256`, `.md5`, `.sha512`, `.sha2`, `.sha2_256`)
-  - Automatically enables `-OnlyVerify` mode when a hash sidecar file is opened
-  - Checks PATH first for PowerShell 7 (better performance)
-  - Perfect for Windows file associations and Send To functionality
-
-**IMPROVEMENTS:**
-
-- 🔍 **Smarter sidecar parsing**: Automatically detects hash position (first or last) in sidecar files
-- 📝 **Better documentation**: Updated help text to include `-NoPause` parameter
-
-[See full changelog](CHANGELOG.md)
-
----
-
-### [v1.2.4] (Previous)
-
-**Version: 1.2.4 - 2025-01-17**
-**Enhanced Testing, Bug Fixes, UX Improvements & Performance Analysis Tools**
-
-**NEW FEATURES:**
-
-- ✨ **`-Force` parameter**: Auto-update sidecars without prompting
-  - Ideal for automation scripts and batch processing
-  - Usage: `.\VeriHash.ps1 file.exe -Force`
-
-- ⚡ **`-SkipSignatureCheck` parameter**: Skip digital signature verification for faster execution
-  - **Why?** Digital signature checks consume ~65% of execution time for small files (typically 110ms overhead)
-  - **When to use:** Batch processing, repeated hashing, automation scripts where speed is critical
-  - **When NOT to use:** When verifying software authenticity is important
-  - Usage: `.\VeriHash.ps1 file.exe -SkipSignatureCheck`
-
-- 🧠 **Smart signature detection**: Automatically optimizes performance for non-Authenticode files
-  - Intelligently skips signature checks on files that don't support Authenticode signatures
-  - Three categories: ✅ Authenticode-signable (.exe, .dll, .ps1) | ⚪ Non-Authenticode (.jar, .pdf, .apk) | ⚪ Non-signable (.txt, .jpg, .json)
-  - Saves ~110ms per file for non-Authenticode files (65% faster)
-  - Educational: Shows users when files use other signing methods
-  - Works automatically - no configuration needed
-
-- 🔍 **Performance profiling tool**: `Profile-VeriHashTiming.ps1` analyzes execution overhead
-  - Shows exactly where time is spent during hash computation
-  - Returns structured data for programmatic access (Pester testing)
-  - Useful for understanding performance characteristics
-  - Example: `.\Profile-VeriHashTiming.ps1 -FilePath file.exe -Algorithm SHA256`
-
-- ⏱️ **Millisecond-precision timing**: Exact hash computation times
-- 🕐 **ISO8601 UTC timestamps**: Start/end timestamps for precise timing comparisons
-
-**BUG FIXES:**
-
-- 🐛 **Fixed confusing "Saved to:" text** when sidecar already matched
-- 🐛 **Fixed cached comparison data** after sidecar updates
-- 🐛 **Removed 1GB signature check limit** - Now always checks signatures regardless of file size (unless `-SkipSignatureCheck` is used)
-- 🐛 **Code quality improvements**: Removed unused variables flagged by PSScriptAnalyzer
-
-**PERFORMANCE INSIGHTS:**
-
-Understanding where your time goes:
-
-| Operation | Small Files (< 1KB) | Large Files (> 1GB) |
-|-----------|---------------------|---------------------|
-| Digital Signature Check | ~110ms (65%) | ~110ms (negligible %) |
-| Hash Computation | ~10ms (6%) | Dominant (linear with size) |
-| Metadata & I/O | ~50ms (29%) | Negligible |
-
-**Smart Detection Benefits:**
-
-- `.txt`, `.json`, `.jpg` files: **~65% faster** (no signature check needed)
-- `.jar`, `.pdf`, `.apk` files: **~65% faster** (non-Authenticode format auto-detected)
-- `.exe`, `.dll`, `.ps1` files: Normal speed (signature check still performed as intended)
-
-**Recommendation:** Smart detection now handles most performance optimization automatically. For Authenticode-compatible files where you still want to skip signature checks, use `-SkipSignatureCheck`. For large files (> 1GB), signature overhead is already negligible.
-
-**TESTING:**
-
-- 🧪 **91 comprehensive tests** (added 32 new tests)
-- ✅ **100% test pass rate** + **PSScriptAnalyzer clean**
-- 📊 **Full coverage** of performance profiling, signature checks, smart detection, and sidecar updates
-
-**IMPROVEMENTS:**
-
-- ⏱️ **Improved timing accuracy**: "Total time" now accurately matches Start UTC → End UTC delta
-- 📊 **Better performance visibility**: Users can understand where execution time is spent
-- 🔍 **Enhanced output clarity**: Better messaging for sidecar matches and updates
-
-[See full changelog](CHANGELOG.md)
-
----
-
-## 🚀 What was new in v1.2.3?
-
-**Documentation improvements and comprehensive testing!**
-
-- 📚 **Enhanced Documentation**: 220+ lines of troubleshooting guidance
-- 🧪 **Profile & SendTo Tests**: 22 new integration tests for user-facing features
-- ⚙️ **Test-All.ps1**: One command to run all tests and code quality checks
-
-## 🚀 What was new in v1.2.2?
-
-**Testing improvements and PowerShell 7 compatibility!**
-
-- ✅ **QuickHash Modernized**: Fixed deprecated `-Encoding Byte` parameter for full PowerShell 7 compatibility
-- 🧪 **Comprehensive Testing**: Added 22 Pester tests for QuickHash.ps1 (100% passing)
-- 📊 **Quality Assurance**: PSScriptAnalyzer validation ensures code quality
-- 🔧 **Test Coverage**: File hashing, string hashing, algorithm validation, error handling, and more
+- 🐧 **Linux context menu integration**: Right-click files in Dolphin to compute/verify hashes
+  - ✅ **KDE Plasma/Dolphin support**: Native .desktop service menu integration
+  - 📂 **User-level & system-wide installation**: `./VeriHash.ps1 -SendTo` or with `-SystemWide` flag
+  - 🎨 **Icon integration**: VeriHash icon appears in context menu
+  - 🔧 **Two actions**: "Compute Hash" and "Verify Hash" (with -OnlyVerify)
+  - 🖥️ **Terminal window output**: Opens in Konsole/xterm for visual feedback
+  - 🚀 **Extensible architecture**: Easy to add GNOME, XFCE support in future
 
 [See full changelog](CHANGELOG.md)
 
@@ -314,6 +202,14 @@ Copy a hash to your clipboard, then:
 
 **Behavior**: Automatically detects and verifies the hash from clipboard
 
+**Cross-Platform Support**:
+
+- **Windows**: Built-in clipboard support
+- **Linux**: Requires clipboard tool
+  - Wayland: `sudo pacman -S wl-clipboard` (or `sudo apt install wl-clipboard`)
+  - X11: `sudo pacman -S xclip` (or `sudo apt install xclip`)
+- **macOS**: Built-in clipboard support
+
 ---
 
 ### 6. **Sidecar File Verification**
@@ -367,7 +263,7 @@ Summary:
 ### All Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| --------- | ---- | ----------- |
 | `FilePath` | String | Path to file (or sidecar file) |
 | `-Hash` / `-InputHash` | String | Hash to verify against |
 | `-Algorithm` | String[] | Algorithms to compute: `MD5`, `SHA256`, `SHA512`, `All` |
@@ -405,7 +301,7 @@ Hash computation speed varies by hardware and file size.
 ### Tested Performance (SHA256)
 
 | Storage Type | Speed | 1 GB | 8 GB | 10 GB |
-|-------------|-------|------|------|-------|
+| ----------- | ----- | ---- | ---- | ----- |
 | **SSD** | ~190 MB/s | 5s | 40s | 53s |
 | **HDD** | ~93 MB/s | 11s | 88s | 110s |
 
@@ -586,7 +482,7 @@ This shortcut:
 ### ⚠️ Important: SendTo vs Profile Differences
 
 | Feature | Profile (`verihash` function) | SendTo Menu |
-|---------|-------------------------------|------------|
+| ------- | ----------------------------- | ---------- |
 | **How to use** | Type `verihash filename.exe` in PowerShell | Right-click file → Send To |
 | **Requires profile?** | ✅ Yes, must be loaded | ❌ No |
 | **Profile aliases available?** | ✅ Yes | ❌ No (`-NoProfile` mode) |
@@ -664,6 +560,184 @@ cd path\to\VeriHash
 ```
 
 This will overwrite the old shortcut with updated paths.
+
+---
+
+## 🐧 Linux Context Menu Integration (KDE/Dolphin)
+
+Add VeriHash directly to your Linux file manager's context menu for quick access.
+
+### Quick Setup (Linux Automated)
+
+```bash
+# User-level installation (recommended)
+pwsh -File VeriHash.ps1 -SendTo
+
+# System-wide installation (requires sudo)
+sudo pwsh -File VeriHash.ps1 -SendTo -SystemWide
+```
+
+That's it! Right-click any file in Dolphin → **Actions** → **Compute Hash (VeriHash)** or **Verify Hash (VeriHash)**
+
+### Supported Desktop Environments
+
+- ✅ **KDE Plasma (Dolphin)** - Fully supported
+- 🚧 **GNOME (Nautilus)** - Planned for future release
+- 🚧 **XFCE (Thunar)** - Planned for future release
+
+### What Gets Created (User-Level)
+
+The `-SendTo` flag creates these files:
+
+```text
+~/.local/share/kio/servicemenus/verihash.desktop
+~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+**System-Wide Installation** (with `-SystemWide` flag):
+
+```text
+/usr/share/kio/servicemenus/verihash.desktop
+/usr/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+### Using in Dolphin
+
+1. Right-click any file in Dolphin file manager
+2. Select **Actions** submenu
+3. Choose one of:
+   - **Compute Hash (VeriHash)** - Calculate and save hashes
+   - **Verify Hash (VeriHash)** - Verify against existing sidecar (auto-enables `-OnlyVerify`)
+
+### Uninstalling
+
+**User-Level:**
+
+```bash
+rm ~/.local/share/kio/servicemenus/verihash.desktop
+rm ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+**System-Wide:**
+
+```bash
+sudo rm /usr/share/kio/servicemenus/verihash.desktop
+sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
+```
+
+### Troubleshooting Linux Context Menu
+
+#### Problem: Context menu integration not installing
+
+**Solution:**
+
+1. Verify PowerShell 7 is installed:
+
+   ```bash
+   pwsh --version
+   ```
+
+2. Install if needed:
+
+   ```bash
+   # Arch/Garuda/Manjaro
+   sudo pacman -S powershell
+
+   # Ubuntu/Debian
+   sudo apt install powershell
+
+   # Fedora
+   sudo dnf install powershell
+   ```
+
+3. Verify desktop environment is KDE:
+
+   ```bash
+   echo $XDG_CURRENT_DESKTOP  # Should show "KDE"
+   ```
+
+#### Problem: Context menu entries don't appear in Dolphin
+
+**Solution:**
+
+1. Restart Dolphin:
+
+   ```bash
+   killall dolphin
+   dolphin &
+   ```
+
+2. Verify the `.desktop` file was created:
+
+   ```bash
+   cat ~/.local/share/kio/servicemenus/verihash.desktop
+   ```
+
+3. Check KDE service menu directory permissions:
+
+   ```bash
+   ls -la ~/.local/share/kio/servicemenus/
+   ```
+
+#### Problem: "Could not detect desktop environment" error
+
+**Cause**: You're running a desktop environment other than KDE, or environment variables aren't set.
+
+**Solution**:
+
+Check your desktop environment:
+
+```bash
+echo "XDG_CURRENT_DESKTOP: $XDG_CURRENT_DESKTOP"
+echo "DESKTOP_SESSION: $DESKTOP_SESSION"
+```
+
+Current supported environments:
+
+- KDE Plasma (detected via `XDG_CURRENT_DESKTOP=KDE` or `plasma`)
+
+For other desktop environments, please open an issue on GitHub with your `$XDG_CURRENT_DESKTOP` value.
+
+#### Problem: Icons not showing in context menu
+
+**Solution:**
+
+1. Verify icon was copied:
+
+   ```bash
+   ls -la ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
+   ```
+
+2. If missing, reinstall:
+
+   ```bash
+   pwsh -File VeriHash.ps1 -SendTo
+   ```
+
+3. Update icon cache (may help):
+
+   ```bash
+   gtk-update-icon-cache ~/.local/share/icons/hicolor/ -f
+   ```
+
+### Recreating the Context Menu
+
+If you move your VeriHash directory or update PowerShell, recreate the integration:
+
+```bash
+cd /path/to/VeriHash
+pwsh -File VeriHash.ps1 -SendTo
+```
+
+This will overwrite the old `.desktop` file with updated paths.
+
+#### When to Reinstall
+
+- ✅ **After updating PowerShell** (e.g., switching from pacman to manual install)
+- ✅ **After moving VeriHash directory**
+- ✅ **If context menu shows errors** about missing pwsh
+
+The installer automatically detects the current `pwsh` location and updates all paths.
 
 ---
 
