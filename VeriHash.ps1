@@ -96,6 +96,12 @@ param (
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
 $RunningOnLinux = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
 
+#region Module Imports
+# Import configuration and logging utility modules
+. "$PSScriptRoot\VeriHash.Config.ps1"
+. "$PSScriptRoot\VeriHash.LogUtils.ps1"
+#endregion Module Imports
+
 #region Path Sanitization (Data Minimization)
 # Principle: GDPR Article 5(1)(c) - collect only what's necessary
 # Paths can reveal usernames; sanitize before logging
@@ -128,9 +134,21 @@ function ConvertTo-SanitizedPath {
 #endregion Path Sanitization (Data Minimization)
 
 #region PSFramework Logging Initialization
-# Check for environment variable override of LogLevel
-if ($env:VERIHASH_LOG_LEVEL -and -not $PSBoundParameters.ContainsKey('LogLevel')) {
-    $LogLevel = $env:VERIHASH_LOG_LEVEL
+# Load configuration (env vars > config file > defaults)
+$script:VeriHashConfig = Get-VeriHashConfig
+
+# LogLevel priority: CLI param > env var > config file > defaults
+if (-not $PSBoundParameters.ContainsKey('LogLevel')) {
+    if ($env:VERIHASH_LOG_LEVEL) {
+        $LogLevel = $env:VERIHASH_LOG_LEVEL
+    } elseif ($script:VeriHashConfig.logging.level -and $script:VeriHashConfig.logging.level -ne 'INFO') {
+        # Map config levels to VeriHash parameter values
+        $LogLevel = switch ($script:VeriHashConfig.logging.level) {
+            'DEBUG'   { 'Debug' }
+            'VERBOSE' { 'Verbose' }
+            default   { 'None' }
+        }
+    }
 }
 
 # Check if PSFramework is available
@@ -145,21 +163,13 @@ if (-not $script:PSFrameworkAvailable) {
     # Import PSFramework
     Import-Module PSFramework -ErrorAction SilentlyContinue
 
-    # Configure cross-platform log path
-    # Use separate test log directory when VERIHASH_TEST_MODE is set
+    # Get log path from LogUtils module, append /test if in test mode
     $isTestMode = $env:VERIHASH_TEST_MODE -eq '1'
-    $script:VeriHashLogPath = if ($RunningOnWindows) {
-        if ($isTestMode) {
-            Join-Path $env:APPDATA "VeriHash\logs\test"
-        } else {
-            Join-Path $env:APPDATA "VeriHash\logs"
-        }
+    $baseLogPath = Get-VeriHashLogPath
+    $script:VeriHashLogPath = if ($isTestMode) {
+        Join-Path $baseLogPath "test"
     } else {
-        if ($isTestMode) {
-            Join-Path $HOME ".verihash/logs/test"
-        } else {
-            Join-Path $HOME ".verihash/logs"
-        }
+        $baseLogPath
     }
 
     # Ensure log directory exists
