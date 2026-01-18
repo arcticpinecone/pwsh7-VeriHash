@@ -2,8 +2,30 @@
 
 ## Version History
 
-- Current Feature/Release info is shown first: [v1.3.0]
--- Version Release History contains older release notes.
+- Unreleased changes are shown first: [Unreleased]
+- Current stable release: [v1.3.0]
+- Version Release History contains older release notes.
+
+---
+
+### [Unreleased]
+
+**BUG FIXES:**
+
+- 🔧 **Fixed `Get-VeriHashLogSummary` not reading logs properly**: Was showing only 2 entries instead of 200+
+  - `ConvertFrom-VeriHashLog` now handles UTF-8 BOM at file start
+  - Strips trailing commas from JSON lines (PSFramework array format artifact)
+  - Skips standalone comma lines in log files
+
+**IMPROVEMENTS:**
+
+- 🧪 **Test logs now separated from production logs**: Tests no longer pollute user's log history
+  - New `VERIHASH_TEST_MODE=1` environment variable redirects logs to `logs/test/` subdirectory
+  - `VeriHash.Tests.ps1` sets this automatically in `BeforeAll`/`AfterAll`
+
+- 🤖 **Fixed interactive prompts blocking test runs**: All test invocations now include `-NoPause -Force`
+  - Prevents "Press Enter to continue..." prompts during automated testing
+  - Prevents sidecar conflict prompts during automated testing
 
 ---
 

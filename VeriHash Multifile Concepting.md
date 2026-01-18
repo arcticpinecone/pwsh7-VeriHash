@@ -53,24 +53,56 @@ Currently, VeriHash handles one file at a time. Users often need to:
   - **Safety**: Prevent cyclic redundancy (don't hash `.sha256` files)
   - **Performance**: Chunk processing to avoid system overload
   - **Safeguard**: Confirm before processing >1000 files
+- New flag: `-OutputPath <path>` - Specify where to save the index file
+
+#### **CLI Output Location Requirement**
+
+When `-NoPause` is used (GUI suppressed), the output location **must** be determinable:
+
+- **If `-OutputPath` is specified**: Use that path
+- **If not specified**: Default to parent directory of the first input item
+- **Validation**: Error if output location isn't writable
+
+**Rationale**: CLI usage (especially in scripts) needs predictable behavior. If someone suppresses the GUI, they're likely automating and need to know exactly where files go.
+
+```powershell
+# Explicit output path (recommended for scripts)
+.\VeriHash.ps1 -CreateIndex "C:\MyFiles\" -OutputPath "C:\Indexes\" -NoPause
+
+# Implicit output (goes to parent of MyFiles)
+.\VeriHash.ps1 -CreateIndex "C:\MyFiles\" -NoPause
+```
 
 ### 2. Index File Format & Naming
 
-#### **Format**: GNU `sha256sum` standard
+#### **Format**: GNU `sha*sum` standard (algorithm-flexible)
 
 ```bash
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *relative/path/file1.txt
 5d41402abc4b2a76b9719d911017c592 *subdir/file2.dat
 ```
 
+#### **Algorithm Support**
+
+- **Default**: SHA256 (most common, good balance of speed/security)
+- **Supported**: SHA256, SHA512, SHA384, SHA1, MD5
+- **CLI flag**: `-Algorithm <name>` (same as existing single-file behavior)
+- **Extension reflects algorithm**: `.sha256`, `.sha512`, `.sha1`, `.md5`, etc.
+- **Index file is self-describing**: Extension tells you what algorithm was used
+
 #### **Naming Convention**
 
-- Pattern: `YYYY-MM-DDTHHMMSS.sha256` (UTC-0)
-- Example: `2026-01-16T234917.sha256`
+- Pattern: `YYYY-MM-DDTHHMMSS.<algorithm>` (UTC-0)
+- Example: `2026-01-16T234917.sha256` or `2026-01-16T234917.sha512`
 - Rationale:
   - Sortable chronologically
   - No timezone confusion (UTC-0)
-  - Clear purpose (`.sha256` extension)
+  - Extension indicates hash algorithm used
+
+#### **File Encoding**
+
+- **Encoding**: UTF-8 (no BOM)
+- **Rationale**: UTF-8 without BOM is the most compatible choice — GNU tools, Linux, macOS, and modern Windows all handle it correctly. BOM can cause issues with some Unix tools that interpret it as content.
 
 #### **Creation Flow**
 
@@ -83,15 +115,34 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *relative/path/
    - User can edit filename
 4. Index file created with relative paths
 
+#### **Safe Write Strategy (Temp File Approach)**
+
+To handle cancellation gracefully:
+
+1. **During hashing**: Write results to a temp file (e.g., `~verihash-temp-<guid>.tmp`)
+2. **On completion**: Rename temp file to final index filename (atomic operation)
+3. **On cancellation (Ctrl+C)**:
+   - Trap the interrupt signal
+   - Delete the temp file
+   - Show message: "Index creation cancelled. No files modified."
+4. **On error**: Same as cancellation — clean up temp file
+
+**Benefits**:
+
+- User never sees a partial/corrupt index file
+- Atomic rename ensures index is either complete or doesn't exist
+- Easy cleanup on failure
+
 ### 3. Recursive Directory Handling
 
 #### **When folder(s) selected**
 
 - Hash **all files recursively**
 - Skip:
-  - Existing hash files (`.sha256`, `.sha512`, `.md5`)
+  - Existing hash files (`.sha256`, `.sha512`, `.md5`, `.sha1`, `.sha384`)
   - Hidden system files (optional flag should be included)
   - Symlinks (to prevent loops!)
+  - **Empty directories** (no files to hash, skip silently)
 
 #### **Path Format in Index**
 
@@ -517,9 +568,45 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *file1.bin
 
 1. **Path Traversal**: Sanitize relative paths to prevent `../../../etc/passwd` attacks
 2. **Symlink Loops**: Detect and skip circular symlinks during recursion
-3. **Hash File Recursion**: Never hash `.sha256`, `.sha512`, `.md5` files themselves
+3. **Hash File Recursion**: Never hash `.sha256`, `.sha512`, `.md5`, `.sha1`, `.sha384` files themselves
 4. **Large Files**: Warn if single file > 10 GB (slow to hash)
-5. **Permissions**: Handle permission-denied errors gracefully
+5. **Permissions**: Handle permission-denied errors gracefully (see below)
+
+### Permission Pre-Check Strategy
+
+Before processing files, VeriHash should verify read access to avoid mid-process failures:
+
+#### **How It Works**
+
+1. **Enumerate files first** (already needed for progress reporting)
+2. **Quick permission check**: Attempt to open each file briefly for read access
+   - PowerShell: `[System.IO.File]::OpenRead($path).Close()` or `Test-Path -PathType Leaf` + check ACL
+   - This is fast — just checking access, not reading content
+3. **Report inaccessible files upfront**:
+
+   ```bash
+   ⚠️  3 files cannot be read (permission denied):
+       - C:\Protected\secret.dat
+       - C:\System\config.sys
+       - C:\Admin\data.bin
+
+   Options:
+   [1] Skip these files and continue (44/47 files)
+   [2] Abort and run with elevated permissions
+   [3] Cancel
+   ```
+
+#### **Elevation Guidance**
+
+- **Windows**: "Run PowerShell as Administrator" or use `sudo` (Windows 11 24H2+)
+- **Linux**: "Run with `sudo`"
+- Don't auto-elevate — that's a security risk. Just inform the user.
+
+#### **Rationale**
+
+- Failing mid-hash on file 47 of 100 is frustrating
+- Pre-checking is cheap (milliseconds) compared to hashing (seconds/minutes)
+- User can make an informed decision before waiting
 
 ---
 
@@ -532,6 +619,8 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *file1.bin
 - [ ] Multi-input detection
 - [ ] Timestamp generation (UTC)
 - [ ] Parallel processing logic
+- [ ] Algorithm extension mapping (SHA256 → .sha256, etc.)
+- [ ] UTF-8 encoding (no BOM) output validation
 
 ### Integration Tests
 
@@ -541,6 +630,11 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *file1.bin
 - [ ] Verify index with modified file
 - [ ] Recursive directory hashing
 - [ ] Cross-platform path handling (Windows/Linux)
+- [ ] Empty directory handling (should be skipped)
+- [ ] Permission pre-check (inaccessible files detected before hashing)
+- [ ] Cancellation handling (temp file cleanup)
+- [ ] `-OutputPath` flag behavior
+- [ ] `-NoPause` with implicit output location
 
 ### Performance Tests
 
@@ -548,6 +642,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *file1.bin
 - [ ] 10 large files (> 100 MB each)
 - [ ] 1000+ files (stress test)
 - [ ] Parallel vs serial comparison
+- [ ] Permission pre-check overhead (should be negligible)
 
 ---
 
@@ -556,7 +651,8 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *file1.bin
 - [ ] README: Add multi-file index section
 - [ ] README: Update usage examples
 - [ ] CHANGELOG: Document new feature
-- [ ] Help text: Add `-CreateIndex`, `-RecursiveIndividual` flags
+- [ ] Help text: Add `-CreateIndex`, `-RecursiveIndividual`, `-OutputPath` flags
+- [ ] Help text: Document algorithm flexibility with `-Algorithm`
 - [ ] Screenshots: Show GUI dialogs
 
 ---

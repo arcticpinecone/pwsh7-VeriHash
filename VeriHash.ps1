@@ -83,6 +83,10 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$SystemWide,
 
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('None', 'Verbose', 'Debug')]
+    [string]$LogLevel = 'None',
+
     [Alias("h", "?")]
     [Parameter(Mandatory = $false)]
     [switch]$Help
@@ -91,6 +95,112 @@ param (
 # Initialize variables early
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
 $RunningOnLinux = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
+
+#region Path Sanitization (Data Minimization)
+# Principle: GDPR Article 5(1)(c) - collect only what's necessary
+# Paths can reveal usernames; sanitize before logging
+function ConvertTo-SanitizedPath {
+    <#
+    .SYNOPSIS
+        Replaces user profile paths with platform-appropriate placeholders.
+    .DESCRIPTION
+        Implements data minimization by removing personally identifiable
+        information from file paths before logging.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(ValueFromPipeline)]
+        [string]$Path
+    )
+    process {
+        if ([string]::IsNullOrEmpty($Path)) { return $Path }
+
+        if ($RunningOnWindows) {
+            # Replace C:\Users\username with %USERPROFILE%
+            $Path -replace [regex]::Escape($env:USERPROFILE), '%USERPROFILE%'
+        } else {
+            # Replace /home/username or /Users/username with ~
+            $Path -replace [regex]::Escape($HOME), '~'
+        }
+    }
+}
+#endregion Path Sanitization (Data Minimization)
+
+#region PSFramework Logging Initialization
+# Check for environment variable override of LogLevel
+if ($env:VERIHASH_LOG_LEVEL -and -not $PSBoundParameters.ContainsKey('LogLevel')) {
+    $LogLevel = $env:VERIHASH_LOG_LEVEL
+}
+
+# Check if PSFramework is available
+$script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)
+
+if (-not $script:PSFrameworkAvailable) {
+    # PSFramework not installed - warn but continue (logging is optional)
+    if ($LogLevel -ne 'None') {
+        Write-Warning "PSFramework module not installed. Logging features unavailable. Install with: Install-Module PSFramework -Scope CurrentUser"
+    }
+} else {
+    # Import PSFramework
+    Import-Module PSFramework -ErrorAction SilentlyContinue
+
+    # Configure cross-platform log path
+    # Use separate test log directory when VERIHASH_TEST_MODE is set
+    $isTestMode = $env:VERIHASH_TEST_MODE -eq '1'
+    $script:VeriHashLogPath = if ($RunningOnWindows) {
+        if ($isTestMode) {
+            Join-Path $env:APPDATA "VeriHash\logs\test"
+        } else {
+            Join-Path $env:APPDATA "VeriHash\logs"
+        }
+    } else {
+        if ($isTestMode) {
+            Join-Path $HOME ".verihash/logs/test"
+        } else {
+            Join-Path $HOME ".verihash/logs"
+        }
+    }
+
+    # Ensure log directory exists
+    if (-not (Test-Path $script:VeriHashLogPath)) {
+        New-Item -ItemType Directory -Path $script:VeriHashLogPath -Force | Out-Null
+    }
+
+    # Configure file logging provider (JSON format for agent/programmatic parsing)
+    # Data Minimization: Headers exclude File/ComputerName/Username; -Data paths sanitized
+    # Reference: GDPR Article 5(1)(c), OWASP Logging Cheat Sheet, CWE-532
+    Set-PSFLoggingProvider -Name 'logfile' -InstanceName 'VeriHash' `
+        -FilePath (Join-Path $script:VeriHashLogPath "verihash-%date%.json") `
+        -FileType Json `
+        -JsonCompress $true `
+        -UTC $true `
+        -Headers 'FunctionName', 'Level', 'Line', 'Message', 'ModuleName', 'Runspace', 'Tags', 'TargetObject', 'Timestamp', 'Type', 'Data' `
+        -Enabled $true
+
+    # Set message level based on LogLevel parameter
+    switch ($LogLevel) {
+        'Debug' {
+            Set-PSFConfig -FullName 'PSFramework.Message.Info.Maximum' -Value 9
+            Set-PSFConfig -FullName 'PSFramework.Message.Verbose.Maximum' -Value 9
+        }
+        'Verbose' {
+            Set-PSFConfig -FullName 'PSFramework.Message.Info.Maximum' -Value 6
+            Set-PSFConfig -FullName 'PSFramework.Message.Verbose.Maximum' -Value 6
+        }
+        default {
+            # 'None' - file logging only, minimal console output
+            Set-PSFConfig -FullName 'PSFramework.Message.Info.Maximum' -Value 3
+        }
+    }
+
+    Write-PSFMessage -Level Debug -Message "VeriHash logging initialized" -Tag 'Init' -Data @{
+        LogPath = $script:VeriHashLogPath | ConvertTo-SanitizedPath
+        LogLevel = $LogLevel
+        Platform = if ($RunningOnWindows) { 'Windows' } elseif ($RunningOnLinux) { 'Linux' } else { 'macOS' }
+    }
+}
+#endregion PSFramework Logging Initialization
 
 # File extensions that support Authenticode signatures
 $script:SignableExtensions = @(
@@ -196,6 +306,11 @@ function Install-WindowsSendTo {
     [CmdletBinding()]
     param()
 
+    # Log installation attempt
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Verbose -Message "Installing Windows SendTo shortcut" -Tag 'Install', 'Windows'
+    }
+
     $sendToPath    = Join-Path $env:AppData "Microsoft\Windows\SendTo"
     $shortcutPath  = Join-Path $sendToPath "VeriHash.lnk"
     $pwshCommand   = "pwsh"
@@ -224,6 +339,15 @@ function Install-WindowsSendTo {
     }
 
     $shortcut.Save()
+
+    # Log success
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Verbose -Message "Windows SendTo shortcut created" -Tag 'Install', 'Windows', 'Success' -Data @{
+            ShortcutPath = $shortcutPath | ConvertTo-SanitizedPath
+            TargetScript = $scriptFullPath | ConvertTo-SanitizedPath
+        }
+    }
+
     Write-Host "Shortcut created at: $shortcutPath" -ForegroundColor Green
 }
 
@@ -240,6 +364,13 @@ function Install-LinuxContextMenu {
     param(
         [switch]$SystemWide
     )
+
+    # Log installation attempt
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Verbose -Message "Installing Linux context menu" -Tag 'Install', 'Linux' -Data @{
+            SystemWide = $SystemWide.IsPresent
+        }
+    }
 
     $desktop = Get-DesktopEnvironment
 
@@ -281,6 +412,13 @@ function Install-KDEContextMenu {
     param(
         [switch]$SystemWide
     )
+
+    # Log installation attempt
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Verbose -Message "Installing KDE context menu" -Tag 'Install', 'Linux', 'KDE' -Data @{
+            SystemWide = $SystemWide.IsPresent
+        }
+    }
 
     $scriptFullPath = $PSCommandPath
     $scriptDir = Split-Path $scriptFullPath -Parent
@@ -403,6 +541,15 @@ Exec=$execVerifyHash
     # Make .desktop file executable (required by KDE for security)
     if (Get-Command chmod -ErrorAction SilentlyContinue) {
         & chmod +x "$desktopFile" 2>$null
+    }
+
+    # Log success
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Verbose -Message "KDE context menu installed" -Tag 'Install', 'Linux', 'KDE', 'Success' -Data @{
+            DesktopFile = $desktopFile | ConvertTo-SanitizedPath
+            SystemWide = $SystemWide.IsPresent
+            Terminal = $terminalCmd
+        }
     }
 
     Write-Host ""
@@ -533,6 +680,13 @@ function Test-InputHash {
 function Get-ClipboardHash {
     $clipboard = $null
 
+    # Log clipboard check attempt
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Debug -Message "Checking clipboard for hash" -Tag 'Clipboard', 'Entry' -Data @{
+            Platform = if ($RunningOnWindows) { 'Windows' } elseif ($RunningOnLinux) { 'Linux' } else { 'macOS' }
+        }
+    }
+
     # Try different methods to get clipboard based on platform
     if ($RunningOnWindows) {
         # Windows: Use built-in Get-Clipboard
@@ -603,21 +757,33 @@ function Get-ClipboardHash {
     $sha512Pattern = '^[A-Fa-f0-9]{128}$'
 
     if ($clipboard -match $md5Pattern) {
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Debug -Message "MD5 hash detected in clipboard" -Tag 'Clipboard', 'Detected' -Data @{ Algorithm = 'MD5' }
+        }
         return [pscustomobject]@{
             Algorithm = 'MD5'
             Hash      = $clipboard.ToUpper()
         }
     } elseif ($clipboard -match $sha256Pattern) {
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Debug -Message "SHA256 hash detected in clipboard" -Tag 'Clipboard', 'Detected' -Data @{ Algorithm = 'SHA256' }
+        }
         return [pscustomobject]@{
             Algorithm = 'SHA256'
             Hash      = $clipboard.ToUpper()
         }
     } elseif ($clipboard -match $sha512Pattern) {
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Debug -Message "SHA512 hash detected in clipboard" -Tag 'Clipboard', 'Detected' -Data @{ Algorithm = 'SHA512' }
+        }
         return [pscustomobject]@{
             Algorithm = 'SHA512'
             Hash      = $clipboard.ToUpper()
         }
     } else {
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Debug -Message "No valid hash found in clipboard" -Tag 'Clipboard', 'NotFound'
+        }
         return $null
     }
 }
@@ -634,6 +800,18 @@ function Get-And-SaveHash {
         [switch]$Force
     )
 
+    # Log function entry
+    if ($script:PSFrameworkAvailable) {
+        $fileSize = (Get-Item $PathToFile).Length
+        $sanitizedPath = $PathToFile | ConvertTo-SanitizedPath
+        Write-PSFMessage -Level Verbose -Message "Computing $Algorithm hash for: $sanitizedPath" -Tag 'Hash', 'Compute' -Data @{
+            Path = $sanitizedPath
+            Algorithm = $Algorithm
+            FileSizeBytes = $fileSize
+            Force = $Force.IsPresent
+        }
+    }
+
     # Start timing
     $hashStartTime = Get-Date
 
@@ -644,6 +822,18 @@ function Get-And-SaveHash {
     # End timing
     $hashEndTime = Get-Date
     $hashDuration = $hashEndTime - $hashStartTime
+
+    # Log hash computation result
+    if ($script:PSFrameworkAvailable) {
+        $throughputMBs = if ($hashDuration.TotalSeconds -gt 0) { [Math]::Round($fileSize / 1MB / $hashDuration.TotalSeconds, 2) } else { 0 }
+        Write-PSFMessage -Level Verbose -Message "Hash computed: $hashValue" -Tag 'Hash', 'Result' -Data @{
+            Path = $PathToFile | ConvertTo-SanitizedPath
+            Algorithm = $Algorithm
+            Hash = $hashValue
+            DurationMs = [Math]::Round($hashDuration.TotalMilliseconds, 2)
+            ThroughputMBs = $throughputMBs
+        }
+    }
 
     # Decide extension
     switch ($Algorithm) {
@@ -855,6 +1045,18 @@ function Invoke-HashFile {
         [switch]$SkipSignatureCheck,
         [switch]$NoPause
     )
+
+    # Log function entry
+    if ($script:PSFrameworkAvailable) {
+        Write-PSFMessage -Level Debug -Message "Invoke-HashFile called" -Tag 'HashFile', 'Entry' -Data @{
+            FilePath = $FilePath | ConvertTo-SanitizedPath
+            InputHash = if ($InputHash) { $InputHash.Substring(0, [Math]::Min(16, $InputHash.Length)) + '...' } else { $null }
+            Algorithm = $Algorithm
+            OnlyVerify = $OnlyVerify.IsPresent
+            Force = $Force.IsPresent
+            SkipSignatureCheck = $SkipSignatureCheck.IsPresent
+        }
+    }
 
     # Only check clipboard if no InputHash was explicitly provided
     [pscustomobject]$clipboardHashInfo = $null
@@ -1209,7 +1411,18 @@ function Test-HashSidecar {
     )
 
     process {
+        # Log function entry (sanitize paths for privacy)
+        $sanitizedSidecarPath = $SidecarPath | ConvertTo-SanitizedPath
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Verbose -Message "Verifying sidecar: $sanitizedSidecarPath" -Tag 'Verify', 'Entry' -Data @{
+                SidecarPath = $sanitizedSidecarPath
+            }
+        }
+
         if (-not (Test-Path -Path $SidecarPath)) {
+            if ($script:PSFrameworkAvailable) {
+                Write-PSFMessage -Level Warning -Message "Sidecar file not found: $sanitizedSidecarPath" -Tag 'Verify', 'Error'
+            }
             Write-Error "Sidecar file '$SidecarPath' does not exist."
             return
         }
@@ -1218,6 +1431,9 @@ function Test-HashSidecar {
         $lines = Get-Content -Path $SidecarPath | Where-Object { $_.Trim() -ne '' }
 
         if ($lines.Count -eq 0) {
+            if ($script:PSFrameworkAvailable) {
+                Write-PSFMessage -Level Warning -Message "Sidecar file is empty: $sanitizedSidecarPath" -Tag 'Verify', 'Error'
+            }
             Write-Error "Sidecar '$SidecarPath' is empty."
             return
         }
@@ -1227,6 +1443,13 @@ function Test-HashSidecar {
         $passedFiles = 0
         $failedFiles = 0
         $missingFiles = 0
+
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Verbose -Message "Processing $totalFiles entries from sidecar" -Tag 'Verify', 'Process' -Data @{
+                SidecarPath = $sanitizedSidecarPath
+                TotalEntries = $totalFiles
+            }
+        }
 
         Write-Host "Checksum file:      $SidecarPath" -ForegroundColor Cyan
         Write-Host "Total entries:      $totalFiles" -ForegroundColor Cyan
@@ -1290,6 +1513,19 @@ function Test-HashSidecar {
         }
         if ($missingFiles -gt 0) {
             Write-Host "  Missing: $missingFiles" -ForegroundColor Yellow
+        }
+
+        # Log verification summary
+        if ($script:PSFrameworkAvailable) {
+            $status = if ($failedFiles -eq 0 -and $missingFiles -eq 0) { 'AllPassed' } elseif ($failedFiles -gt 0) { 'HasFailures' } else { 'HasMissing' }
+            Write-PSFMessage -Level Verbose -Message "Sidecar verification complete: $passedFiles passed, $failedFiles failed, $missingFiles missing" -Tag 'Verify', 'Summary' -Data @{
+                SidecarPath = $sanitizedSidecarPath
+                TotalEntries = $totalFiles
+                Passed = $passedFiles
+                Failed = $failedFiles
+                Missing = $missingFiles
+                Status = $status
+            }
         }
     }
 }

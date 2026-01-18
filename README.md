@@ -43,6 +43,7 @@
 - [QuickHash](#-quickhash---lightweight-string--file-hasher)
 - [Contributing](#-contributing)
 - [Running Tests](#-running-tests)
+- [Privacy & Data Minimization](#-privacy--data-minimization)
 - [License](#-license)
 
 ---
@@ -270,7 +271,9 @@ Summary:
 | `-OnlyVerify` | Switch | Only verify provided hash (no extra computations) |
 | `-Force` | Switch | Auto-update sidecars without prompting when mismatches detected |
 | `-SkipSignatureCheck` | Switch | Skip digital signature verification (faster for small files) |
-| `-SendTo` | Switch | Install Windows "Send To" menu shortcut |
+| `-SendTo` | Switch | Install Windows "Send To" menu shortcut (or Linux context menu) |
+| `-SystemWide` | Switch | Install context menu system-wide (Linux only, requires sudo) |
+| `-LogLevel` | String | Enable logging: `None` (default), `Verbose`, or `Debug` |
 | `-Help` | Switch | Display detailed help message |
 
 ### Examples with Multiple Parameters
@@ -927,11 +930,17 @@ Invoke-Pester -Path "Tests\ProfileAndSendTo.Tests.ps1"
 
 # Run all tests in the Tests directory
 Invoke-Pester -Path "Tests\"
+
+# Run with detailed output (shows test names and verbose logging)
+Invoke-Pester -Path "Tests\" -Output Detailed
 ```
 
 **Run PSScriptAnalyzer**:
 
 ```powershell
+# Install or update PSScriptAnalyzer to latest version
+Install-Module -Name PSScriptAnalyzer -Force
+
 # Analyze VeriHash.ps1
 Invoke-ScriptAnalyzer -Path ".\VeriHash.ps1" -Settings PSGallery
 
@@ -958,6 +967,82 @@ Invoke-ScriptAnalyzer -Path ".\QuickHash.ps1" -Settings PSGallery
 - **Total: 91 comprehensive tests** ensuring reliability and performance
 
 **Note on Pester Version**: VeriHash uses Pester 5.x syntax. If you see errors about `BeforeAll` location, update Pester with `Install-Module Pester -Force`.
+
+---
+
+## 🔒 Privacy & Data Minimization
+
+VeriHash is designed with privacy in mind. We believe in transparency about what data is collected and why.
+
+### Logging Philosophy
+
+VeriHash includes optional logging (via [PSFramework](https://psframework.org/)) for debugging and troubleshooting. However, we follow strict data minimization principles:
+
+**What we sanitize/control:**
+
+- ✅ **File paths are sanitized** (e.g., `C:\Users\name\...` becomes `%USERPROFILE%\...`)
+- ✅ **Messages don't contain full paths** (sanitized before logging)
+- ⚠️ PSFramework adds some metadata (ComputerName, Username) that we cannot disable
+- ⚠️ If sharing logs externally, consider filtering these fields
+
+**What we DO log (when logging is enabled):**
+
+- ✅ Timestamps
+- ✅ Log levels (Debug, Verbose, Warning)
+- ✅ Operation messages (e.g., "Hash computed")
+- ✅ Sanitized paths (e.g., `%USERPROFILE%\Downloads\file.exe`)
+- ✅ Hash algorithms used
+- ✅ Performance metrics (file size, throughput)
+
+### Principles Applied
+
+| Principle | Reference | Implementation |
+| --------- | --------- | -------------- |
+| **Data Minimization** | GDPR Article 5(1)(c) | Collect only data necessary for debugging |
+| **Sensitive Data in Logs** | CWE-532 | No usernames or system identifiers in logs |
+| **Logging Best Practices** | OWASP Logging Cheat Sheet | Sanitize paths, exclude PII |
+| **Privacy by Design** | GDPR Article 25 | Sanitization built-in, not opt-in |
+
+### Path Sanitization
+
+All file paths in logs are automatically sanitized:
+
+- **Windows**: `C:\Users\username\...` becomes `%USERPROFILE%\...`
+- **Linux/macOS**: `/home/username/...` becomes `~/...`
+
+This means logs can be safely shared for debugging without exposing usernames or directory structures.
+
+### Log Utilities
+
+VeriHash includes `VeriHash.LogUtils.ps1` for working with log files:
+
+```powershell
+# View recent log entries
+ConvertFrom-VeriHashLog -Days 7
+
+# Get a summary of log activity
+Get-VeriHashLogSummary -Days 30
+
+# Expand sanitized paths back to full paths (local debugging only)
+ConvertFrom-SanitizedPath -Path '%USERPROFILE%\Downloads\file.exe'
+```
+
+### Enabling Logging
+
+Logging is **disabled by default**. To enable:
+
+```powershell
+# Enable verbose logging
+.\VeriHash.ps1 -LogLevel Verbose "file.exe"
+
+# Enable debug logging (most detailed)
+.\VeriHash.ps1 -LogLevel Debug "file.exe"
+
+# Or set via environment variable
+$env:VERIHASH_LOG_LEVEL = 'Verbose'
+```
+
+**Note**: Logging requires the [PSFramework](https://psframework.org/) module. If not installed, VeriHash works normally without logging capabilities.
 
 ---
 

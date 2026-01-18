@@ -1,4 +1,7 @@
 BeforeAll {
+    # Enable test mode to redirect logs to separate test directory
+    $env:VERIHASH_TEST_MODE = '1'
+
     # Import the function we want to test from VeriHash.ps1
     # We use dot-sourcing to load the script
     . "$PSScriptRoot\..\VeriHash.ps1" -FilePath "dummy" -ErrorAction SilentlyContinue 2>$null
@@ -12,6 +15,11 @@ BeforeAll {
     # Create a temp directory for test outputs
     $script:TestOutputDir = Join-Path $TestDrive "VeriHashTests"
     New-Item -ItemType Directory -Path $script:TestOutputDir -Force | Out-Null
+}
+
+AfterAll {
+    # Clean up test mode environment variable
+    Remove-Item Env:\VERIHASH_TEST_MODE -ErrorAction SilentlyContinue
 }
 
 <#
@@ -615,8 +623,8 @@ Describe 'Force Parameter Behavior' {
             $wrongHash = "0000000000000000000000000000000000000000000000000000000000000000"
             Set-Content -Path $sidecarPath -Value "VeriHash_1024.ico  $wrongHash"
 
-            # Act
-            Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force | Out-Null
+            # Act - Capture the result
+            $result = Get-And-SaveHash -PathToFile $testFile -Algorithm SHA256 -Force
 
             # Assert - File should contain the real hash now
             $result.Hash | Should -Be $realHash
@@ -762,7 +770,7 @@ Describe 'SkipSignatureCheck Parameter' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show signature was skipped
@@ -775,7 +783,7 @@ Describe 'SkipSignatureCheck Parameter' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show signature check happened (on Windows) or was skipped for platform reasons (non-Windows)
@@ -797,7 +805,7 @@ Describe 'SkipSignatureCheck Parameter' {
             $expectedHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should still compute hash correctly
@@ -811,7 +819,7 @@ Describe 'SkipSignatureCheck Parameter' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Use with -Algorithm parameter, capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -Algorithm MD5 -SkipSignatureCheck *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -Algorithm MD5 -SkipSignatureCheck -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert
@@ -834,7 +842,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should check signature (on Windows)
@@ -851,7 +859,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should check signature (on Windows)
@@ -868,7 +876,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should check signature (on Windows)
@@ -887,7 +895,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show N/A for non-Authenticode (on Windows)
@@ -902,7 +910,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show N/A for non-Authenticode (on Windows)
@@ -917,7 +925,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show N/A for non-Authenticode (on Windows)
@@ -934,7 +942,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show N/A (on Windows)
@@ -949,7 +957,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show N/A (on Windows)
@@ -964,7 +972,7 @@ Describe 'Smart Signature Detection' {
             Copy-Item -Path $script:TestIconFile -Destination $testFile -Force
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should show N/A (on Windows)
@@ -980,12 +988,102 @@ Describe 'Smart Signature Detection' {
             $expectedHash = (Get-FileHash -Algorithm SHA256 -Path $testFile).Hash
 
             # Act - Capture all output streams
-            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile *>&1
+            $output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
             $outputString = ($output | Out-String)
 
             # Assert - Should still compute hash correctly
             $outputString | Should -Match $expectedHash
             $outputString | Should -Match 'Computed hash:'
+        }
+    }
+}
+
+Describe 'PSFramework Logging Integration' {
+    Context 'When PSFramework is available' {
+        BeforeAll {
+            $script:PSFrameworkInstalled = $null -ne (Get-Module -ListAvailable -Name PSFramework)
+        }
+
+        It 'Should have PSFrameworkAvailable variable set correctly' -Skip:(-not $script:PSFrameworkInstalled) {
+            # The script should set $script:PSFrameworkAvailable based on module availability
+            # When PSFramework is installed, this should be $true
+            $script:PSFrameworkAvailable | Should -BeTrue
+        }
+
+        It 'Should not throw when logging is enabled' -Skip:(-not $script:PSFrameworkInstalled) {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "log-test.txt"
+            "Test content" | Set-Content $testFile
+
+            # Act & Assert - should not throw even with logging enabled
+            { & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -LogLevel Verbose -NoPause -Force *>&1 } | Should -Not -Throw
+        }
+
+        It 'Should create log directory when logging is enabled' -Skip:(-not $script:PSFrameworkInstalled) {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "log-dir-test.txt"
+            "Test content" | Set-Content $testFile
+            $expectedLogPath = if ($IsWindows) {
+                Join-Path $env:APPDATA "VeriHash\logs"
+            } else {
+                Join-Path $HOME ".verihash/logs"
+            }
+
+            # Act
+            & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -LogLevel Debug -NoPause -Force *>&1 | Out-Null
+
+            # Assert
+            Test-Path $expectedLogPath | Should -BeTrue
+        }
+    }
+
+    Context 'When PSFramework is not available' {
+        It 'Should still function without PSFramework' {
+            # This test verifies VeriHash works even without PSFramework
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "no-psf-test.txt"
+            "Test content" | Set-Content $testFile
+
+            # Act & Assert - VeriHash should work regardless of PSFramework
+            { & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1 } | Should -Not -Throw
+        }
+    }
+
+    Context 'LogLevel Parameter' {
+        It 'Should accept None as LogLevel' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "loglevel-none.txt"
+            "Test content" | Set-Content $testFile
+
+            # Act & Assert
+            { & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -LogLevel None -NoPause -Force *>&1 } | Should -Not -Throw
+        }
+
+        It 'Should accept Verbose as LogLevel' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "loglevel-verbose.txt"
+            "Test content" | Set-Content $testFile
+
+            # Act & Assert
+            { & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -LogLevel Verbose -NoPause -Force *>&1 } | Should -Not -Throw
+        }
+
+        It 'Should accept Debug as LogLevel' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "loglevel-debug.txt"
+            "Test content" | Set-Content $testFile
+
+            # Act & Assert
+            { & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -LogLevel Debug -NoPause -Force *>&1 } | Should -Not -Throw
+        }
+
+        It 'Should reject invalid LogLevel values' {
+            # Arrange
+            $testFile = Join-Path $script:TestOutputDir "loglevel-invalid.txt"
+            "Test content" | Set-Content $testFile
+
+            # Act & Assert - ValidateSet should reject invalid values
+            { & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -LogLevel Invalid -NoPause -Force *>&1 } | Should -Throw
         }
     }
 }

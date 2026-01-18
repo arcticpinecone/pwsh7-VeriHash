@@ -12,6 +12,9 @@ Thumbs.db
 .claude/settings.local.json
 .claude/*
 
+# Serena MCP tool (local AI session data)
+.serena/
+
 # Exclude test example files but keep actual test files
 Get-Planet.Tests.ps1
 tmp/*
