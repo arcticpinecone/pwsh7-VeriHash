@@ -28,7 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `ConvertTo-SanitizedPath` is defined in `VeriHash.LogUtils.ps1` and callable from Config, main script, and any future module (dot-source order: LogUtils → Config → VeriHash)
   4. PSFramework bootstrap detection (`$script:PSFrameworkAvailable`) is set exactly once across all modules — no redundant `Get-Module -ListAvailable` calls
   5. `Verihash Logging Concepting.md` accurately describes the code's actual behavior with zero "not yet implemented" caveats
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Relocate ConvertTo-SanitizedPath to LogUtils, reorder dot-sources, deduplicate PSFramework bootstrap
+- [ ] 01-02-PLAN.md — Fix hash truncation (PRIV-01) and config path sanitization (PRIV-02)
+- [ ] 01-03-PLAN.md — Update logging guide to match actual code behavior (PRIV-04)
 
 ### Phase 2: CI/CD Pipeline
 **Goal**: Every push and PR is automatically validated — tests pass cross-platform, lint is clean across all modules
