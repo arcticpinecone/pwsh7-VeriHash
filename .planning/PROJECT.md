@@ -38,7 +38,7 @@ Close the audit gaps so the privacy-first logging guide is the **honest contract
 - [ ] Sanitize all path arguments in `VeriHash.Config.ps1` log payloads (close 10+ unsanitized-path violations)
 - [ ] Run Pester + PSScriptAnalyzer automatically on every push and PR via GitHub Actions
 - [ ] Lint `VeriHash.Config.ps1` and `VeriHash.LogUtils.ps1` with PSScriptAnalyzer (currently only `VeriHash.ps1` is linted)
-- [ ] Enable log-file rotation (`-MaxLogFileAge` / `-MaxTotalFolderSize` on the PSFramework provider) so logs don't grow unbounded
+- [ ] Enable log-file rotation (`LogRotatePath` + `LogRetentionTime` on the PSFramework provider) so logs don't grow unbounded
 - [ ] Default `virustotal.enabled` to `false` in `Get-VeriHashDefaultConfig` until Phase 3 ships (avoid misleading users)
 - [ ] Eliminate the redundant `Get-Module -ListAvailable -Name PSFramework` call (single bootstrap detection)
 - [ ] After fixes, the `Verihash Logging Concepting.md` guide describes actual behavior with no caveats
