@@ -62,6 +62,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Privacy & Logging Compliance | 0/? | Not started | - |
+| 1. Privacy & Logging Compliance | 0/3 | Planned | - |
 | 2. CI/CD Pipeline | 0/? | Not started | - |
 | 3. Small Wins & Baseline Lock | 0/? | Not started | - |
