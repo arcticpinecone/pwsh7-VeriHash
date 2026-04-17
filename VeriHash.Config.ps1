@@ -303,7 +303,7 @@ function Set-VeriHashConfig {
         $config.logging.level = 'DEBUG'
         Set-VeriHashConfig -Config $config
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$Config,
@@ -340,11 +340,13 @@ function Set-VeriHashConfig {
     }
 
     # Write config file
-    $configToSave | ConvertTo-Json -Depth 3 | Set-Content $configFile -Encoding UTF8
+    if ($PSCmdlet.ShouldProcess($configFile, 'Save VeriHash configuration')) {
+        $configToSave | ConvertTo-Json -Depth 3 | Set-Content $configFile -Encoding UTF8
 
-    if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Debug -Message "Configuration saved" -Tag 'Config', 'Success' -Data @{
-            ConfigFile = $configFile
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Debug -Message "Configuration saved" -Tag 'Config', 'Success' -Data @{
+                ConfigFile = $configFile
+            }
         }
     }
 }
