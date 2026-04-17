@@ -1,672 +1,450 @@
-# VeriHash Multi-File Index Enhancement Concept
+# VeriHash Manifest Feature — Concept & Design
 
-**Date**: 2026-01-16  
-**Status**: Planning Phase  
-**Goal**: Enable efficient hashing and verification of multiple files using GNU-standard index files
+**Date**: 2026-01-22 (Created) | 2026-04-17 (Revised)
+**Status**: Planning Phase — Scope Locked for MVP
+**Goal**: Multi-select files in Explorer → Send To → get a single manifest. Send To the manifest later → verify them all.
 
 ---
 
-## 🎯 Philosophy
+## Philosophy
 
 VeriHash exists to make hash verification **fast, visual, and accessible**.
 People skip hash checks because they're cumbersome; this tool removes that barrier.
-Multi-file indexing extends this philosophy to entire directories and file collections.
+
+The manifest feature extends this to **groups of files** — same philosophy, same right-click simplicity.
 
 ---
 
-## 📋 Core Concept
+## Core Use Case
 
 ### The Problem
 
-Currently, VeriHash handles one file at a time. Users often need to:
+VeriHash handles one file at a time. When you download or transfer several files, you either:
 
-- Verify entire directories haven't changed after transfer/backup
-- Maintain hash records for collections of files
-- Avoid creating hundreds of individual `.sha256` sidecar files
+- Create individual `.sha256` sidecars for each (tedious)
+- Skip verification entirely (risky)
 
 ### The Solution
 
-**Multi-file index files** using GNU `sha256sum` standard format:
+A **manifest file** — one GNU-standard index file covering multiple files:
 
-```bash
-<hash> *<relative/path/to/file.ext>
-<hash> *<another/file.exe>
+```text
+e3b0c44298fc1c14...b855 *report.pdf
+5d41402abc4b2a76...c592 *setup.exe
+a1b2c3d4e5f67890...1234 *readme.txt
+```
+
+Right-click → Send To → done. Right-click the manifest later → verified.
+
+---
+
+## Two Send To Entries
+
+| Shortcut | Behavior |
+| - | - |
+| **VeriHash** (existing) | Single-file sidecar create/verify. Unchanged. |
+| **VeriHash - Manifest** (new) | Multi-file manifest create or verify. |
+
+The existing `VeriHash` shortcut is **not modified**. A second `.lnk` is added via `-SendTo`, passing a `-Manifest` flag.
+
+---
+
+## Input Routing (Manifest Mode)
+
+When invoked with `-Manifest`:
+
+### Multiple file paths (Create mode)
+
+Explorer passes each selected file as a separate argument.
+
+- All inputs must be **files** (not folders). If a folder is passed, error: *"Folder input not supported yet. Select files directly."*
+- All files must share a **single common parent directory**. If they don't, error: *"Selected files span multiple directories. Manifests use relative paths — select files under one root."*
+- Files with hash extensions (`.sha256`, `.sha512`, `.sha384`, `.sha1`, `.md5`, `.sha2_256`, `.sha2`) are silently filtered out — you can't hash metadata as content.
+
+### Single `.sha256` / `.sha512` / `.md5` / `.sha1` / `.sha384` file (Verify mode)
+
+- Parse the manifest and verify each entry against the files on disk.
+
+### Single non-hash file
+
+- Error: *"Manifest mode requires multiple files (to create) or a manifest file (to verify)."*
+
+### No arguments
+
+- Error with usage hint.
+
+---
+
+## Manifest File Format
+
+### Format: GNU `sha256sum` standard
+
+```text
+<hash> *<filename>
+```
+
+- **Always binary mode** (`*` prefix) — VeriHash deals in bytes, not text.
+- **Relative paths** from the manifest file's directory (since MVP = single directory, paths are just filenames).
+- **Forward slashes** (`/`) in paths when writing, accept `\` when reading. This ensures `sha256sum -c` works cross-platform.
+- **UTF-8, no BOM**. GNU tools, Linux, macOS, and modern Windows all handle this correctly.
+
+### Algorithm Support
+
+- **Default**: SHA256
+- **Supported**: SHA256, SHA512, SHA384, SHA1, MD5
+- **Extension reflects algorithm**: `.sha256`, `.sha512`, `.sha1`, `.md5`, etc.
+- **CLI flag**: `-Algorithm <name>` (same as existing single-file behavior)
+
+### Naming Convention
+
+- **Pattern**: `YYYY-MM-DDTHHMMSSZ.<algorithm>`
+- **Example**: `2026-04-17T143022Z.sha256`
+- The `Z` suffix marks UTC explicitly (ISO-8601 compliant). Colons are illegal in Windows filenames, so compact form is used.
+- **Collision handling**: If the name exists, append `-1`, `-2`, etc. Never overwrite unless `-Force`.
+
+### Compatibility Target
+
+The output must pass `sha256sum -c <manifest>` on Linux/WSL. This is the acceptance test for format correctness.
+
+---
+
+## Create Flow
+
+1. **Validate inputs**: All files exist, all in same directory, none are hash files.
+2. **Hash each file**: Sequential by default, or `ForEach-Object -Parallel -ThrottleLimit 2` to keep CPU polite.
+3. **Write to temp file**: `~verihash-<8-char-guid>.tmp` in the common directory.
+4. **On success**: Atomic rename (`Move-Item`) to `YYYY-MM-DDTHHMMSSZ.<alg>`.
+5. **On Ctrl+C / error**: Delete temp file. No partial manifests left behind.
+6. **Display summary**: File count, manifest path, any errors.
+
+### Safe Write Implementation
+
+```powershell
+function Write-ManifestAtomically {
+    param(
+        [string]$FinalPath,
+        [string[]]$Content
+    )
+
+    # Temp file in SAME directory = same NTFS volume = atomic rename
+    $tempFile = Join-Path (Split-Path $FinalPath) "~verihash-$([guid]::NewGuid().ToString('N').Substring(0,8)).tmp"
+
+    try {
+        $Content | Set-Content -Path $tempFile -Encoding UTF8NoBOM -ErrorAction Stop
+
+        # Collision handling
+        $targetPath = $FinalPath
+        $counter = 0
+        while (Test-Path $targetPath) {
+            $counter++
+            $targetPath = $FinalPath -replace '(\.\w+)$', "-$counter`$1"
+        }
+
+        Move-Item -Path $tempFile -Destination $targetPath -ErrorAction Stop
+        return $targetPath
+    }
+    catch {
+        if (Test-Path $tempFile) { Remove-Item $tempFile -Force }
+        throw
+    }
+}
 ```
 
 ---
 
-## 🔧 Technical Design
-
-### 1. Input Detection & Behavior
-
-#### **Send-To / Right-Click Context**
-
-- **Single file** → Create individual `.sha256` sidecar (current behavior)
-- **Multiple files/folders** → Create index file (new behavior)
-- Auto-detect from input arguments count
-
-#### **CLI Usage**
-
-- Current single-file behavior unchanged
-- New flag: `-CreateIndex` - Force index creation even for single file
-- New flag: `-RecursiveIndividual` - Create individual `.sha256` for all files in directory
-  - **Safety**: Prevent cyclic redundancy (don't hash `.sha256` files)
-  - **Performance**: Chunk processing to avoid system overload
-  - **Safeguard**: Confirm before processing >1000 files
-- New flag: `-OutputPath <path>` - Specify where to save the index file
-
-#### **CLI Output Location Requirement**
-
-When `-NoPause` is used (GUI suppressed), the output location **must** be determinable:
-
-- **If `-OutputPath` is specified**: Use that path
-- **If not specified**: Default to parent directory of the first input item
-- **Validation**: Error if output location isn't writable
-
-**Rationale**: CLI usage (especially in scripts) needs predictable behavior. If someone suppresses the GUI, they're likely automating and need to know exactly where files go.
-
-```powershell
-# Explicit output path (recommended for scripts)
-.\VeriHash.ps1 -CreateIndex "C:\MyFiles\" -OutputPath "C:\Indexes\" -NoPause
-
-# Implicit output (goes to parent of MyFiles)
-.\VeriHash.ps1 -CreateIndex "C:\MyFiles\" -NoPause
-```
-
-### 2. Index File Format & Naming
-
-#### **Format**: GNU `sha*sum` standard (algorithm-flexible)
-
-```bash
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *relative/path/file1.txt
-5d41402abc4b2a76b9719d911017c592 *subdir/file2.dat
-```
-
-#### **Algorithm Support**
-
-- **Default**: SHA256 (most common, good balance of speed/security)
-- **Supported**: SHA256, SHA512, SHA384, SHA1, MD5
-- **CLI flag**: `-Algorithm <name>` (same as existing single-file behavior)
-- **Extension reflects algorithm**: `.sha256`, `.sha512`, `.sha1`, `.md5`, etc.
-- **Index file is self-describing**: Extension tells you what algorithm was used
-
-#### **Naming Convention**
-
-- Pattern: `YYYY-MM-DDTHHMMSS.<algorithm>` (UTC-0)
-- Example: `2026-01-16T234917.sha256` or `2026-01-16T234917.sha512`
-- Rationale:
-  - Sortable chronologically
-  - No timezone confusion (UTC-0)
-  - Extension indicates hash algorithm used
-
-#### **File Encoding**
-
-- **Encoding**: UTF-8 (no BOM)
-- **Rationale**: UTF-8 without BOM is the most compatible choice — GNU tools, Linux, macOS, and modern Windows all handle it correctly. BOM can cause issues with some Unix tools that interpret it as content.
-
-#### **Creation Flow**
-
-1. User selects multiple files/folders
-2. VeriHash processes hashes
-3. **GUI prompt appears**:
-   - Default location: Parent directory of selected items
-   - Default name: Timestamp (UTC)
-   - User can browse to different location
-   - User can edit filename
-4. Index file created with relative paths
-
-#### **Safe Write Strategy (Temp File Approach)**
-
-To handle cancellation gracefully:
-
-1. **During hashing**: Write results to a temp file (e.g., `~verihash-temp-<guid>.tmp`)
-2. **On completion**: Rename temp file to final index filename (atomic operation)
-3. **On cancellation (Ctrl+C)**:
-   - Trap the interrupt signal
-   - Delete the temp file
-   - Show message: "Index creation cancelled. No files modified."
-4. **On error**: Same as cancellation — clean up temp file
-
-**Benefits**:
-
-- User never sees a partial/corrupt index file
-- Atomic rename ensures index is either complete or doesn't exist
-- Easy cleanup on failure
-
-### 3. Recursive Directory Handling
-
-#### **When folder(s) selected**
-
-- Hash **all files recursively**
-- Skip:
-  - Existing hash files (`.sha256`, `.sha512`, `.md5`, `.sha1`, `.sha384`)
-  - Hidden system files (optional flag should be included)
-  - Symlinks (to prevent loops!)
-  - **Empty directories** (no files to hash, skip silently)
-
-#### **Path Format in Index**
-
-- **Relative paths** from index file location
-- Example structure:
-
-  ```bash
-  MyProject/
-  ├── 2026-01-16T234917.sha256  (index file)
-  ├── src/
-  │   ├── main.cpp
-  │   └── utils.cpp
-  └── data/
-      └── config.json
-  ```
-  
-  Index contains:
-  
-  ```bash
-  abc123... *src/main.cpp
-  def456... *src/utils.cpp
-  789ghi... *data/config.json
-  ```
-
-### 4. Parallel Processing
-
-**Hash Computation**:
-
-- Auto-detect CPU cores: `$env:NUMBER_OF_PROCESSORS` (Windows) or `nproc` (Linux)
-- Process 2-4 files simultaneously based on available cores
-- Formula: `[Math]::Max(2, [Math]::Min(4, $cores - 1))`
-  - Leaves 1 core for system
-  - Minimum 2 for efficiency
-  - Maximum 4 to avoid I/O bottleneck (SSD limitations)
-
-**PowerShell Implementation**:
-
-```powershell
-# Use PowerShell 7's ForEach-Object -Parallel
-$files | ForEach-Object -Parallel {
-    Get-FileHash $_ -Algorithm SHA256
-} -ThrottleLimit $optimalThreads
-```
-
-### 5. Verification Workflows
-
-#### **Scenario A: Verifying Against Index**
-
-```powershell
-.\VeriHash.ps1 "C:\path\to\2026-01-16T234917.sha256"
-```
-
-- Parse index file
-- Verify each file listed
-- Output summary:
-
-[User tweaked this a bit, so please validate it's even possible] List of files, row by row with ✅❌⚠️ at the start? As a visual indicator as it processes, and easy to scroll back and read?
-
-  ```bash
-  ✅  abc123... *src/main.cpp
-  ❌  def456... *src/utils.cpp
-  ⚠️  789ghi... *data/config.json
-  
-  ✅  47/50 files verified successfully
-  ❌  2 files failed verification
-  ⚠️  1 file not found
-  ```
-
-- **Only use index** - don't check for individual `.sha256` files in addition to the index; which would confuse everyone.
-
-#### **Scenario B: Individual File Verification**
-
-```powershell
-.\VeriHash.ps1 "C:\path\to\file.exe"
-```
-
-- Current behavior: Look for `file.exe.sha256`
-- **New enhancement**: Also check parent directories for index files
-  - Search up to 3 levels up
-  - If index found with this file, offer choice:
-
-    ```bash
-    Found in index: ../2026-01-16T234917.sha256
-    [1] Verify against index
-    [2] Create individual .sha256
-    [3] Both
-    ```
-
-#### **Scenario C: Mixed Verification**
-
-- User has some individual `.sha256` files
-- User has an index file
-- When verifying index, (optionally) show which files also have individual sidecars
-- Flag: `-PreferIndex` or `-PreferIndividual` to control priority
-
-### 6. GUI Integration Points
-
-**When to Show GUI**:
-
-- ✅ Multiple inputs detected (files/folders)
-- ✅ User needs to choose index save location
-- ✅ Single file verification finds index in parent directory
-- ❌ Single file, no index found (use current behavior)
-- ❌ CLI with `-NoPause` flag (suppress all GUIs)
-
-**GUI Framework**:
-
-- **Windows**: Continue using Windows Forms (`System.Windows.Forms`)
-- **Linux**: Use `kdialog` (KDE) or `zenity` (GNOME) native dialogs
-- **Fallback**: PowerShell console prompts
-
-**Index Save Dialog**:
-
-```bash
-┌─────────────────────────────────────────┐
-│ Save Hash Index                         │
-├─────────────────────────────────────────┤
-│ Location: [C:\MyFiles\          ] [📁] │
-│ Filename: [2026-01-16T234917.sha256   ] │
-│                                         │
-│ Files to hash: 47                       │
-│ Total size: 2.3 GB                      │
-│                                         │
-│         [Cancel]          [Create]      │
-└─────────────────────────────────────────┘
-```
-
-**Index Discovery Dialog** (when single file has index available):
-
-```bash
-┌─────────────────────────────────────────┐
-│ file.exe is tracked in an index:        │
-│ ../backups/2026-01-16T234917.sha256     │
-│                                         │
-│ ○ Verify against index                  │
-│ ○ Create individual .sha256             │
-│ ○ Verify index + create individual      │
-│ ○ Browse for different index...         │
-│                                         │
-│         [Cancel]          [OK]          │
-└─────────────────────────────────────────┘
-```
-
-### 7. Path Handling & Index Discovery
-
-**Relative Path Storage**:
-
-- All paths in index are relative to index file location
-- Supports cross-platform (use `/` separator, PowerShell normalizes)
-- Handle edge cases:
-  - Files in same directory: `file.txt`
-  - Files in subdirectory: `subdir/file.txt`
-  - Files in parent: `../file.txt` (if user manually moved things)
-
-**Index Discovery Algorithm**:
-When verifying single file `C:\Projects\MyApp\src\main.cpp`:
-
-1. Check for `main.cpp.sha256` (current behavior)
-2. **NEW**: Search for index files:
-
-   ```bash
-   C:\Projects\MyApp\src\*.sha256
-   C:\Projects\MyApp\*.sha256
-   C:\Projects\*.sha256
+## Verify Flow
+
+1. **Parse manifest**: Strict regex per line: `^([0-9a-fA-F]{32,128}) (\*| )(.+)$`
+   - Reject lines that don't match.
+   - Validate hash length for the algorithm (inferred from file extension: `.sha256` = 64 hex chars, etc.).
+2. **Resolve paths** relative to the **manifest file's directory** — never CWD.
+3. **Path traversal guard**: Reject any entry whose resolved path escapes the manifest's root. If `Resolve-Path` of `(manifest_dir)/(entry_path)` doesn't start with `(manifest_dir)`, reject it with `❌ <path> (path traversal rejected)`. This is a hard security rule.
+4. **Hash each file and compare**:
+   - `✅ filename.ext` — match
+   - `❌ filename.ext (hash mismatch)` — computed hash differs
+   - `⚠️ filename.ext (file not found)` — missing from disk
+   - `⚠️ filename.ext (unreadable)` — permission denied or I/O error
+5. **Summary at end**:
+
+   ```text
+   Verification Complete
+   ━━━━━━━━━━━━━━━━━━━━━
+   ✅ 8 files verified
+   ❌ 1 file failed
+   ⚠️  1 file missing
    ```
 
-3. Parse each index found
-4. Check if current file is listed (match by relative path)
-5. If found in multiple indexes:
-   - Show all matches
-   - Let user choose
-   - Remember choice? (future enhancement)
+6. **Exit codes** (machine-readable without parsing stdout):
+   - `0` — all good
+   - `1` — one or more hash mismatches
+   - `2` — one or more missing/unreadable files (but no mismatches)
+   - `3` — manifest parse error
 
-**Performance**:
+### Error Handling During Hash
 
-- Cache index search results during session
-- Only search up to 3 directory levels (configurable)
-- Skip network drives (slow)
+- If a file can't be read (permissions, locked, etc.), record it as `⚠️ unreadable` and **continue**. Don't abort the whole run.
+- No separate pre-check pass. Catching errors inline is simpler and covers the same cases without doubling I/O.
 
 ---
 
-## 🚀 Implementation Phases
+## CLI Interface
 
-Linux can be done later; for now this is pursuing Windows capability first.
+The manifest feature adds a `-Manifest` switch to the existing `VeriHash.ps1` parameter block. No new parameter sets needed for MVP — `-Manifest` acts as a mode flag alongside the existing parameters.
 
-### Phase 1: Core Index Creation
+```powershell
+# Create manifest from multiple files
+.\VeriHash.ps1 -Manifest "C:\Downloads\file1.exe" "C:\Downloads\file2.zip" "C:\Downloads\file3.iso"
 
-- [ ] Detect multiple input files/folders
-- [ ] Recursive file enumeration with safeguards
-- [ ] GNU format index generation
-- [ ] Timestamp-based naming (UTC)
-- [ ] Relative path handling
+# Verify a manifest
+.\VeriHash.ps1 -Manifest "C:\Downloads\2026-04-17T143022Z.sha256"
 
-### Phase 2: Index Verification
+# Create with specific algorithm
+.\VeriHash.ps1 -Manifest "C:\Downloads\file1.exe" "C:\Downloads\file2.zip" -Algorithm SHA512
 
-- [ ] Parse GNU-format index files
-- [ ] Verify all files in index
-- [ ] Summary report with statistics
-- [ ] Handle missing files gracefully
+# Create without pause (scripting)
+.\VeriHash.ps1 -Manifest "C:\Downloads\file1.exe" "C:\Downloads\file2.zip" -NoPause
 
-### Phase 3: Parallel Processing
+# Create with explicit output location
+.\VeriHash.ps1 -Manifest "C:\Downloads\file1.exe" "C:\Downloads\file2.zip" -OutputPath "C:\Manifests\" -NoPause
+```
 
-- [ ] CPU core detection
-- [ ] PowerShell 7 `ForEach-Object -Parallel` implementation
-- [ ] Throttle limit calculation (2-4 threads)
-- [ ] Progress feedback during multi-file hashing
+### Output Location Rules
 
-### Phase 4: GUI Enhancements
-
-- [ ] Index save location dialog
-- [ ] Filename editing
-- [ ] Index discovery dialog (single file → found in index)
-- [ ] Browse for index option
-
-### Phase 5: Smart Discovery
-
-- [ ] Search parent directories for indexes
-- [ ] Match file against index entries
-- [ ] Present choices to user
-- [ ] Prefer index vs individual selection
-
-### Phase 6: Advanced Features
-
-- [ ] `-RecursiveIndividual` flag for CLI
-- [ ] Cyclic redundancy prevention
-- [ ] System overload protection (chunking)
-- [ ] Multiple index support (choose between indexes)
-- [ ] Index merging? (combine multiple indexes)
+- **Default**: Manifest is written to the common parent directory of the input files.
+- **`-OutputPath`**: Override the output directory.
+- **`-NoPause` without `-OutputPath`**: Uses default location (predictable for scripts).
 
 ---
 
-## 🤔 Open Questions & Considerations
+## SendTo Installation
 
-### 1. Index File Conflicts
+`-SendTo` installs **both** shortcuts:
 
-**Q**: What if an index file already exists with the same timestamp?  
-**A**: Options:
+```powershell
+function Install-WindowsSendTo {
+    param([switch]$ManifestMode)
+    $name = if ($ManifestMode) { 'VeriHash - Manifest.lnk' } else { 'VeriHash.lnk' }
+    $extraArg = if ($ManifestMode) { ' -Manifest' } else { '' }
+    # ... existing shortcut creation logic, append $extraArg to $arguments
+}
+```
 
-- Append counter: `.sha256(1)`
-- Prompt user to overwrite/rename
+When the user runs `.\VeriHash.ps1 -SendTo`, both `VeriHash.lnk` and `VeriHash - Manifest.lnk` appear in the Send To menu.
 
-### 2. Large Directory Performance
+### Windows Command Line Limit
 
-**Q**: What if user selects folder with 10,000+ files?  
-**A**:
-
-- Show file count estimate before processing
-- Confirm if > 1000 files
-- Show progress indicator. E.g. "Hashing... 15/47 (32%)"
-- Allow cancellation (Ctrl+C handling)
-
-### 3. Cross-Platform Path Handling
-
-**Q**: Windows uses `\`, Unix uses `/` - how to handle in index?  
-**A**:
-
-- **Store**: Always use `/` (forward slash) in index files
-- **Read**: PowerShell's `Join-Path` and `Resolve-Path` handle conversion
-- **Compatibility**: GNU tools on both platforms expect `/`
-
-### 4. Signature Verification in Indexes
-
-**Q**: Should index creation also verify Authenticode signatures (Windows)?  
-**A**: NO, not yet. Maybe in the future, but that seems very intensive depending on the amount of files. shelf feature for now.
-
-- Could add signature status column (optional)
-- Extended format: `<hash> *<path> # Signature: Valid`
-- Keep standard GNU format as primary
-- Separate signature report file?
-
-### 5. Incremental Updates
-
-**Q**: User adds files to directory - update existing index?  
-**A**: Future enhancement.
-
-- `.\VeriHash.ps1 -UpdateIndex "existing.sha256"`
-- Re-scan directory
-- Add new files
-- Re-verify existing files (mark if changed?)
-- Timestamp the update?
-
-### 6. Differential/Changed Files Report
-
-**Q**: Show what changed between old and new index?  
-**A**: Future enhancement.
-
-- `.\VeriHash.ps1 -CompareIndexes old.sha256 new.sha256`
-- Output: Added, Removed, Modified, Unchanged
-- Compare 2 indexes
+Explorer passes each selected file as a separate argument. PowerShell + `.lnk` handles this fine, but long paths multiplied by many files can exceed ~8 KB. This is not an MVP blocker. If it becomes an issue, the fallback is a temp file listing paths. Don't pre-build for this.
 
 ---
 
-## 📝 GNU `sha256sum` Format Reference
+## Skip Rules (Create Mode)
 
-**Standard Format**:
+When building a manifest, filter out:
 
-```bash
+- Hash/sidecar files: `.sha256`, `.sha512`, `.sha384`, `.sha1`, `.md5`, `.sha2_256`, `.sha2`
+- The manifest's own temp file (`~verihash-*.tmp`)
+
+These are metadata, not content. Silently skip them — don't error.
+
+---
+
+## Security
+
+- **Path traversal on verify**: Hard reject. Any manifest entry resolving outside the manifest's directory is flagged and skipped. Not a warning — a block.
+- **No auto-elevation**: If files are unreadable, inform the user. Don't offer to re-run as admin.
+- **No symlink following**: If a selected file is a symlink, hash the symlink target. But since MVP is flat files (no recursion), symlink loops aren't a concern yet.
+
+---
+
+## What's NOT in MVP
+
+These are valid ideas for later. They're documented here so they're not lost, but they are **explicitly out of scope** for the first version.
+
+| Feature | Why Deferred |
+| - | - |
+| **Recursive folder hashing** | Higher complexity (symlinks, permission trees, enumeration errors). Less frequent use case than multi-file select. |
+| **Folder input (Smart Entry)** | Needs recursive hashing, ambiguity resolution UX. Depends on the above. |
+| **Parent-directory index discovery** | Neat but adds surprise behavior. Users can send-to the manifest directly. |
+| **`-Update` (modify existing manifest)** | Users can just create a new manifest. Atomic-rewrite semantics add complexity. |
+| **`-Compare` (diff two manifests)** | Power-user feature. Can be a separate script or phase 3+. |
+| **Sidecar import / cleanup** | Side-quest. Existing sidecar flow works fine independently. |
+| **GUI options dialog** | Right-click → go. No dialog needed. |
+| **Save location dialog** | Predictable default (same directory) is better for MVP. |
+| **Tiered output (>50 issues → report file)** | Just stream results and print a summary. Add `-Report` flag later if needed. |
+| **Permission pre-check pass** | Inline error handling covers this without doubling I/O. |
+| **Signature column in manifest** | Breaks `sha256sum -c` compatibility. If wanted, separate report. |
+| **Parallel auto-tuning** | Fixed `-ThrottleLimit 2` is fine. Tune later with real benchmarks. |
+| **Linux context menu** | Windows-first. Equalize later. |
+
+---
+
+## Behavior Contracts
+
+### The Manifest Mental Model
+
+> **A manifest is a snapshot of content at a point in time.**
+
+- **Create** = fresh hashes of the files you selected. Period.
+- **Verify** = check files against ONE manifest. Period.
+- Manifests don't know about each other. They don't know about sidecars. They're independent snapshots.
+
+### Index Parsing Rules
+
+- Trim whitespace per line
+- Lines must match: `<hex_hash><space><mode_char><path>`
+- Accept `*` (binary) and ` ` (text) mode indicators
+- Reject lines with invalid hash length for the algorithm
+- Normalize path separators to `/` when writing; accept both `/` and `\` when reading
+- Skip blank lines and lines starting with `#` (comments, for forward-compatibility)
+
+### Existing Single-File Flow
+
+**Completely unchanged.** The `-Manifest` flag gates all new behavior. Without it, VeriHash works exactly as it does today.
+
+---
+
+## Implementation Phases
+
+### Phase 1: MVP — Manifest Create + Verify (current target)
+
+- `-Manifest` switch + input routing (create vs verify)
+- Common-parent validation (single directory)
+- GNU-format writer with atomic temp→rename
+- GNU-format parser with strict regex + path-traversal guard
+- Hashing with `-ThrottleLimit 2` (or sequential)
+- Streaming output + end summary + exit codes
+- Second SendTo shortcut via `-SendTo`
+- Pester tests for roundtrip, tampered file, missing file, format compatibility, traversal rejection
+
+### Phase 2: Progress + Polish
+
+- Live progress counter: `Hashing... 3/10 (30%)`
+- Large file warning (>10 GB)
+- `-Report` flag for writing verification results to a file
+
+### Phase 3: Folder Input + Recursion
+
+- Accept folder as input (enumerate files recursively)
+- Skip rules: hash files, hidden/system files, symlinks
+- Confirmation prompt for large counts (>1000 files)
+
+### Phase 4: Update + Discovery
+
+- `-Update` to refresh an existing manifest (atomic rewrite)
+- Parent-directory manifest search for single-file verify
+- `-Compare` for diffing two manifests
+
+### Phase 5: GUI + Advanced
+
+- Save location dialog
+- Import sidecars workflow
+- Cross-platform context menu parity
+
+---
+
+## Resolved Questions
+
+| Question | Answer |
+| - | - |
+| Naming collision? | Append `-1`, `-2`, etc. Never overwrite unless `-Force`. |
+| Path separator in manifest? | Always `/` when writing. Accept `\` when reading. |
+| Timestamp timezone? | UTC, marked with `Z` suffix. |
+| Signature info in manifest? | No. Breaks GNU compatibility. Separate report if ever needed. |
+| Folder input for MVP? | No. Select files directly. |
+| Permission failures mid-run? | Catch inline, record as `⚠️ unreadable`, continue. |
+
+---
+
+## GNU `sha256sum` Format Reference
+
+```text
 <hash><space><mode><filename>
 ```
 
-**Mode Indicators**:
-
-- ` ` (space): Text mode (line endings may differ)
-- `*`: Binary mode (byte-for-byte)
-
-**Example**:
-
-```bash
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *file1.bin
-5d41402abc4b2a76b9719d911017c592 *subdirectory/file2.txt
-```
-
-**Compatibility**:
-
-- Can be verified with GNU `sha256sum -c filename.sha256`
-- Cross-platform (Linux, macOS, Windows with GNU tools)
-- VeriHash already uses this format for individual files
+- Mode `*` = binary (byte-for-byte). Mode ` ` = text. VeriHash always writes `*`.
+- Verify with: `sha256sum -c manifest.sha256`
+- VeriHash already uses this format for individual sidecars.
 
 ---
 
-## 🎨 User Experience Examples
+## User Experience Examples
 
-### Example 1: Right-Click Multiple Files
+### Example 1: Create Manifest (Right-Click)
 
-**User Action**:
+1. Select `report.pdf`, `data.csv`, `image.png` in Explorer
+2. Right-click → Send To → **VeriHash - Manifest**
+3. Console opens, hashes each file, writes manifest:
 
-1. Select 3 files in Explorer: `report.pdf`, `data.csv`, `image.png`
-2. Right-click → Send To → VeriHash
+   ```text
+   Hashing 3 files...
+     ✅ report.pdf
+     ✅ data.csv
+     ✅ image.png
 
-**VeriHash Behavior**:
-
-1. Detects 3 files (multiple input)
-2. Computes SHA256 for each (parallel: 2-3 at once)
-3. Shows GUI dialog:
-   - Location: Current directory
-   - Filename: `2026-01-16T234917.sha256`
-4. User clicks "Create"
-5. Index file created:
-
-   ```bash
-   abc123... *report.pdf
-   def456... *data.csv
-   789ghi... *image.png
+   Manifest created: 2026-04-17T143022Z.sha256 (3 files)
    ```
 
-6. Success message: "Index created with 3 files"
+### Example 2: Verify Manifest (Right-Click)
 
-### Example 2: Right-Click Folder
+1. Right-click `2026-04-17T143022Z.sha256` → Send To → **VeriHash - Manifest**
+2. Console opens, verifies each entry:
 
-**User Action**:
+   ```text
+   Verifying manifest: 2026-04-17T143022Z.sha256
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     ✅ report.pdf
+     ✅ data.csv
+     ❌ image.png (hash mismatch)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Summary: 2/3 OK, 1 Failed, 0 Missing
+   ```
 
-1. Right-click `MyProject/` folder → Send To → VeriHash
-
-**VeriHash Behavior**:
-
-1. Scans recursively: 47 files found
-2. Shows confirmation: "Hash 47 files (2.3 GB)? [Yes/No]"
-3. User clicks Yes
-4. Progress indicator: "Hashing... 15/47 (32%)"
-5. Shows save dialog with default location (parent of `MyProject/`)
-6. Index created: `2026-01-16T234917.sha256`
-
-### Example 3: Verify Single File (Index Exists)
-
-**User Action**:
-
-1. Right-click `src/main.cpp` → Send To → VeriHash
-
-**VeriHash Behavior**:
-
-1. Looks for `main.cpp.sha256` - not found
-2. Searches parent directories
-3. Finds: `../2026-01-16T234917.sha256` (contains this file)
-4. Shows dialog: "Found in index, verify against it?"
-5. User selects "Verify against index"
-6. Result: "✅ main.cpp verified (matches index)"
-
-### Example 4: CLI Index Creation
-
-**User Action**:
+### Example 3: CLI Create + Verify
 
 ```powershell
-.\VeriHash.ps1 -CreateIndex "C:\MyFiles\"
+# Create
+.\VeriHash.ps1 -Manifest "C:\Downloads\file1.exe" "C:\Downloads\file2.zip" -NoPause
+
+# Verify
+.\VeriHash.ps1 -Manifest "C:\Downloads\2026-04-17T143022Z.sha256" -NoPause
 ```
 
-**VeriHash Behavior**:
-
-1. Scans directory recursively
-2. Shows GUI save dialog (unless `-NoPause`)
-3. Creates index with timestamp name
-4. Outputs summary to console
-
-### Example 5: CLI Index Verification
-
-**User Action**:
-
-```powershell
-.\VeriHash.ps1 "C:\MyFiles\2026-01-16T234917.sha256"
-```
-
-**VeriHash Behavior**:
-
-1. Detects file is an index (`.sha256` extension + GNU format)
-2. Parses all entries
-3. Verifies each file (parallel processing)
-4. Shows detailed report:
-
-   ```bash
-   Verifying index: 2026-01-16T234917.sha256
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ✅ src/main.cpp
-   ✅ src/utils.cpp
-   ✅ data/config.json
-   ❌ images/logo.png (hash mismatch)
-   ⚠️  backup/old.txt (file not found)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Summary: 3/5 OK, 1 Failed, 1 Missing
-   ```
-
 ---
 
-## 🔐 Security Considerations
+## Testing Strategy
 
-1. **Path Traversal**: Sanitize relative paths to prevent `../../../etc/passwd` attacks
-2. **Symlink Loops**: Detect and skip circular symlinks during recursion
-3. **Hash File Recursion**: Never hash `.sha256`, `.sha512`, `.md5`, `.sha1`, `.sha384` files themselves
-4. **Large Files**: Warn if single file > 10 GB (slow to hash)
-5. **Permissions**: Handle permission-denied errors gracefully (see below)
+### Pester Tests (`Tests/VeriHash.Manifest.Tests.ps1`)
 
-### Permission Pre-Check Strategy
+- [ ] Create manifest from 3 files → verify roundtrip passes
+- [ ] Tamper with one file → verify detects mismatch (exit code 1)
+- [ ] Delete one file → verify reports missing (exit code 2)
+- [ ] Manifest with path traversal entry (`../../etc/passwd`) → rejected
+- [ ] Files spanning multiple directories → error message
+- [ ] Folder input → error message
+- [ ] Hash files in input → silently filtered
+- [ ] Collision handling (timestamp already exists)
+- [ ] UTF-8 no-BOM encoding validated
+- [ ] `sha256sum -c` compatibility (if WSL available, else skip)
+- [ ] `-Algorithm SHA512` creates `.sha512` extension
+- [ ] Single file (non-hash) in manifest mode → error message
 
-Before processing files, VeriHash should verify read access to avoid mid-process failures:
+### Documentation Updates
 
-#### **How It Works**
-
-1. **Enumerate files first** (already needed for progress reporting)
-2. **Quick permission check**: Attempt to open each file briefly for read access
-   - PowerShell: `[System.IO.File]::OpenRead($path).Close()` or `Test-Path -PathType Leaf` + check ACL
-   - This is fast — just checking access, not reading content
-3. **Report inaccessible files upfront**:
-
-   ```bash
-   ⚠️  3 files cannot be read (permission denied):
-       - C:\Protected\secret.dat
-       - C:\System\config.sys
-       - C:\Admin\data.bin
-
-   Options:
-   [1] Skip these files and continue (44/47 files)
-   [2] Abort and run with elevated permissions
-   [3] Cancel
-   ```
-
-#### **Elevation Guidance**
-
-- **Windows**: "Run PowerShell as Administrator" or use `sudo` (Windows 11 24H2+)
-- **Linux**: "Run with `sudo`"
-- Don't auto-elevate — that's a security risk. Just inform the user.
-
-#### **Rationale**
-
-- Failing mid-hash on file 47 of 100 is frustrating
-- Pre-checking is cheap (milliseconds) compared to hashing (seconds/minutes)
-- User can make an informed decision before waiting
-
----
-
-## 🧪 Testing Strategy
-
-### Unit Tests
-
-- [ ] GNU format parsing (valid/invalid)
-- [ ] Relative path resolution
-- [ ] Multi-input detection
-- [ ] Timestamp generation (UTC)
-- [ ] Parallel processing logic
-- [ ] Algorithm extension mapping (SHA256 → .sha256, etc.)
-- [ ] UTF-8 encoding (no BOM) output validation
-
-### Integration Tests
-
-- [ ] Create index from multiple files
-- [ ] Verify index with all files present
-- [ ] Verify index with missing file
-- [ ] Verify index with modified file
-- [ ] Recursive directory hashing
-- [ ] Cross-platform path handling (Windows/Linux)
-- [ ] Empty directory handling (should be skipped)
-- [ ] Permission pre-check (inaccessible files detected before hashing)
-- [ ] Cancellation handling (temp file cleanup)
-- [ ] `-OutputPath` flag behavior
-- [ ] `-NoPause` with implicit output location
-
-### Performance Tests
-
-- [ ] 100 small files (< 1 MB each)
-- [ ] 10 large files (> 100 MB each)
-- [ ] 1000+ files (stress test)
-- [ ] Parallel vs serial comparison
-- [ ] Permission pre-check overhead (should be negligible)
-
----
-
-## 📚 Documentation Updates Needed
-
-- [ ] README: Add multi-file index section
-- [ ] README: Update usage examples
+- [ ] README: Add manifest section with examples
 - [ ] CHANGELOG: Document new feature
-- [ ] Help text: Add `-CreateIndex`, `-RecursiveIndividual`, `-OutputPath` flags
-- [ ] Help text: Document algorithm flexibility with `-Algorithm`
-- [ ] Screenshots: Show GUI dialogs
+- [ ] Help text: Add `-Manifest`, `-OutputPath` flags
 
 ---
 
-## 🎯 Success Metrics
+## Success Criteria
 
-- Users can hash entire directories with 1 right-click
-- Index verification is faster than individual file checks
-- GNU format ensures compatibility with existing tools
-- GUI makes it approachable for non-CLI users
+- Multi-select files → Send To → manifest created in same directory
+- Send To the manifest → all files verified with clear pass/fail
+- Output is `sha256sum -c` compatible
+- No partial manifests on cancel/error
 - No breaking changes to existing single-file workflow
+- Exit codes are machine-readable
 
 ---
 
-### **End of Concept Document**
-
-*This is a living document. As implementation progresses, update with lessons learned, design decisions, and new considerations.*
+*This is a living document. Update as implementation reveals new constraints or decisions.*
