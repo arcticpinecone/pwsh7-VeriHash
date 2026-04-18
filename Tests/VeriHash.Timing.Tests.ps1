@@ -12,7 +12,7 @@
 
 BeforeAll {
     $script:ProfilerScript = Join-Path $PSScriptRoot "..\Profile-VeriHashTiming.ps1"
-    $script:TestIconFile = Join-Path $PSScriptRoot "VeriHash_1024.ico"
+    $script:TestIconFile = Join-Path $PSScriptRoot "Fixtures/VeriHash_1024.ico"
     $script:TestOutputDir = Join-Path $TestDrive "TimingTestOutput"
 
     # ═══════════════════════════════════════════════════════════════════════════

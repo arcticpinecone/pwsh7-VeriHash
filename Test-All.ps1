@@ -118,6 +118,11 @@ if (-not $SkipAnalyzer) {
         (Join-Path $scriptRoot "VeriHash.Config.ps1"),
         (Join-Path $scriptRoot "VeriHash.LogUtils.ps1")
     )
+    # VeriHash.Core public + private function files
+    $coreRoot = Join-Path $scriptRoot "VeriHash.Core"
+    if (Test-Path $coreRoot) {
+        $scriptPaths += (Get-ChildItem -Path $coreRoot -Recurse -Filter '*.ps1' -File).FullName
+    }
 
     $analysisResults = @()
     foreach ($path in $scriptPaths) {
