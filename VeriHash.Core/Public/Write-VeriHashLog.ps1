@@ -37,6 +37,15 @@ function Write-VeriHashLog {
 
         [switch]$Log
     )
-    $null = $PSBoundParameters
-    throw 'NotImplemented: Write-VeriHashLog -- implemented in plan 01-02'
+
+    if (-not ($Log -or $env:VERIHASH_LOG -eq '1')) { return }
+
+    $logPath = Resolve-VeriHashLogPath
+    $parent = Split-Path -Parent $logPath
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $line = Format-VeriHashLogLine -Op $Op -Algorithm $Algorithm -Hash $Hash -Bytes $Bytes -ElapsedMs $ElapsedMs -Result $Result -Path $Path
+    Add-Content -LiteralPath $logPath -Value $line -Encoding utf8
 }

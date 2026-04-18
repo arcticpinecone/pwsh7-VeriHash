@@ -19,6 +19,6 @@ function Format-VeriHashLogLine {
         [Parameter(Mandatory)][string]$Result,
         [Parameter(Mandatory)][string]$Path
     )
-    $null = $PSBoundParameters
-    throw 'NotImplemented: Format-VeriHashLogLine -- implemented in plan 01-02'
+    $ts = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    return "$ts $Op $Algorithm $Hash $Bytes $ElapsedMs $Result $Path"
 }

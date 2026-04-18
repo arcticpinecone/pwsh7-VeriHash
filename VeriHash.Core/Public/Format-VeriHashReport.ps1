@@ -27,7 +27,32 @@ function Format-VeriHashReport {
         [pscustomobject]$SidecarInfo
     )
     process {
-        $null = $PSBoundParameters
-        throw 'NotImplemented: Format-VeriHashReport -- implemented in plan 01-02'
+        $fileName = Split-Path -Leaf $Result.FilePath
+        Write-Host ("File selected:    " + $fileName) -ForegroundColor Green
+        Write-Host "---" -ForegroundColor Cyan
+        $currentUTC = (Get-Date).ToUniversalTime()
+        Write-Host ("Start UTC:    " + $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")) -ForegroundColor Cyan
+        Write-Host "---" -ForegroundColor Cyan
+        Write-Host "[Metadata]" -ForegroundColor White
+        Write-Host ("File Path:    " + $Result.FilePath) -ForegroundColor Cyan
+        $formattedBytes = $Result.Size.ToString("N0").Replace(",", " ")
+        $sizeMb = "{0:N2}" -f ($Result.Size / 1MB)
+        Write-Host ("File Size:    " + $sizeMb + " MB  (" + $formattedBytes + " bytes)") -ForegroundColor Yellow
+        Write-Host "Created:      <CREATED>" -ForegroundColor Cyan
+        Write-Host "Modified:     <MODIFIED>" -ForegroundColor Cyan
+        Write-Host "---" -ForegroundColor Cyan
+        Write-Host "[Hash]" -ForegroundColor White
+        Write-Host ("Algorithm:    " + $Result.Algorithm) -ForegroundColor Cyan
+        Write-Host ("Hash:         " + $Result.Hash) -ForegroundColor Cyan
+        Write-Host ("Elapsed:      " + $Result.ElapsedMs + " ms") -ForegroundColor Cyan
+
+        if ($CompareTo) {
+            $match = ($Result.Hash -eq $CompareTo.Hash.ToLowerInvariant())
+            $verdict = if ($match) { 'MATCH' } else { 'MISMATCH' }
+            Write-Host ("Compare:      " + $verdict + " (" + $CompareTo.Algorithm + ")") -ForegroundColor Cyan
+        }
+        if ($SidecarInfo) {
+            Write-Host ("Sidecar:      " + $SidecarInfo.Status) -ForegroundColor Cyan
+        }
     }
 }

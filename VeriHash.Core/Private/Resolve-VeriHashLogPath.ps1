@@ -10,5 +10,6 @@ function Resolve-VeriHashLogPath {
     [CmdletBinding()]
     [OutputType([string])]
     param()
-    throw 'NotImplemented: Resolve-VeriHashLogPath -- implemented in plan 01-02'
+    if ($env:VERIHASH_LOG_PATH) { return $env:VERIHASH_LOG_PATH }
+    return (Join-Path $HOME '.verihash/verihash.log')
 }

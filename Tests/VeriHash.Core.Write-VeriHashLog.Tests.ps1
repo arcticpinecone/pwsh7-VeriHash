@@ -10,6 +10,7 @@ Describe 'Write-VeriHashLog (CORE-07)' {
         $script:LogPath = Join-Path $TestDrive 'verihash.log'
         $env:VERIHASH_LOG_PATH = $script:LogPath
         Remove-Item Env:VERIHASH_LOG -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $script:LogPath -ErrorAction SilentlyContinue
     }
     AfterEach {
         Remove-Item Env:VERIHASH_LOG_PATH -ErrorAction SilentlyContinue
