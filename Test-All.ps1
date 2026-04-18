@@ -156,7 +156,7 @@ if (-not $SkipAnalyzer) {
 # [3/3] Performance Profiler (Quick Check)
 # ════════════════════════════════════════════════════════════════════════════════
 $profilerScript = Join-Path $scriptRoot "Profile-VeriHashTiming.ps1"
-$testIconFile = Join-Path $scriptRoot "Tests\VeriHash_1024.ico"
+$testIconFile = Join-Path $scriptRoot "Tests\Fixtures\VeriHash_1024.ico"
 
 if (-not $SkipProfiler -and (Test-Path $profilerScript) -and (Test-Path $testIconFile)) {
     Write-Host "[3/3] Performance Profiler (Quick Check)" -ForegroundColor Yellow
