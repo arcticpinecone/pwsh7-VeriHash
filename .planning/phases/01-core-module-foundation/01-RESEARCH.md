@@ -709,27 +709,30 @@ Describe 'VeriHash.Core module' {
 | A4 | `$env:VERIHASH_TEST_MODE=1` no longer needs to gate logging behavior (it was a PSFramework-routing flag); the new contract is `$env:VERIHASH_LOG_PATH` for redirection | Runtime State Inventory | If tests still set `VERIHASH_TEST_MODE` and expect log redirection, they'll write to the user's real `~/.verihash/verihash.log`. Mitigate by making this an explicit decision item for the planner — see Notes for the Planner. |
 | A5 | The Phase 1 module does NOT need to keep `ConvertTo-SanitizedPath` privacy redaction in the new logger — the locked log format records the full `$path` as the last field. Privacy redaction was a v1 PSFramework concern. | Pattern §4 | If the user's intent is "still sanitize paths in the new plain-text log," then `Path` field would need redaction before write. CONTEXT.md format example shows `<path>` last — implies full path. Worth confirming with the planner; flag for discuss-phase if uncertain. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Golden-text fixture: capture from v1 verbatim, or generate fresh against v2 lowercase contract?**
    - What we know: CONTEXT.md says "visually compatible with v1." v1 used uppercase hex in some output paths.
    - What's unclear: Is "visually compatible" strict (byte-identical) or visual layout only (column positions, labels, colors)?
-   - Recommendation: **Visual layout only.** Hash values render in lowercase per CONTEXT.md decision #2. Capture a v1 baseline for layout reference but let the v2 fixture be generated against the v2 contract. Otherwise CORE-06 and decision #2 collide.
+   - RESOLVED: **Visual layout only — generate fixture fresh against the v2 lowercase contract.** Hash values render in lowercase per CONTEXT.md decision #2. Capture a v1 baseline for layout reference but the v2 fixture is generated against the v2 contract. Otherwise CORE-06 and decision #2 collide.
 
 2. **Does `Write-VeriHashLog` redact the path, or write it verbatim?**
    - What we know: Locked format places `<path>` last and uses single-space separators (suggests verbatim — and "spaces in paths cannot break splitting on the first 7 columns" wording).
    - What's unclear: v1 had aggressive privacy redaction via `ConvertTo-SanitizedPath`; CONTEXT.md doesn't say whether that's preserved.
-   - Recommendation: **Verbatim path**, no redaction. The log is opt-in (`-Log` / env var); the user explicitly asked for it. If redaction is desired later, it's a wrapping concern, not a Core concern.
+   - RESOLVED: **Verbatim path, no redaction.** The log is opt-in (`-Log` / env var); the user explicitly asked for it. If redaction is desired later, it's a wrapping concern, not a Core concern.
 
 3. **Should `VERIHASH_TEST_MODE=1` still do anything in Phase 1?**
    - What we know: v1 used it to route PSFramework logs to `logs/test/`. PSFramework is being removed.
    - What's unclear: Whether tests still rely on this env var to mean "don't pollute prod logs."
-   - Recommendation: **Phase 1 ignores `VERIHASH_TEST_MODE`.** Tests use `$env:VERIHASH_LOG_PATH = (Join-Path $TestDrive 'verihash.log')` for redirection — cleaner, more explicit, and `TestDrive`-scoped (auto-cleaned by Pester).
+   - RESOLVED: **Drop `VERIHASH_TEST_MODE` entirely in Phase 1.** Tests use `$env:VERIHASH_LOG_PATH = (Join-Path $TestDrive 'verihash.log')` for redirection — cleaner, more explicit, and `TestDrive`-scoped (auto-cleaned by Pester).
 
 4. **`Format-VeriHashReport` input contract: takes a single result, or a result + comparison context?**
    - What we know: v1's `Invoke-HashFile` mixes "render the file metadata block" with "render the verification result."
    - What's unclear: Does `Format-VeriHashReport` accept just a `VeriHash.Result`, or also a `-CompareTo` (clipboard hash) and `-Sidecar` (sidecar info)?
-   - Recommendation: **Accept the result by pipeline + optional `-CompareTo` and `-SidecarInfo` parameters.** Test golden text with all three combinations: no-compare, with-clipboard-compare, with-sidecar-compare.
+   - RESOLVED: **Pure renderer — accepts result by pipeline + optional `-CompareTo` and `-SidecarInfo` parameters.** Test golden text with all three combinations: no-compare, with-clipboard-compare, with-sidecar-compare.
+
+5. **Move `Tests/VeriHash_1024.ico` to `Tests/Fixtures/VeriHash_1024.ico`?**
+   - RESOLVED: **Yes** — Plan 01-01 creates the icon at `Tests/Fixtures/VeriHash_1024.ico`; Plan 01-03 updates `Test-All.ps1` and `Tests/VeriHash.Tests.ps1` to point at the new path.
 
 ## Environment Availability
 

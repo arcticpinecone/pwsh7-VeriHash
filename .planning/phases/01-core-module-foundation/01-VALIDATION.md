@@ -46,12 +46,12 @@ created: 2026-04-18
 | `Get-VeriHashResult` shape | 2 | CORE-02 | unit | `Invoke-Pester Tests/VeriHash.Core.GetVeriHashResult.Tests.ps1` | One `It` per algorithm (MD5/SHA256/SHA512); object has FilePath, Size, Algorithm, Hash, ElapsedMs |
 | `Read-ClipboardHash` length inference | 2 | CORE-03 | unit | `Invoke-Pester Tests/VeriHash.Core.ReadClipboardHash.Tests.ps1` | Cases: 32-hex → MD5, 64 → SHA256, 128 → SHA512 |
 | `Read-ClipboardHash` prefixed form | 2 | CORE-03 | unit | same file | `sha256:<hex>` form, including prefix-overrides-length case |
-| Sidecar verify (`HASH  filename`) | 2 | CORE-04 | unit | `Invoke-Pester Tests/VeriHash.Core.TestVeriHashSidecar.Tests.ps1` | Round-trip a fixture file with two-space text format |
-| Sidecar verify (`HASH *filename`) | 2 | CORE-04 | unit | same file | Binary-marker variant produced by `sha256sum -b` |
-| Golden-text format | 2 | CORE-05 | golden | `Invoke-Pester Tests/VeriHash.Core.FormatVeriHashReport.Tests.ps1` | Diff against `Tests/Fixtures/format-report.golden.txt` |
-| `Write-VeriHashLog` gating | 2 | CORE-06 | unit | `Invoke-Pester Tests/VeriHash.Core.WriteVeriHashLog.Tests.ps1` | Asserts no file when neither `-Log` nor `$env:VERIHASH_LOG` set; exactly one line when set |
-| `Write-VeriHashLog` line shape | 2 | CORE-06 | unit | same file | UTF-8 no-BOM, single line, locked timestamp+algo+hash+path columns |
-| Platform helper | 2 | CORE-07 | unit | `Invoke-Pester Tests/VeriHash.Core.GetVeriHashPlatform.Tests.ps1` | Returns `Windows`/`Linux`/`macOS` based on `$IsWindows`/`$IsLinux`/`$IsMacOS` |
+| Sidecar verify (`HASH  filename`) | 2 | CORE-05 | unit | `Invoke-Pester Tests/VeriHash.Core.TestVeriHashSidecar.Tests.ps1` | Round-trip a fixture file with two-space text format |
+| Sidecar verify (`HASH *filename`) | 2 | CORE-05 | unit | same file | Binary-marker variant produced by `sha256sum -b` |
+| Golden-text format | 2 | CORE-06 | golden | `Invoke-Pester Tests/VeriHash.Core.FormatVeriHashReport.Tests.ps1` | Diff against `Tests/Fixtures/format-report.golden.txt` |
+| `Write-VeriHashLog` gating | 2 | CORE-07 | unit | `Invoke-Pester Tests/VeriHash.Core.WriteVeriHashLog.Tests.ps1` | Asserts no file when neither `-Log` nor `$env:VERIHASH_LOG` set; exactly one line when set |
+| `Write-VeriHashLog` line shape | 2 | CORE-07 | unit | same file | UTF-8 no-BOM, single line, locked timestamp+algo+hash+path columns |
+| Platform helper | 2 | CORE-08 | unit | `Invoke-Pester Tests/VeriHash.Core.GetVeriHashPlatform.Tests.ps1` | Returns `Windows`/`Linux`/`macOS` based on `$IsWindows`/`$IsLinux`/`$IsMacOS` |
 | Zero duplicate platform defs | 2 | CORE-08 | static | `Invoke-Pester Tests/VeriHash.Core.NoDuplicates.Tests.ps1` | `Select-String -Pattern 'function Get-VeriHashPlatform'` over repo returns exactly 1 hit (in `VeriHash.Core/Public/`) |
 | PSScriptAnalyzer clean | all | CORE-01..08 | static | `Invoke-ScriptAnalyzer -Path VeriHash.Core -Settings PSScriptAnalyzerSettings.psd1` | Zero `Error`/`Warning` outputs |
 
