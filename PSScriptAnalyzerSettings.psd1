@@ -21,7 +21,13 @@
         # of existing .md5 sidecar files. The test suite includes a warning that
         # MD5 is cryptographically broken (collision-prone) and recommends SHA256+.
         # See Tests/VeriHash.Tests.ps1 for details.
-        'PSAvoidUsingBrokenHashAlgorithms'
+        'PSAvoidUsingBrokenHashAlgorithms',
+
+        # ThreadJob/Job script blocks in this codebase pass inputs explicitly via
+        # -ArgumentList + param(...) (the documented alternative to $using:). The
+        # analyzer does not see the param-binding contract and false-flags every
+        # parameter reference. See VeriHash.HotPath/Public/Invoke-VeriHashHotPath.ps1.
+        'PSUseUsingScopeModifierInNewRunspaces'
     )
 
     # Custom rule arguments (optional)
