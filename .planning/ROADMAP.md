@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Relocate ConvertTo-SanitizedPath to LogUtils, reorder dot-sources, deduplicate PSFramework bootstrap
-- [ ] 01-02-PLAN.md — Fix hash truncation (PRIV-01) and config path sanitization (PRIV-02)
+- [x] 01-02-PLAN.md — Fix hash truncation (PRIV-01) and config path sanitization (PRIV-02)
 - [ ] 01-03-PLAN.md — Update logging guide to match actual code behavior (PRIV-04)
 
 ### Phase 2: CI/CD Pipeline
@@ -62,6 +62,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Privacy & Logging Compliance | 1/3 | In Progress | - |
+| 1. Privacy & Logging Compliance | 2/3 | In Progress | - |
 | 2. CI/CD Pipeline | 0/? | Not started | - |
 | 3. Small Wins & Baseline Lock | 0/? | Not started | - |
