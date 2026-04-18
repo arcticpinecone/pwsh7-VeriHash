@@ -48,7 +48,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Create CI workflow + expand local lint to all 3 files
-- [ ] 02-02-PLAN.md — Verify CI triggers and passes on GitHub Actions
+- [x] 02-02-PLAN.md — Verify CI triggers and passes on GitHub Actions
 
 ### Phase 3: Small Wins & Baseline Lock
 **Goal**: Remaining audit items from CONCERNS.md closed — the foundation is clean and self-maintaining before feature work begins
@@ -71,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Privacy & Logging Compliance | 3/3 | Complete | - |
-| 2. CI/CD Pipeline | 1/2 | In Progress | - |
+| 2. CI/CD Pipeline | 2/2 | Complete | 2026-04-18 |
 | 3. Small Wins & Baseline Lock | 0/? | Not started | - |
