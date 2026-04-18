@@ -1,317 +1,285 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-04-17
+**Analysis Date:** 2026-04-18
+
+VeriHash is a PowerShell 7+ cross-platform script (not a module). Conventions are enforced through PSScriptAnalyzer, Pester tests, and patterns documented in `.github\copilot-instructions.md`.
 
 ## Naming Patterns
 
 **Files:**
-- Main scripts: `VeriHash.ps1`, `QuickHash.ps1`, `Profile-VeriHashTiming.ps1`
-- Dot-sourced modules: `VeriHash.[Component].ps1` (e.g., `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`)
-- Utility/runner scripts: `Test-All.ps1`, `Build.ps1`
-- Config data: `PSScriptAnalyzerSettings.psd1`, `VeriHash.Config.ps1`
+- `PascalCase.ps1` for scripts: `VeriHash.ps1`, `QuickHash.ps1`, `Build.ps1`, `Test-All.ps1`
+- `PascalCase.Namespace.ps1` for dot-sourced modules: `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`
+- Test files mirror source: `VeriHash.Tests.ps1`, `VeriHash.Config.Tests.ps1`, `VeriHash.LogUtils.Tests.ps1`, `VeriHash.Timing.Tests.ps1` under `Tests\`
+- Linter config is a data file: `PSScriptAnalyzerSettings.psd1`
 
 **Functions:**
-- Follow PowerShell Verb-Noun convention: `Get-VeriHashConfig`, `Set-VeriHashConfig`, `ConvertTo-SanitizedPath`, `ConvertFrom-VeriHashLog`
-- Approved verbs required: `Get-`, `Set-`, `Test-`, `Install-`, `Initialize-`, `ConvertTo-`, `ConvertFrom-`, `Select-`
-- Internal/helper functions omit module prefix when script-local: `Select-File`, `Get-And-SaveHash`
-- No cmdlet aliases in source code (PSScriptAnalyzer rule `PSAvoidUsingCmdletAliases`, empty allowlist)
+- Strict `Verb-Noun` pattern using approved PowerShell verbs:
+  - `Get-VeriHashConfig`, `Get-VeriHashLogPath`, `Get-ClipboardHash`, `Get-DesktopEnvironment`
+  - `Test-InputHash`, `Test-HashSidecar`
+  - `Invoke-HashFile`
+  - `Install-WindowsSendTo`, `Install-LinuxContextMenu`, `Install-KDEContextMenu`
+  - `ConvertTo-SanitizedPath`, `ConvertFrom-VeriHashLog`
+  - `Select-File`
+- Noun prefix `VeriHash` is used for module-public helpers (`Get-VeriHashConfig`, `Get-VeriHashLogPath`).
 
 **Variables:**
-- Script-scoped shared state uses `$script:` prefix: `$script:RunningOnWindows`, `$script:PSFrameworkAvailable`, `$script:VeriHashConfig`
-- Local variables use camelCase: `$configDir`, `$configFile`, `$hashValue`, `$sanitizedPath`
-- Constants/lookups use PascalCase hashtables: `$script:DesktopEnvironments`, `$script:ValidLogLevels`, `$script:SignableExtensions`
-- Environment variable names: SCREAMING_SNAKE_CASE with `VERIHASH_` prefix: `$env:VERIHASH_TEST_MODE`, `$env:VERIHASH_LOG_LEVEL`
+- `camelCase` for local variables: `$testsPassed`, `$scriptRoot`, `$analysisResults`, `$hashValue`
+- `$script:PascalCase` for module/script-scope state shared across dot-sourced files:
+  - `$script:PSFrameworkAvailable` (single authoritative PSFramework detection)
+  - `$script:VeriHashConfig`
+  - `$script:RunningOnWindows`, `$script:RunningOnLinux`, `$script:RunningOnMacOS`
+  - `$script:DesktopEnvironments` (hashtable dispatch table)
+- Ad-hoc script-root locals (not reused across modules) are plain `$PascalCase` or `$camelCase` at the top of `VeriHash.ps1` — e.g. `$RunningOnWindows` initialized on line 96.
 
-**Types/Objects:**
-- Return custom objects via `[pscustomobject]@{ ... }` with PascalCase property names
-- Parameter type annotations use full type names: `[string]`, `[hashtable]`, `[switch]`, `[int]`, `[bool]`
+**Parameters:**
+- `[PascalCase]` per PowerShell idiom: `-FilePath`, `-Algorithm`, `-NoPause`, `-Force`, `-SkipSignatureCheck`, `-CI`, `-UpdateVersion`.
+- Switches for boolean flags, never `[bool]` parameters.
 
-## Comment-Based Help (Mandatory for Non-Trivial Functions)
+**Environment variables:**
+- `UPPER_SNAKE_CASE` with `VERIHASH_` prefix: `VERIHASH_LOG_LEVEL`, `VERIHASH_LOG_FILE`, `VERIHASH_LOG_CONSOLE`, `VERIHASH_VT_APIKEY`, `VERIHASH_VT_ENABLED`, `VERIHASH_TEST_MODE`, `VERIHASH_NO_CLEAR`.
+- Documented in `.github\copilot-instructions.md` and `VeriHash.Config.ps1`.
 
-**All public functions in `VeriHash.Config.ps1` and `VeriHash.LogUtils.ps1` include full comment-based help:**
+**Config file keys:** lowercase (JSON): `logging.level`, `virustotal.apiKey`, etc.
 
-```powershell
-function Get-VeriHashConfig {
-    <#
-    .SYNOPSIS
-        One-line summary.
-
-    .DESCRIPTION
-        Full description with priority rules, behavior details.
-
-    .PARAMETER ParameterName
-        What this parameter does.
-
-    .OUTPUTS
-        System.Collections.Hashtable - What is returned.
-
-    .EXAMPLE
-        $config = Get-VeriHashConfig
-        Write-Host "Log level: $($config.logging.level)"
-    #>
-    [CmdletBinding()]
-    [OutputType([hashtable])]
-    param(
-        [Parameter(Mandatory = $false)]
-        [string]$ConfigDirectory
-    )
-    ...
-}
-```
-
-**Rules:**
-- `.SYNOPSIS` — always present, single line
-- `.DESCRIPTION` — always present for public functions, multi-line detail
-- `.PARAMETER` — one entry per non-obvious parameter
-- `.OUTPUTS` — always present with full .NET type name and description
-- `.EXAMPLE` — at least one per function
-
-## CmdletBinding and OutputType (Mandatory)
-
-All non-trivial functions declare `[CmdletBinding()]` and `[OutputType()]`:
-
-```powershell
-[CmdletBinding()]
-[OutputType([string])]
-param(...)
-```
-
-- Functions that modify state add `SupportsShouldProcess`: `[CmdletBinding(SupportsShouldProcess = $true)]`
-- Functions using `-WhatIf` gates writes with `$PSCmdlet.ShouldProcess()`
-- Simple helper functions (e.g., `Test-InputHash`, `Get-And-SaveHash`) inside `VeriHash.ps1` use minimal `param()` blocks without full CmdletBinding — these are script-internal, not module functions
+**Types:** `[string]`, `[hashtable]`, `[PSCustomObject]`, `[switch]` — standard PowerShell types.
 
 ## Code Style
 
 **Formatting:**
-- No formatter config file detected (no `.prettierrc`, no `EditorConfig`); formatting is manual
-- Consistent 4-space indentation throughout
-- Opening braces on same line as control structure or function: `function Foo {`, `if (...) {`
-- Closing braces on their own line
-- Hashtable alignment: properties visually aligned with spaces for readability:
-  ```powershell
-  @{
-      logging    = @{
-          level   = 'INFO'
-          file    = $true
-          console = $true
-      }
-  }
-  ```
-- `[pscustomobject]@{}` property names PascalCase, aligned:
-  ```powershell
-  return [pscustomobject]@{
-      Algorithm     = $Algorithm
-      Hash          = $hashValue
-      Sidecar       = $hashFilePath
-      SidecarMatch  = $true
-      Duration      = $hashDuration
-  }
-  ```
+- 4-space indentation, no tabs.
+- Opening brace on same line as keyword: `if (...) {`, `function Foo {`.
+- `} else {` / `} catch {` on single line.
+- Heavy use of ASCII/Unicode banner separators in scripts for section readability (see `Test-All.ps1` lines 50-56, 74-76).
+- UTF-8 with optional BOM — several files carry a leading BOM (e.g., `Test-All.ps1`, `VeriHash.ps1`, `VeriHash.Timing.Tests.ps1`).
+- `#region` / `#endregion` blocks used for logical sections in `VeriHash.ps1` (see `#region Module Imports` at line 102).
 
 **Linting:**
-- Tool: PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1`
-- Severity: Error + Warning (Information excluded)
-- Excluded rules (justified):
-  - `PSAvoidUsingWriteHost` — intentional colored interactive output
-  - `PSAvoidUsingBrokenHashAlgorithms` — MD5 retained for legacy sidecar compatibility
-- Targeted PowerShell 7.0+ via `PSUseCompatibleSyntax`
-- Run via `Test-All.ps1 -SkipTests` or `Test-All.ps1` (combined with Pester)
+- Tool: `PSScriptAnalyzer` with settings in `PSScriptAnalyzerSettings.psd1`.
+- `Severity = @('Error', 'Warning')` — info-level rules ignored.
+- `IncludeDefaultRules = $true`.
+- `PSUseCompatibleSyntax` targeted at PowerShell 7.0.
+- Suppressed rules (with rationale in the settings file):
+  - `PSAvoidUsingWriteHost` — VeriHash is an interactive CLI; colored console output is a core UX feature.
+  - `PSAvoidUsingBrokenHashAlgorithms` — MD5 is intentionally retained for legacy `.md5` sidecar compatibility (warned about in tests).
+- Run locally: `Invoke-ScriptAnalyzer -Path VeriHash.ps1 -Settings PSScriptAnalyzerSettings.psd1`
+- Run via `Test-All.ps1` (iterates `VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`).
+- Enforced in CI: `.github\workflows\ci.yml` job `lint` fails on any issue.
 
-## Logical Region Grouping
+**Script preamble:**
+```powershell
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS ...
+.DESCRIPTION ...
+.PARAMETER ...
+.EXAMPLE ...
+#>
+param(...)
+$ErrorActionPreference = 'Stop'
+$scriptRoot = $PSScriptRoot
+```
+Every top-level script sets `$ErrorActionPreference = 'Stop'` (see `Test-All.ps1:46`, `Build.ps1:39`).
 
-Use `#region` / `#endregion` to structure large scripts:
+## Comment-Based Help (Mandatory)
+
+All non-trivial functions carry full help blocks. Canonical signature (from `VeriHash.LogUtils.ps1`, `ConvertTo-SanitizedPath`):
 
 ```powershell
-#region Platform Detection
-$script:RunningOnWindows = ...
-$script:RunningOnLinux   = ...
-#endregion Platform Detection
-
-#region PSFramework Logging Initialization
-...
-#endregion PSFramework Logging Initialization
+function ConvertTo-SanitizedPath {
+    <#
+    .SYNOPSIS
+        Replaces user profile paths with platform-appropriate placeholders.
+    .DESCRIPTION
+        Implements data minimization by removing personally identifiable
+        information from file paths before logging (GDPR Article 5(1)(c)).
+    .PARAMETER Path
+        The file path to sanitize.
+    .OUTPUTS
+        String - The sanitized path with user-specific segments replaced.
+    .EXAMPLE
+        'C:\Users\john\Downloads\file.exe' | ConvertTo-SanitizedPath
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(ValueFromPipeline)]
+        [string]$Path
+    )
+    process { ... }
+}
 ```
 
-Regions used in `VeriHash.Config.ps1`: `Platform Detection`, `Valid Values`
-Regions used in `VeriHash.ps1`: `Module Imports`, `Path Sanitization (Data Minimization)`, `PSFramework Logging Initialization`
+**Rules:**
+- Every exported/reusable function has `[CmdletBinding()]` and `[OutputType([...])]` attributes.
+- `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER <Name>` for each param, `.OUTPUTS`, and at least one `.EXAMPLE`.
+- Parameters use `[Parameter(Mandatory = $true/$false)]`, `[ValidateSet(...)]`, and `[Alias(...)]` where appropriate. See `VeriHash.ps1` top-level `param()` block (`-Algorithm` uses `[ValidateSet('MD5','SHA256','SHA512','All')]`; `-Help` has `[Alias("h","?")]`).
 
-## Platform Detection
+## Import Organization
 
-**Always use script-scoped platform booleans, never inline `$PSVersionTable` checks in logic:**
+**Dot-sourcing (no module manifest):**
+```powershell
+#region Module Imports
+# Import logging utilities first (Config depends on ConvertTo-SanitizedPath)
+. "$PSScriptRoot\VeriHash.LogUtils.ps1"
+. "$PSScriptRoot\VeriHash.Config.ps1"
+#endregion Module Imports
+```
+- Order matters — `VeriHash.Config.ps1` depends on `ConvertTo-SanitizedPath` from `VeriHash.LogUtils.ps1`, so LogUtils is sourced first.
+- Always use `$PSScriptRoot` for paths (never relative paths or `$PWD`).
+- Tests mirror this: `Tests\VeriHash.Config.Tests.ps1` dot-sources LogUtils then Config in `BeforeAll`.
+
+## Platform Detection Idioms
+
+The canonical triple (from copilot instructions and mirrored in `VeriHash.ps1`):
 
 ```powershell
-# Defined at module/script scope
 $script:RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform
 $script:RunningOnLinux   = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
 $script:RunningOnMacOS   = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Darwin'
 ```
 
-- `VeriHash.Config.ps1` and `VeriHash.ps1` each define these at their own scope
-- `VeriHash.LogUtils.ps1` uses local `$RunningOnWindows` (not script-scoped) — note the inconsistency
+Note the `-or $null -eq $PSVersionTable.Platform` clause — older Windows PowerShell leaves `Platform` unset. Always include it.
 
-## PSFramework Logging Pattern
+For Authenticode and Windows-only APIs, also guard with the built-in `$IsWindows` automatic variable (see `Profile-VeriHashTiming.ps1:58`).
 
-**All log calls are guarded by availability check. Never call `Write-PSFMessage` unconditionally:**
+**Path conventions:**
+- Windows config/logs: `%APPDATA%\VeriHash\` (e.g., `Join-Path $env:APPDATA "VeriHash\logs"`).
+- Unix config/logs: `~/.verihash/` (e.g., `Join-Path $HOME ".verihash/logs"`).
+- Always use `Join-Path` — never string concatenation for paths.
 
+## Script-Level Shared State
+
+Cross-module flags use `$script:` scope so all dot-sourced files see them:
 ```powershell
-if ($script:PSFrameworkAvailable) {
-    Write-PSFMessage -Level Verbose -Message "Computing $Algorithm hash" -Tag 'Hash', 'Compute' -Data @{
-        Path      = $sanitizedPath
-        Algorithm = $Algorithm
-    }
-}
+# Single authoritative check — used by all modules
+$script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)
 ```
-
-**Logging conventions:**
-- `-Level`: `Debug` (trace detail), `Verbose` (operation progress), `Warning` (recoverable issues), `Error` (failures)
-- `-Tag`: Comma-separated categorization — first tag is the domain (`Hash`, `Verify`, `Config`, `Clipboard`, `Install`), second is the lifecycle (`Entry`, `Compute`, `Result`, `Success`, `Error`, `Init`)
-- `-Data`: Hashtable of structured context. **All path values must be sanitized first** (see Path Sanitization)
-- `-Message`: Human-readable present-tense description of what is happening
-
-## Path Sanitization (Data Minimization — GDPR)
-
-**Never log raw file paths. Always sanitize before logging:**
-
-```powershell
-# CORRECT
-$sanitizedPath = $PathToFile | ConvertTo-SanitizedPath
-Write-PSFMessage -Level Verbose -Message "Computing hash" -Data @{ Path = $sanitizedPath }
-
-# WRONG — never log $PathToFile directly
-Write-PSFMessage -Level Verbose -Message "Computing hash" -Data @{ Path = $PathToFile }
-```
-
-`ConvertTo-SanitizedPath` replaces `$env:USERPROFILE` (Windows) or `$HOME` (Linux/macOS) with `%USERPROFILE%` / `~`.
-
-Defined in `VeriHash.ps1` lines 108–133. The inverse (`ConvertFrom-SanitizedPath`) is in `VeriHash.LogUtils.ps1`.
+Declared once near the top of `VeriHash.ps1` (line 100), consumed everywhere.
 
 ## Error Handling
 
-**Strategy:** Explicit try/catch; never silent swallowing without logging.
-
-**Patterns:**
-
+**Canonical pattern (from copilot instructions):**
 ```powershell
-# External calls that might fail — catch and warn, continue with defaults
-try {
-    $fileContent = Get-Content $configFile -Raw | ConvertFrom-Json
-    # process content...
-}
-catch {
+function Invoke-SomeOperation {
+    param($FilePath)
     if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Warning -Message "Failed to parse config file, using defaults" `
-            -Tag 'Config', 'Error' -ErrorRecord $_
+        Write-PSFMessage -Level Debug -Message "Invoke-SomeOperation called" -Tag 'Entry' -Data @{
+            FilePath = $FilePath | ConvertTo-SanitizedPath
+        }
     }
-    # falls through to defaults
+    try {
+        # ... logic ...
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Verbose -Message "Operation completed" -Tag 'Success'
+        }
+    } catch {
+        if ($script:PSFrameworkAvailable) {
+            Write-PSFMessage -Level Warning -Message "Operation failed" -Tag 'Error' -ErrorRecord $_
+        }
+        throw
+    }
 }
 ```
 
-```powershell
-# Platform capability checks — try, fall back gracefully
-try {
-    $clipboard = Get-Clipboard -ErrorAction Stop
-}
-catch {
-    Write-Host "Clipboard access not supported on this platform." -ForegroundColor Yellow
-    return $null
-}
-```
+**Rules:**
+- `try { ... } catch { Write-PSFMessage -Level Warning ...; throw }` — always log at Warning then re-throw to let the caller decide.
+- `-ErrorRecord $_` is attached to the PSFramework call so the full exception is captured in the JSONL log.
+- Top-level scripts set `$ErrorActionPreference = 'Stop'` so non-terminating errors become terminating.
+- Silent ignore is explicit: `catch { $null = $_ }` (see `Profile-VeriHashTiming.ps1:108-111` for `Clear-Host` in non-interactive contexts).
+- Use `-ErrorAction SilentlyContinue` for best-effort cleanup (e.g., `Remove-Item Env:\VERIHASH_TEST_MODE -ErrorAction SilentlyContinue`).
+- `Write-Error` + `exit 1` is the pattern for build/test scripts (see `Build.ps1:51-53`).
+
+## Logging (PSFramework, guarded)
+
+**Every** call to `Write-PSFMessage` must be wrapped in the `$script:PSFrameworkAvailable` guard — PSFramework is an optional dependency.
 
 ```powershell
-# System calls that must succeed — ErrorAction Stop + Write-Error
-if (-not $pwshPath) {
-    Write-Error "PowerShell 7 (pwsh) not found in PATH."
-    return
-}
-```
-
-**`-ErrorAction` usage:**
-- `-ErrorAction SilentlyContinue` on `Get-Command` probes, optional lookups, cleanup operations
-- `-ErrorAction Stop` when the failure must be caught in a try/catch
-- Prefer explicit `-ErrorAction` over `$ErrorActionPreference` changes, except in `Test-All.ps1` which sets `$ErrorActionPreference = 'Stop'` globally
-
-## Output / Console Pattern
-
-**`Write-Host` is the correct output method** for this interactive console tool:
-- Use `-ForegroundColor` for all user-facing messages to maintain visual hierarchy
-- Color scheme:
-  - `Green` — success, positive results
-  - `Red` — failures, mismatches
-  - `Yellow` — warnings, attention needed, user prompts
-  - `Cyan` — informational, headings, progress
-  - `Magenta` — highlighted values
-  - `DarkGray` — secondary/decorative content
-  - `White` — neutral labels
-
-```powershell
-Write-Host "Hash matches! ✅" -ForegroundColor Green
-Write-Host "Hash does not match! 🚫" -ForegroundColor Red
-Write-Warning "Sidecar hash differs from computed hash!"
-```
-
-Emoji used extensively for quick visual status: ✅ (match/OK), 🚫 (mismatch/fail), ⚠️ (warning/missing), 📝 (file operations)
-
-## Module Import Pattern
-
-Dot-source companion modules relative to `$PSScriptRoot`:
-
-```powershell
-#region Module Imports
-. "$PSScriptRoot\VeriHash.Config.ps1"
-. "$PSScriptRoot\VeriHash.LogUtils.ps1"
-#endregion Module Imports
-```
-
-- Dot-sourcing is used (not `Import-Module`) since these are `.ps1` helper files, not modules
-- The comment at end of `VeriHash.Config.ps1`: `# Functions are exported by dot-sourcing this file`
-
-## Switch Statement Dispatch
-
-Prefer `switch` over if/elseif chains for algorithm and platform routing:
-
-```powershell
-switch ($Algorithm) {
-    'MD5'    { $ext = '.md5'     }
-    'SHA256' { $ext = '.sha256'  }
-    'SHA512' { $ext = '.sha512'  }
-    default  { $ext = '.unknown' }
+if ($script:PSFrameworkAvailable) {
+    Write-PSFMessage -Level Verbose -Message "Hash computed" -Tag 'Hash', 'Result' -Data @{
+        Path      = $filePath | ConvertTo-SanitizedPath
+        Algorithm = $algorithm
+        HashShort = $hash.Substring(0, 16)
+    }
 }
 ```
 
-```powershell
-switch ($LogLevel) {
-    'Debug'   { Set-PSFConfig -FullName '...' -Value 9 }
-    'Verbose' { Set-PSFConfig -FullName '...' -Value 6 }
-    default   { Set-PSFConfig -FullName '...' -Value 3 }
-}
-```
+**Log levels used:** `Debug`, `Verbose`, `Warning`. Higher levels follow PSFramework conventions.
 
-## Configuration Priority Pattern
+**Standard tags** (consume these — don't invent new ones; see `.github\copilot-instructions.md` table):
 
-Configuration follows a strict three-tier priority, documented in comment-based help:
+| Tag | Use For |
+|-----|---------|
+| `Hash` | Hash computation operations |
+| `Verify` | Verification operations |
+| `Compute` | Computing a hash |
+| `Result` | Operation result |
+| `Entry` | Function entry |
+| `Success` | Successful operation |
+| `Error` | Error condition |
+| `Install` | Installation operations (context menu, SendTo) |
+| `Windows` / `Linux` / `KDE` | Platform-specific operations |
+| `Clipboard` | Clipboard operations |
+| `Config` | Configuration loading |
 
-```
-Environment variables  (highest)
-  > Config file
-    > Defaults          (lowest)
-```
+**Log files:** JSONL format, daily rotation:
+- Windows: `%APPDATA%\VeriHash\logs\verihash-YYYY-MM-DD.jsonl`
+- Unix: `~/.verihash/logs/verihash-YYYY-MM-DD.jsonl`
+- Test mode (`VERIHASH_TEST_MODE=1`): routed to `logs\test\` subfolder.
 
-This pattern is implemented in `Get-VeriHashConfig` in `VeriHash.Config.ps1`.
+## Privacy / GDPR Conventions
 
-## Comments
+`VeriHash.LogUtils.ps1` enforces GDPR Article 5(1)(c) data minimization:
 
-**When to Comment:**
-- Above sections using `##` + descriptive label for major logical blocks (e.g., `## Context Menu Integration Functions`)
-- Inline where non-obvious behavior occurs: regex formats, legacy compat decisions, GDPR rationale
-- GDPR / security rationale documented inline with article references:
+- **Always sanitize paths before logging:**
   ```powershell
-  # Principle: GDPR Article 5(1)(c) - collect only what's necessary
-  # Reference: GDPR Article 5(1)(c), OWASP Logging Cheat Sheet, CWE-532
+  $filePath | ConvertTo-SanitizedPath
+  # Windows: C:\Users\john\Downloads\x.exe -> %USERPROFILE%\Downloads\x.exe
+  # Unix:    /home/john/x.tar.gz           -> ~/x.tar.gz
   ```
-- PSScriptAnalyzer exclusions in `PSScriptAnalyzerSettings.psd1` include explicit justification comments
+- **Never log full hash values under comparison** — truncate to first 16 chars (`$hash.Substring(0, 16)`).
+- **Never log file contents.**
+- `ConvertFrom-SanitizedPath` expands paths back for local debugging.
 
-**Block separators** use `###...###` (80 chars) for function group boundaries in `VeriHash.ps1`.
+## Console Output
+
+- `Write-Host` is the approved output mechanism for user-facing messages (suppressed rule documented above).
+- Use `-ForegroundColor` for semantic coloring: `Cyan` (headings), `Yellow` (in-progress / warnings), `Green` (success), `Red` (failure), `DarkGray` (separators/notes), `Gray` (neutral), `White` (steps).
+- Banner boxes use box-drawing characters (`╔ ═ ╗ ║ ╚ ╝`) — see `Test-All.ps1:52-54`.
+- Status symbols: `✅`, `❌`, `⚠️`.
+
+## Function Design
+
+**Size:** Functions should be single-purpose. `VeriHash.ps1` holds the larger orchestration functions (`Invoke-HashFile`, `Get-And-SaveHash`, `Test-HashSidecar`); helpers are extracted into `VeriHash.Config.ps1` and `VeriHash.LogUtils.ps1`.
+
+**Parameters:**
+- Prefer `[Parameter(Mandatory = $true)]` over positional-only parameters.
+- Use `[ValidateSet(...)]` for closed value sets: algorithms, log levels.
+- Use `[Alias(...)]` to preserve ergonomic CLI names (`-InputHash` → `-Hash`, `-h`/`-?` → `-Help`).
+- Pipeline support where meaningful: `[Parameter(ValueFromPipeline)]` (e.g., `ConvertTo-SanitizedPath`), with a `process { }` block.
+
+**Return values:**
+- Functions with `[OutputType([string])]` return a single string (or pipe-sourced string).
+- Structured returns use `[PSCustomObject]@{ ... }` (see `Profile-VeriHashTiming.ps1:119-125`).
+- Avoid `Write-Output` in interactive functions — use `return`.
+
+## Module Design
+
+- No module manifest (`.psd1`) exists — scripts are dot-sourced and run directly.
+- Public helpers in dot-sourced files are implicitly "exported" (all functions are in scope after `.` sourcing).
+- Shared state goes through `$script:` scope, which is common across dot-sourced files at the same script root.
+- `$script:DesktopEnvironments` is a dispatch hashtable; to add GNOME/XFCE support, add an entry and implement the named `Install-*ContextMenu` handler — no switch statement changes required.
+
+## Dispatch Tables Over Switches
+
+Platform/desktop routing uses hashtable lookup rather than large switch statements:
+```powershell
+$script:DesktopEnvironments = @{
+    'KDE'   = 'Install-KDEContextMenu'
+    # 'GNOME' = 'Install-GnomeContextMenu'  # add here, implement handler, done
+}
+```
+This pattern is surfaced in `.github\copilot-instructions.md` and should be preferred for extensible routing.
 
 ---
 
-*Convention analysis: 2026-04-17*
+*Convention analysis: 2026-04-18*

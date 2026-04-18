@@ -1,97 +1,131 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-04-17
+**Analysis Date:** 2026-04-18
 
 ## Test Framework
 
 **Runner:**
-- Pester (PowerShell testing framework)
-- Minimum version: Pester 5.x (uses `New-PesterConfiguration` API)
-- Config: no `pester.config.ps1` — configuration built inline in `Test-All.ps1`
+- **Pester 5.x** (capped at `<= 5.99` in CI: `.github\workflows\ci.yml:42`)
+- Install: `Install-Module Pester -Scope CurrentUser`
+- No separate config file — configuration is built inline via `New-PesterConfiguration` in `Test-All.ps1` and `.github\workflows\ci.yml`.
 
 **Assertion Library:**
-- Pester built-in: `Should -Be`, `Should -Not -BeNullOrEmpty`, `Should -Match`, `Should -BeOfType`, `Should -Throw`, `Should -BeLessThan`, `Should -BeGreaterOrEqual`
+- Built-in Pester `Should` operator: `Should -Be`, `Should -BeOfType`, `Should -Match`, `Should -Not -Throw`, `Should -Not -BeNullOrEmpty`, `Should -HaveCount`, etc.
 
-**Static Analysis:**
-- PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1`
+**Mocking:** Built-in Pester `Mock` command (see `Tests\VeriHash.Tests.ps1:85-97` for `Get-Clipboard` and Linux clipboard tool mocking).
 
 **Run Commands:**
 ```powershell
-# Run all tests + PSScriptAnalyzer + performance profiler
+# Run everything (tests + lint + profiler)
 .\Test-All.ps1
 
-# Run all tests only (skip PSScriptAnalyzer and profiler)
-.\Test-All.ps1 -SkipAnalyzer -SkipProfiler
-
-# Run PSScriptAnalyzer only
-.\Test-All.ps1 -SkipTests -SkipProfiler
-
-# Run in CI mode (exits with error code 1 if failures)
+# CI mode (sets exit code)
 .\Test-All.ps1 -CI
 
-# Run a single test file directly
-Invoke-Pester .\Tests\VeriHash.Config.Tests.ps1 -Output Detailed
+# Tests only
+.\Test-All.ps1 -SkipAnalyzer -SkipProfiler
 
-# Run via Pester configuration (as Test-All.ps1 does)
-$config = New-PesterConfiguration
-$config.Run.Path = ".\Tests"
-$config.Output.Verbosity = 'Detailed'
-Invoke-Pester -Configuration $config
+# Direct Pester invocation
+Invoke-Pester -Path "Tests/" -Output Detailed
+
+# Single test file
+Invoke-Pester -Path "Tests\VeriHash.Tests.ps1" -Output Detailed
+Invoke-Pester -Path "Tests\VeriHash.Config.Tests.ps1" -Output Detailed
+Invoke-Pester -Path "Tests\VeriHash.LogUtils.Tests.ps1" -Output Detailed
+Invoke-Pester -Path "Tests\VeriHash.Timing.Tests.ps1" -Output Detailed
+
+# Full release build (runs Test-All.ps1 -CI first, fails on non-zero exit)
+.\Build.ps1
+.\Build.ps1 -Version "1.4.0" -UpdateVersion
 ```
 
-## TDD Rule (Critical)
-
-**NEVER modify tests to make them pass. Always modify the production code.**
-
-This is an explicit rule for this codebase. If a test fails, fix the implementation — not the test.
+Standard Pester configuration used by `Test-All.ps1`:
+```powershell
+$pesterConfig = New-PesterConfiguration
+$pesterConfig.Run.Path       = $testsPath       # ./Tests
+$pesterConfig.Output.Verbosity = 'Detailed'
+$pesterConfig.Run.Exit       = $false           # $true in CI
+$testResults = Invoke-Pester -Configuration $pesterConfig
+```
 
 ## Test File Organization
 
-**Location:** All test files in `Tests\` directory
+**Location:** All tests live in the `Tests\` directory at the repo root. One test file per source file:
 
-**Naming:** `VeriHash.[Component].Tests.ps1`
-
-**Structure:**
 ```
 Tests\
-├── VeriHash.Tests.ps1          # Core hash operations (VeriHash.ps1 functions)
-├── VeriHash.Config.Tests.ps1   # Configuration management (VeriHash.Config.ps1)
-├── VeriHash.LogUtils.Tests.ps1 # Log utilities (VeriHash.LogUtils.ps1)
-├── VeriHash.Timing.Tests.ps1   # Performance profiler (Profile-VeriHashTiming.ps1)
-├── QuickHash.Tests.ps1         # QuickHash tool (QuickHash.ps1)
-└── VeriHash_1024.ico           # Binary test fixture (real file for hash verification)
+├── VeriHash.Tests.ps1           # tests for VeriHash.ps1 (main script)
+├── VeriHash.Config.Tests.ps1    # tests for VeriHash.Config.ps1
+├── VeriHash.LogUtils.Tests.ps1  # tests for VeriHash.LogUtils.ps1
+├── VeriHash.Timing.Tests.ps1    # tests for Profile-VeriHashTiming.ps1
+├── QuickHash.Tests.ps1          # tests for QuickHash.ps1
+└── VeriHash_1024.ico            # shared test fixture (real file for hashing)
 ```
 
-## Test Isolation (Mandatory)
+**Naming:** `<SourceName>.Tests.ps1` — mirrors the `.ps1` file it exercises.
 
-**Always set test mode in `BeforeAll`:**
+**Discovery:** `Test-All.ps1` and CI point Pester at the entire `Tests\` directory; no explicit inclusion list.
 
+## Test Structure
+
+**Canonical skeleton** (every test file follows this):
 ```powershell
 BeforeAll {
-    # Redirect logs to separate test directory (prevents polluting user's real logs)
+    # 1. Enable test mode FIRST (prevents polluting production logs)
     $env:VERIHASH_TEST_MODE = '1'
 
-    # Dot-source the script under test
-    . "$PSScriptRoot\..\VeriHash.ps1" -FilePath "dummy" -ErrorAction SilentlyContinue 2>$null
+    # 2. Dot-source dependencies in correct order
+    . "$PSScriptRoot\..\VeriHash.LogUtils.ps1"
+    . "$PSScriptRoot\..\VeriHash.Config.ps1"
 
-    # Use Pester's $TestDrive for all temp files — auto-cleaned after test run
-    $script:TestOutputDir = Join-Path $TestDrive "VeriHashTests"
+    # 3. Set up fixtures using $TestDrive (auto-cleaned by Pester)
+    $script:TestOutputDir = Join-Path $TestDrive "MyTests"
     New-Item -ItemType Directory -Path $script:TestOutputDir -Force | Out-Null
 }
-```
 
-**Clean up in `AfterAll`:**
-
-```powershell
 AfterAll {
+    # Clean up every env var the test touched
     Remove-Item Env:\VERIHASH_TEST_MODE -ErrorAction SilentlyContinue
+    $env:VERIHASH_LOG_LEVEL = $null
+    $env:VERIHASH_VT_APIKEY = $null
+    # ...
+}
+
+Describe 'Function-Under-Test' {
+    Context 'When <condition>' {
+        It '<expected behavior>' {
+            # Arrange
+            $input = '...'
+
+            # Act
+            $result = Function-Under-Test -Param $input
+
+            # Assert
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -BeOfType [string]
+        }
+    }
 }
 ```
 
-**Clean environment variables between tests (`BeforeEach`):**
+**Nesting conventions:**
+- `Describe 'FunctionName'` — one block per public function.
+- `Context 'When <condition>'` / `'Returns <thing>'` — groups related scenarios.
+- `It '<observable behavior>'` — one assertion scope per behavior.
+- Bodies use `# Arrange`, `# Act`, `# Assert` comments consistently (see `Tests\VeriHash.Tests.ps1:42-48`).
+
+## Test Environment Isolation
+
+**Non-negotiable:** every `BeforeAll` sets `$env:VERIHASH_TEST_MODE = '1'` and every `AfterAll` cleans it up. This redirects PSFramework logs to `logs\test\` so production JSONL logs are not polluted.
 
 ```powershell
-BeforeEach {
+BeforeAll { $env:VERIHASH_TEST_MODE = '1' }
+AfterAll  { Remove-Item Env:\VERIHASH_TEST_MODE -ErrorAction SilentlyContinue }
+```
+
+Config tests also null out every `VERIHASH_*` env var they might set (`Tests\VeriHash.Config.Tests.ps1:15-22`):
+```powershell
+AfterAll {
     $env:VERIHASH_LOG_LEVEL   = $null
     $env:VERIHASH_LOG_FILE    = $null
     $env:VERIHASH_LOG_CONSOLE = $null
@@ -100,95 +134,34 @@ BeforeEach {
 }
 ```
 
-**`AfterEach` for file cleanup:**
+## Invoking VeriHash.ps1 Inside Tests
+
+Always call the main script with `-NoPause -Force` (and typically `-SkipSignatureCheck`) to suppress interactive prompts and branches:
 
 ```powershell
-AfterEach {
-    Get-ChildItem -Path $script:TestOutputDir -Filter "*.sha256" -ErrorAction SilentlyContinue | Remove-Item -Force
-    Get-ChildItem -Path $script:TestOutputDir -Filter "*.md5"    -ErrorAction SilentlyContinue | Remove-Item -Force
-    Get-ChildItem -Path $script:TestOutputDir -Filter "*.ico"    -ErrorAction SilentlyContinue | Remove-Item -Force
-}
+$output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -SkipSignatureCheck -NoPause -Force *>&1
 ```
 
-## Test Structure
+- `-NoPause` disables the interactive "Press any key to continue" at the end.
+- `-Force` skips overwrite confirmations for sidecar files.
+- `-SkipSignatureCheck` bypasses Authenticode calls (Windows-only API).
+- `*>&1` merges all streams so the test can inspect combined output.
 
-**Hierarchy:** `Describe` → `Context` → `It`
-
+For dot-sourcing the main script to import its functions (as `Tests\VeriHash.Tests.ps1:7` does):
 ```powershell
-Describe 'Get-VeriHashConfig' {
-    Context 'When no config file exists' {
-        It 'Returns default configuration' {
-            # Arrange
-            $nonExistentPath = Join-Path $script:TestConfigDir "nonexistent"
-
-            # Act
-            $result = Get-VeriHashConfig -ConfigDirectory $nonExistentPath
-
-            # Assert
-            $result.logging.level | Should -Be 'INFO'
-            $result.virustotal.enabled | Should -Be $true
-        }
-    }
-}
-```
-
-**Arrange/Act/Assert comments** are used consistently throughout all test files. This is the required pattern for non-trivial tests.
-
-**`It` naming convention:** Descriptive behavior statements that form readable sentences under their `Context`:
-- `'Returns default configuration'`
-- `'Environment variable overrides config file for log level'`
-- `'Detects mismatched hash correctly (GNU coreutils format)'`
-
-## Test Script Loading Patterns
-
-### Dot-Sourcing Module Files (Config, LogUtils)
-
-For pure module files with no script-level side effects:
-
-```powershell
-BeforeAll {
-    $script:ConfigPath = "$PSScriptRoot\..\VeriHash.Config.ps1"
-    . $script:ConfigPath
-
-    $script:TestConfigDir = Join-Path $TestDrive "ConfigTests"
-    New-Item -ItemType Directory -Path $script:TestConfigDir -Force | Out-Null
-}
-```
-
-### Dot-Sourcing Scripts with Side Effects (VeriHash.ps1)
-
-When the script runs on load, suppress errors via dummy parameters:
-
-```powershell
-# Pass -FilePath "dummy" and suppress errors — the script will fail gracefully
-# Functions are still loaded into scope despite the error
 . "$PSScriptRoot\..\VeriHash.ps1" -FilePath "dummy" -ErrorAction SilentlyContinue 2>$null
 ```
-
-### Extracting Functions from Scripts (QuickHash.ps1)
-
-For scripts with both function definitions and immediate interactive code, extract via regex and load into a temporary module:
-
-```powershell
-$scriptContent = Get-Content $script:QuickHashScriptPath -Raw
-
-if ($scriptContent -match '(?s)(function Get-Hash \{.*?\n\})') {
-    $tempModule = New-Module -ScriptBlock ([scriptblock]::Create($matches[1]))
-    $tempModule | Import-Module -Global
-}
-```
+A dummy file path is passed because the script currently runs at import; errors are suppressed.
 
 ## Mocking
 
-**Framework:** Pester's built-in `Mock`
+**Framework:** Pester's built-in `Mock`.
 
-**Platform-conditional mocking** — mock only tools that exist on the current platform:
-
+**Cross-platform clipboard pattern** (from `Tests\VeriHash.Tests.ps1:82-97`):
 ```powershell
 if ($IsWindows) {
     Mock Get-Clipboard { return '5d41402abc4b2a76b9719d911017c592' }
 } else {
-    # Mock Linux clipboard tools conditionally
     if (Get-Command wl-paste -ErrorAction SilentlyContinue) {
         Mock wl-paste { return '5d41402abc4b2a76b9719d911017c592' }
     }
@@ -201,258 +174,126 @@ if ($IsWindows) {
 }
 ```
 
-**Function mocking** (used for LogUtils path redirection):
-
-```powershell
-Mock Get-VeriHashLogPath { return $script:TestLogDir }
-```
-
 **What to Mock:**
-- Platform-specific clipboard tools (`Get-Clipboard`, `wl-paste`, `xclip`, `xsel`)
-- Functions that return environment-dependent paths (`Get-VeriHashLogPath`)
-- External system calls that cannot be reliably controlled in tests
+- External commands (`Get-Clipboard`, `wl-paste`, `xclip`, `xsel`).
+- Platform-specific OS integration points.
 
 **What NOT to Mock:**
-- File system operations — use `$TestDrive` (Pester's sandbox) instead
-- Configuration file reads/writes — use `$TestDrive`-based temp directories
-- Hash computation (`Get-FileHash`, `[System.Security.Cryptography.*]`) — tests verify real hash values
+- `Get-FileHash` — real hashing is exercised against the committed fixture `Tests\VeriHash_1024.ico`.
+- File I/O — use `$TestDrive` instead; it's auto-cleaned by Pester between runs.
+- Platform detection — use `Set-ItResult -Skipped -Because` to skip tests on the wrong OS.
 
-## Fixtures and Test Data
+## Fixtures and Factories
 
-**Binary fixture:** `Tests\VeriHash_1024.ico` — a real icon file committed to the repo. Used across multiple test files for hash computation tests. Tests copy it to `$TestDrive` before use.
+**Shared fixture:** `Tests\VeriHash_1024.ico` — a real small binary used for hashing/profiler tests.
 
-**Known hash constants** defined in `BeforeAll`:
-
+**Per-test fixtures:** created under `$TestDrive`, Pester's auto-cleaned temp directory:
 ```powershell
-# In QuickHash.Tests.ps1
-$script:HelloWorldMD5    = '65A8E27D8879283831B664BD8B7F0AD4'
-$script:HelloWorldSHA256 = 'DFFD6021BB2BD5B0AF676290809EC3A53191DD81C7F70A4B28688A362182986F'
-$script:FoxMD5           = '9E107D9D372BB6826BD81D3542A419D6'
-$script:FoxSHA256        = 'D7A8FBB307D7809469CA9ABCB0082E4F8D5651E46D3CDB762D02D0BF37C9E592'
+$script:TestOutputDir = Join-Path $TestDrive "VeriHashTests"
+New-Item -ItemType Directory -Path $script:TestOutputDir -Force | Out-Null
 ```
 
-**Inline config fixtures** built directly in tests:
+**Timing test fixtures:** `Tests\VeriHash.Timing.Tests.ps1` supports both auto-generated large files (`$script:LargeFileSizeMB = 500`) and user-provided real files (`$script:UserProvidedTestFiles = @()`), with extension-aware Authenticode signability filtering (`$script:SignableExtensions` at line 40).
 
-```powershell
-@{
-    logging    = @{ level = 'DEBUG'; file = $false; console = $true }
-    virustotal = @{ apiKey = 'test-api-key'; enabled = $false }
-} | ConvertTo-Json -Depth 3 | Set-Content $configFile
-```
-
-**JSON log fixtures** for LogUtils tests:
-
+**Sample log fixtures** are written inline in `BeforeAll` for `ConvertFrom-VeriHashLog` tests (see `Tests\VeriHash.LogUtils.Tests.ps1:57-68`):
 ```powershell
 $sampleEntries = @(
-    '{"Timestamp":"2026-01-17T10:00:00.000Z","Level":"Verbose","Message":"Computing hash","FunctionName":"Get-And-SaveHash","Tags":["Hash","Compute"]}'
-    '{"Timestamp":"2026-01-17T10:00:02.000Z","Level":"Warning","Message":"File not found","FunctionName":"Test-HashSidecar","Tags":["Verify","Error"]}'
+    '{"Timestamp":"2026-01-17T10:00:00.000Z","Level":"Verbose","Message":"Computing hash","FunctionName":"...","Tags":["Hash","Compute"],"Data":{"Path":"C:\\test.txt"}}'
+    ...
 )
 $sampleEntries | Set-Content $script:SampleLogFile
 ```
 
-**Large generated test files** for performance timing tests (`VeriHash.Timing.Tests.ps1`):
+## Platform-Conditional Tests
 
-```powershell
-# Auto-generates a 500MB binary file using seeded Random for reproducibility
-$script:LargeFileSizeMB = 500
-$buffer = [byte[]]::new(1MB)
-$random = [System.Random]::new(42)   # Seeded — reproducible
-$stream = [System.IO.File]::Create($script:GeneratedTestFile)
-```
-
-User-provided real files can override auto-generation via `$script:UserProvidedTestFiles = @("D:\ISOs\Win11.iso")`.
-
-## Platform-Conditional Test Skipping
-
+Use `Set-ItResult -Skipped -Because` inside an `It` block to skip on the wrong OS (never an `if` that silently passes):
 ```powershell
 It 'Returns Windows path on Windows' {
     if (-not ($PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform)) {
         Set-ItResult -Skipped -Because "Not running on Windows"
         return
     }
-
     $result = Get-VeriHashConfigPath
     $result | Should -Match 'AppData.*VeriHash'
 }
 ```
 
-Use `Set-ItResult -Skipped -Because "reason"` followed by `return` to skip platform-inappropriate tests cleanly. Do not use `if ($IsWindows) { ... }` to wrap assertions — always skip via `Set-ItResult`.
-
-## Output Capture Pattern
-
-For functions that produce console output via `Write-Host`, capture all streams:
-
-```powershell
-# Capture all output streams (*>&1) and convert to string for -Match assertions
-$output = Test-HashSidecar -SidecarPath $sidecarPath *>&1
-$outputString = $output | Out-String
-$outputString | Should -Match 'OK.*✅'
-$outputString | Should -Match 'FAILED.*🚫'
-$outputString | Should -Match 'MISSING.*⚠️'
-```
-
-Also used in QuickHash tests:
-```powershell
-$output = Get-Hash -InputValue $script:TestFile1 -Algorithm "SHA256" *>&1 | Out-String
-$output | Should -Match $script:HelloWorldSHA256
-$output | Should -Match "Hash of the file"
-```
-
-## Data-Driven Tests (`-ForEach`)
-
-Used in `VeriHash.Timing.Tests.ps1` for algorithm iteration:
-
-```powershell
-It 'Runs successfully with <Algorithm> algorithm' -ForEach @(
-    @{ Algorithm = 'SHA256' }
-    @{ Algorithm = 'MD5' }
-    @{ Algorithm = 'SHA512' }
-) {
-    {
-        & $script:ProfilerScript -FilePath $script:TestIconFile -Algorithm $Algorithm -Quiet
-    } | Should -Not -Throw
-}
-```
-
-## Performance Optimization in Tests
-
-**Pre-compute expensive results in `BeforeAll`, reuse across all tests. Never repeat expensive operations per-test.**
-
-Pattern from `VeriHash.Timing.Tests.ps1`:
-
-```powershell
-BeforeAll {
-    # PERFORMANCE: Large files are profiled ONCE per algorithm in BeforeAll,
-    # then results are reused across all tests. No redundant hashing.
-    $script:IconResult_SHA256  = & $script:ProfilerScript -FilePath $script:TestIconFile -Algorithm SHA256 -Quiet
-    $script:LargeResult_MD5    = & $script:ProfilerScript -FilePath $script:LargeTestFile -Algorithm MD5 -Quiet
-    $script:LargeResult_SHA256 = & $script:ProfilerScript -FilePath $script:LargeTestFile -Algorithm SHA256 -Quiet
-    $script:LargeResult_SHA512 = & $script:ProfilerScript -FilePath $script:LargeTestFile -Algorithm SHA512 -Quiet
-}
-
-# Individual tests reference $script:LargeResult_SHA256 — no re-execution
-Describe 'Timing Profiler Measurements' {
-    It 'Total time equals sum of individual measurements' {
-        $result = $script:IconResult_SHA256   # ← reuse cached result
-        $sum = ($result.Measurements.Values | Measure-Object -Sum).Sum
-        [Math]::Abs($sum - $result.Total) | Should -BeLessThan 0.01
-    }
-}
-```
-
-## PSScriptAnalyzer as a Test
-
-`VeriHash.LogUtils.Tests.ps1` includes an inline PSScriptAnalyzer check as a Pester test:
-
-```powershell
-Describe 'Code Quality - PSScriptAnalyzer' {
-    It 'VeriHash.LogUtils.ps1 passes PSScriptAnalyzer with no warnings or errors' {
-        if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
-            Set-ItResult -Skipped -Because "PSScriptAnalyzer module is not installed"
-            return
-        }
-
-        $results = Invoke-ScriptAnalyzer -Path $script:LogUtilsPath -Severity Warning, Error
-
-        $results | Should -BeNullOrEmpty -Because "PSScriptAnalyzer found issues: $(
-            $results | ForEach-Object { "`n  [$($_.Severity)] $($_.RuleName) at line $($_.Line): $($_.Message)" }
-        )"
-    }
-}
-```
-
-## Round-Trip Testing Pattern
-
-Config tests verify write→read fidelity:
-
-```powershell
-It 'Round-trips configuration correctly' {
-    # Arrange
-    $config = @{
-        logging    = @{ level = 'DEBUG'; file = $false; console = $true }
-        virustotal = @{ apiKey = 'roundtrip-key'; enabled = $false; autoOpen = $true }
-    }
-
-    # Act
-    Set-VeriHashConfig -Config $config -ConfigDirectory $testDir
-    $loaded = Get-VeriHashConfig -ConfigDirectory $testDir
-
-    # Assert
-    $loaded.logging.level          | Should -Be 'DEBUG'
-    $loaded.virustotal.apiKey      | Should -Be 'roundtrip-key'
-    $loaded.virustotal.autoOpen    | Should -Be $true
-}
-```
-
-## Test Variable Scoping
-
-- `$script:` prefix required for variables shared across `BeforeAll`, `AfterAll`, `Describe`, and `It` blocks
-- Pester `$TestDrive` is always available as a temp filesystem path, auto-cleaned after the run
-- Block-local variables (`$testDir`, `$result`, `$config`) remain unscoped — they are per-`It` locals
-
 ## Coverage
 
-**Requirements:** No coverage threshold enforced; no `.coveragerc` or coverage config detected.
+**Requirements:** None enforced. No coverage gate in CI or `Test-All.ps1`.
 
-**Coverage collection** is not configured in `Test-All.ps1`. Coverage reports require manual Pester config:
-```powershell
-$config = New-PesterConfiguration
-$config.CodeCoverage.Enabled = $true
-$config.CodeCoverage.Path = @('.\VeriHash.ps1', '.\VeriHash.Config.ps1', '.\VeriHash.LogUtils.ps1')
-Invoke-Pester -Configuration $config
-```
+**Verbosity:** `Detailed` — all `Describe`/`Context`/`It` names printed for both local and CI runs.
 
 ## Test Types
 
-**Unit Tests:**
-- `VeriHash.Config.Tests.ps1` — pure function unit tests; all I/O redirected via `-ConfigDirectory $testDir`
-- `VeriHash.LogUtils.Tests.ps1` — unit tests with inline JSON fixture files
+**Unit tests:** dominant style. Dot-source the source module, call functions directly, assert return values.
 
-**Integration Tests:**
-- `VeriHash.Tests.ps1` — tests real hash computation and sidecar file creation against a real binary fixture (`VeriHash_1024.ico`)
-- `QuickHash.Tests.ps1` — tests with real files and known hash values
+**Integration-style tests:** a handful invoke `VeriHash.ps1` end-to-end with `& ... -NoPause -Force *>&1` and grep the merged output stream.
 
-**Performance / Profiling Tests:**
-- `VeriHash.Timing.Tests.ps1` — validates timing profiler behavior and measurement accuracy; uses large generated or user-provided files
+**Performance/timing tests:** `Tests\VeriHash.Timing.Tests.ps1` calls `Profile-VeriHashTiming.ps1` and asserts on the returned `[PSCustomObject]` containing `Measurements`, `Total`, and `SortedMeasurements`.
 
-**E2E Tests:** Not applicable — no browser or network testing. The closest equivalent is `VeriHash.Tests.ps1` which calls functions end-to-end through file creation and verification.
+**E2E tests:** not used.
 
 ## Common Patterns
 
-**Error / throw testing:**
+**Assert-without-capture (output goes to Write-Host):**
 ```powershell
-# Expect no throw
-{ Test-InputHash -ComputedHash $computedHash -InputHash $inputHash } | Should -Not -Throw
+{ Test-InputHash -ComputedHash $a -InputHash $b } | Should -Not -Throw
+```
+Used when the function's "return" is user-facing console output that can't be easily captured.
 
-# Expect throw with message
-{ Get-Hash -InputValue "" -Algorithm "SHA256" } | Should -Throw -ExpectedMessage "*empty string*"
-
-# Expect throw on invalid input
-{
-    & $script:ProfilerScript -FilePath "C:\NonExistent\File.txt" -Algorithm SHA256 -Quiet -ErrorAction Stop
-} | Should -Throw
+**Output capture when Write-Host is involved:**
+```powershell
+$output = & "$PSScriptRoot\..\VeriHash.ps1" -FilePath $testFile -NoPause -Force *>&1
+$output | Should -Match 'SHA256'
 ```
 
-**Regex assertions on hash values:**
+**Error testing:**
 ```powershell
-$result.Hash | Should -Match '^[A-F0-9]{64}$'
-$result.Hash.Length | Should -Be 64
+{ Get-VeriHashConfig -Path '/nonexistent' } | Should -Throw
 ```
 
-**Property existence checks:**
-```powershell
-$result.PSObject.Properties.Name | Should -Contain "HashOperations"
-$result.PSObject.Properties.Name | Should -Contain "VerifyOperations"
-```
+## Performance Profiler
 
-**Null/empty guards:**
-```powershell
-$result | Should -Not -BeNullOrEmpty
-$result | Should -BeNullOrEmpty
-$result | Should -BeOfType [hashtable]
-$result | Should -BeOfType [string]
-```
+`Profile-VeriHashTiming.ps1` is a first-class part of the test pipeline:
+
+- Run standalone: `.\Profile-VeriHashTiming.ps1 -FilePath <file> -Algorithm SHA256`
+- Run as part of `Test-All.ps1` step `[3/3]` — uses `Tests\VeriHash_1024.ico` by default.
+- Sets `$env:VERIHASH_NO_CLEAR = '1'` and `$env:VERIHASH_TEST_MODE = '1'` before invocation so `Clear-Host` is skipped and logs go to test dir.
+- Returns a `[PSCustomObject]` with `.Measurements` (hashtable), `.Total` (ms), `.SortedMeasurements` (sorted enumerable) — Pester tests assert against these.
+- Measures: `Get-Item`, size formatting, date formatting, `Get-AuthenticodeSignature` (Windows-only, guarded by `$IsWindows`), `Get-FileHash`, sidecar write, console-output overhead.
+- `-Quiet` switch suppresses console output and swaps `Write-Host` for `Out-String | Out-Null` so the profiler itself doesn't skew measurements during automated runs.
+
+## TDD Rule (Hard Constraint)
+
+**Never modify tests to make them pass. Modify the code.**
+
+This rule is documented in:
+- `AGENTS.md` / `.agents/context/testing.md`
+- `.github\copilot-instructions.md` under "TDD rule"
+
+Tests define correct behavior. If a test fails, the fix belongs in the source under test, not in the assertion. A test may only be changed when the intended behavior itself changes (and that change is explicit and documented).
+
+## CI Pipeline
+
+File: `.github\workflows\ci.yml`
+
+**Triggers:** push / PR to `dev` or `main`, when any `**.ps1`, `Tests/**`, or `PSScriptAnalyzerSettings.psd1` changes. Also `workflow_dispatch`.
+
+**Jobs:**
+1. `test` — matrix on `ubuntu-latest` and `windows-latest`; installs Pester (`<= 5.99`) and runs the full Pester config with `$config.Run.Exit = $true` so failures fail the job.
+2. `lint` — ubuntu-only; runs `Invoke-ScriptAnalyzer` against `VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1` using `PSScriptAnalyzerSettings.psd1`; any issue fails the job.
+
+Concurrency group `ci-${{ github.ref }}` with `cancel-in-progress: true` ensures superseded runs are cancelled.
+
+## Pre-Commit Checklist
+
+Per `.github\copilot-instructions.md`, before committing:
+1. `.\Test-All.ps1` — must be green.
+2. `.\Build.ps1` — runs `Test-All.ps1 -CI` and fails build on non-zero exit.
+3. Update `CHANGELOG.md`.
+4. Tag and push.
 
 ---
 
-*Testing analysis: 2026-04-17*
+*Testing analysis: 2026-04-18*

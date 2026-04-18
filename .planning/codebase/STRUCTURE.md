@@ -1,199 +1,245 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-04-17
+**Analysis Date:** 2026-04-18
 
 ## Directory Layout
 
 ```
-VeriHash/                           # Repository root
-├── VeriHash.ps1                    # Main script (~1553 lines) — full hash tool
-├── VeriHash.Config.ps1             # Configuration module (dot-sourced by VeriHash.ps1)
-├── VeriHash.LogUtils.ps1           # Log utility functions (dot-sourced by VeriHash.ps1)
-├── QuickHash.ps1                   # Standalone lightweight hash tool (independent)
-├── VeriHash-OpenWith.bat           # Windows context-menu / SendTo launcher
-├── Build.ps1                       # Build & release script (runs tests + version bump)
-├── Test-All.ps1                    # Test runner (Pester + PSScriptAnalyzer + profiler)
-├── Profile-VeriHashTiming.ps1      # Performance profiler (measures per-operation overhead)
-├── PSScriptAnalyzerSettings.psd1   # PSScriptAnalyzer rule configuration
-├── Microsoft.PowerShell_profile_example.ps1  # Example $PROFILE alias snippet
-├── CHANGELOG.md                    # Version history
-├── README.md                       # User-facing documentation
-├── LICENSE.md                      # AGPL-3.0 license
-├── Icons/                          # Icon assets for context menu integration
-│   ├── VeriHash_256.ico            # Windows .ico (256px) — used in SendTo shortcut
-│   ├── VeriHash_512.icns           # macOS .icns (512px)
-│   ├── VeriHash_1024.png           # PNG (1024px) — used in Linux KDE context menu
-│   ├── VeriHash_1024.webp          # WebP variant
-│   ├── VeriHash_256.webp           # WebP variant
-│   └── SourceIcons.7z              # Source icon archive
-├── Tests/                          # Pester 5.x test suite
-│   ├── VeriHash.Tests.ps1          # Tests for VeriHash.ps1 functions
-│   ├── VeriHash.Config.Tests.ps1   # Tests for VeriHash.Config.ps1
-│   ├── VeriHash.LogUtils.Tests.ps1 # Tests for VeriHash.LogUtils.ps1
-│   ├── QuickHash.Tests.ps1         # Tests for QuickHash.ps1
-│   ├── VeriHash.Timing.Tests.ps1   # Performance / timing tests
-│   └── VeriHash_1024.ico           # Test fixture file (used as a known hashing target)
-├── .planning/                      # GSD planning documents
-│   └── codebase/                   # Codebase analysis docs (ARCHITECTURE.md, STRUCTURE.md, etc.)
-├── .github/                        # GitHub configuration
-├── .vscode/                        # VS Code workspace settings
-├── tmp/                            # Temporary files (local, not committed)
-└── VeriHash.code-workspace         # VS Code multi-root workspace file
+VeriHash\
+├── VeriHash.ps1                       # Main script — CLI, hashing, verification, OS integration (~66 KB, ~1528 lines)
+├── VeriHash.Config.ps1                # Configuration module (dot-sourced)
+├── VeriHash.LogUtils.ps1              # Log path + path-sanitisation module (dot-sourced)
+├── QuickHash.ps1                      # Standalone interactive mini-tool (independent of main)
+├── Test-All.ps1                       # Runs Pester + PSScriptAnalyzer + profiler
+├── Build.ps1                          # Release automation (runs tests, bumps version)
+├── Profile-VeriHashTiming.ps1         # Timing / performance harness
+├── Microsoft.PowerShell_profile_example.ps1  # Example profile snippet for users
+├── VeriHash-OpenWith.bat              # Windows "Open With" launcher
+├── PSScriptAnalyzerSettings.psd1      # Linter rule customisation
+├── README.md
+├── CHANGELOG.md
+├── LICENSE.md                         # AGPL-3.0
+├── Verihash Logging Concepting.md     # Design notes
+├── Verihash Multifile Concepting.md   # Design notes
+├── Verihash Multifile Concepting Review.md
+├── VeriHash.code-workspace            # VS Code workspace
+├── VeriHash.sublime-project
+├── VeriHash.sublime-workspace
+├── .gitignore
+├── Tests\                             # Pester 5.x test suite
+│   ├── VeriHash.Tests.ps1             # Core hashing / verification tests (~47 KB)
+│   ├── VeriHash.Config.Tests.ps1      # Config priority & persistence tests
+│   ├── VeriHash.LogUtils.Tests.ps1    # Path sanitisation tests
+│   ├── VeriHash.Timing.Tests.ps1      # Timing / performance tests
+│   ├── QuickHash.Tests.ps1            # Tests for QuickHash.ps1
+│   └── VeriHash_1024.ico              # Test fixture icon
+├── Icons\                             # Application icons (source + generated)
+│   ├── VeriHash_256.ico / _256.webp
+│   ├── VeriHash_512.icns              # macOS icon bundle
+│   ├── VeriHash_1024.png / _1024.webp
+│   └── SourceIcons.7z                 # Archived source art
+├── .github\
+│   ├── copilot-instructions.md        # Project-wide AI agent instructions
+│   └── workflows\
+│       └── ci.yml                     # GitHub Actions CI pipeline
+├── .planning\                         # GSD planning tree (milestones, phases, research, codebase map)
+│   ├── PROJECT.md
+│   ├── STATE.md
+│   ├── ROADMAP.md
+│   ├── REQUIREMENTS.md
+│   ├── MILESTONES.md
+│   ├── RETROSPECTIVE.md
+│   ├── config.json
+│   ├── codebase\                      # ← Documents produced by /gsd-map-codebase (this file lives here)
+│   ├── milestones\
+│   │   ├── v1.0-REQUIREMENTS.md
+│   │   ├── v1.0-ROADMAP.md
+│   │   ├── v1.0-MILESTONE-AUDIT.md
+│   │   └── v1.0-phases\
+│   │       ├── 01-privacy-logging-compliance\
+│   │       ├── 02-ci-cd-pipeline\
+│   │       └── 03-small-wins-baseline-lock\
+│   ├── phases\
+│   │   └── 999.1-psframework-missing-notification\
+│   ├── quick\
+│   │   └── 260418-rename-log-jsonl\
+│   └── research\
+│       ├── SUMMARY.md
+│       ├── STACK.md
+│       ├── ARCHITECTURE.md
+│       ├── FEATURES.md
+│       └── PITFALLS.md
+├── .claude\
+│   └── settings.local.json            # Local agent settings (gitignored content pattern)
+├── .vscode\
+│   ├── .gitignore
+│   └── github-accounts.json
+└── tmp\                               # Scratch / transient (excluded from analysis)
 ```
+
+> Note: there is **no** `.agents\` directory in this repository. Agent instructions live under `.github\copilot-instructions.md` and `.claude\`.
 
 ## Directory Purposes
 
-**Root (`/`):**
-- Purpose: All primary scripts live directly at the root — no `src/` subdirectory
-- Contains: Main tool scripts, companion modules, build/test runners, config, documentation
-- Key files: `VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`, `QuickHash.ps1`
+**Repository root:**
+- Purpose: Runnable PowerShell scripts live directly at the root — there is no `src\` layer. This is idiomatic for dot-sourced PowerShell tools.
+- Contains: All production `.ps1` scripts, all `.md` documentation, editor workspace files, the Windows launcher `.bat`, and the linter settings file.
+- Key files: `VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`, `QuickHash.ps1`, `Test-All.ps1`, `Build.ps1`.
 
-**`Icons/`:**
-- Purpose: Icon assets distributed with the tool for OS context-menu integration
-- Contains: `.ico` (Windows), `.icns` (macOS), `.png`/`.webp` (Linux/web), source archive
-- Key files: `VeriHash_256.ico` (Windows shortcut), `VeriHash_1024.png` (Linux KDE install)
-- Generated: No (hand-crafted assets, source in `SourceIcons.7z`)
-- Committed: Yes
+**`Tests\`:**
+- Purpose: Pester 5.x test suite, one `*.Tests.ps1` per production script.
+- Contains: Four VeriHash test files plus `QuickHash.Tests.ps1` and a shared binary fixture `VeriHash_1024.ico`.
+- Convention: Tests live in a single flat directory rather than co-located with the scripts under test.
 
-**`Tests/`:**
-- Purpose: Pester 5.x test suite covering all major scripts
-- Contains: One `.Tests.ps1` per source file, plus a timing test file and a test fixture (`.ico`)
-- Key files: `VeriHash.Tests.ps1` (main coverage), `VeriHash_1024.ico` (fixture for hash tests)
-- Test isolation: Each test file dot-sources its subject script in `BeforeAll`; config tests use `$TestDrive` for isolation
+**`Icons\`:**
+- Purpose: Application branding assets shipped with the tool. `VeriHash_256.ico` is referenced by `Install-WindowsSendTo` when creating the SendTo shortcut.
+- Contains: Multi-resolution Windows (`.ico`), macOS (`.icns`), and web (`.png`, `.webp`) icons plus archived sources (`SourceIcons.7z`).
+- Generated: No — committed art assets.
 
-**`.planning/codebase/`:**
-- Purpose: GSD codebase analysis documents consumed by planning and execution agents
-- Contains: `ARCHITECTURE.md`, `STRUCTURE.md` (and other analysis docs as created)
-- Generated: Yes (by GSD map-codebase commands)
-- Committed: Yes
+**`.github\`:**
+- Purpose: GitHub metadata — CI workflow and AI-agent instructions.
+- Contains: `workflows\ci.yml` (runs `Test-All.ps1 -CI`) and `copilot-instructions.md` (authoritative agent brief for build/test/lint commands).
 
-**`tmp/`:**
-- Purpose: Local temporary workspace
-- Generated: Yes
-- Committed: No (in `.gitignore`)
+**`.planning\`:**
+- Purpose: GSD (Get-Shit-Done) planning tree. Not part of the runtime tool; consumed by planning / execution commands.
+- Contains: Top-level project docs (`PROJECT.md`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `MILESTONES.md`, `RETROSPECTIVE.md`), the `milestones\v1.0-phases\` tree with per-phase `-CONTEXT.md`, `-PLAN.md`, `-RESEARCH.md`, `-PATTERNS.md`, `-VALIDATION.md`, `-VERIFICATION.md`, `-SUMMARY.md`, and `-DISCUSSION-LOG.md` files, a `quick\` tree for lightweight tasks, a `research\` snapshot of the codebase, and the `codebase\` directory where this document lives.
+
+**`.claude\`, `.vscode\`:**
+- Purpose: Per-tool local settings. Not part of the shipped tool.
+- Committed: Partially — `.claude\settings.local.json` and `.vscode\github-accounts.json` are present; `.vscode\.gitignore` filters local secrets.
+
+**`tmp\`:**
+- Purpose: Scratch directory for ad-hoc output.
+- Generated: Yes.
+- Committed: Likely gitignored content (directory itself kept).
 
 ## Key File Locations
 
 **Entry Points:**
-- `VeriHash.ps1`: Primary tool — full hash compute, verify, and context-menu install
-- `QuickHash.ps1`: Secondary tool — lightweight hash of file or string, no config/logging
-- `VeriHash-OpenWith.bat`: Windows shell launcher for "Send To" / "Open With" integration
-- `Build.ps1`: Release pipeline — runs tests then optionally updates version header
-- `Test-All.ps1`: Development quality gate — Pester + PSScriptAnalyzer + performance profiler
+- `VeriHash.ps1`: Primary tool. Parameter block at lines 56–93; final dispatch `Invoke-HashFile ...` at line 1528.
+- `QuickHash.ps1`: Standalone mini-tool — its bottom-level prompts at lines 83–95 are the entry.
+- `VeriHash-OpenWith.bat`: Windows shell-verb launcher that invokes `pwsh -File VeriHash.ps1 "%1"`.
+- `Microsoft.PowerShell_profile_example.ps1`: Template users copy into their PowerShell profile to expose the `verihash` alias.
 
 **Configuration:**
-- `VeriHash.Config.ps1`: Configuration module (dot-sourced; provides `Get-VeriHashConfig`, `Set-VeriHashConfig`, etc.)
-- `PSScriptAnalyzerSettings.psd1`: Static analysis rules (excludes `PSAvoidUsingWriteHost`, `PSAvoidUsingBrokenHashAlgorithms`)
-- Runtime config file (Windows): `%APPDATA%\VeriHash\config.json` (created on first run)
-- Runtime config file (Linux/macOS): `~/.verihash/config.json` (created on first run)
+- `VeriHash.Config.ps1`: Defines `Get-VeriHashConfig`, `Set-VeriHashConfig`, `Initialize-VeriHashConfig`, `Get-VeriHashConfigPath`, `Get-VeriHashDefaultConfig`.
+- Runtime config file (not in repo): `%APPDATA%\VeriHash\config.json` (Windows) or `~/.verihash/config.json` (Linux/macOS).
+- Environment variables honoured: `VERIHASH_LOG_LEVEL`, `VERIHASH_LOG_FILE`, `VERIHASH_LOG_CONSOLE`, `VERIHASH_VT_APIKEY`, `VERIHASH_VT_ENABLED`, `VERIHASH_TEST_MODE`.
+- `PSScriptAnalyzerSettings.psd1`: Linter rule customisation (suppresses `PSAvoidUsingWriteHost` and `PSAvoidUsingBrokenHashAlgorithms`).
 
 **Core Logic:**
-- `VeriHash.ps1` `Invoke-HashFile` function (line ~1048): Main orchestration
-- `VeriHash.ps1` `Get-And-SaveHash` function (line ~805): Hash computation + sidecar management
-- `VeriHash.ps1` `Test-HashSidecar` function (line ~1416): Multi-entry sidecar verification
-- `VeriHash.ps1` `Get-ClipboardHash` function (line ~690): Clipboard hash auto-detection
+- `VeriHash.ps1` line ~212: `$script:DesktopEnvironments` registry.
+- `VeriHash.ps1` line ~228: `Get-DesktopEnvironment`.
+- `VeriHash.ps1` line ~284: `Install-WindowsSendTo`.
+- `VeriHash.ps1` line ~339: `Install-LinuxContextMenu`.
+- `VeriHash.ps1` line ~387: `Install-KDEContextMenu`.
+- `VeriHash.ps1` line ~619: `Select-File` (interactive file picker).
+- `VeriHash.ps1` line ~650: `Test-InputHash`.
+- `VeriHash.ps1` line ~665: `Get-ClipboardHash` (cross-platform clipboard read + auto-algorithm detection).
+- `VeriHash.ps1` line ~780: `Get-And-SaveHash` (single-algorithm compute + sidecar write).
+- `VeriHash.ps1` line ~1024: `Invoke-HashFile` (main orchestrator).
+- `VeriHash.ps1` line ~1392: `Test-HashSidecar` (multi-entry sidecar verifier).
 
-**Logging Utilities:**
-- `VeriHash.LogUtils.ps1`: Provides `ConvertFrom-VeriHashLog`, `Get-VeriHashLogSummary`, `Get-VeriHashLogPath`
-- Runtime log files (Windows): `%APPDATA%\VeriHash\logs\verihash-YYYY-MM-DD.json`
-- Runtime log files (Linux/macOS): `~/.verihash/logs/verihash-YYYY-MM-DD.json`
-- Test log files: `…/logs/test/verihash-YYYY-MM-DD.json` (when `$env:VERIHASH_TEST_MODE = '1'`)
+**Logging:**
+- `VeriHash.LogUtils.ps1`: `Get-VeriHashLogPath`, `ConvertTo-SanitizedPath`, `ConvertFrom-SanitizedPath`.
+- `VeriHash.ps1` lines 108–187: PSFramework provider configuration (JSONL, UTC, 30-day retention, sanitised headers).
 
 **Testing:**
-- `Tests/VeriHash.Tests.ps1`: Tests for `VeriHash.ps1` (Test-InputHash, Get-ClipboardHash, Get-And-SaveHash, Test-HashSidecar, Invoke-HashFile)
-- `Tests/VeriHash.Config.Tests.ps1`: Tests for all `VeriHash.Config.ps1` functions
-- `Tests/VeriHash.LogUtils.Tests.ps1`: Tests for all `VeriHash.LogUtils.ps1` functions
-- `Tests/QuickHash.Tests.ps1`: Tests for `QuickHash.ps1`
-- `Tests/VeriHash.Timing.Tests.ps1`: Performance regression tests
-- `Tests/VeriHash_1024.ico`: Shared test fixture — a known file used for hash computation tests
-
-**Documentation:**
-- `README.md`: User documentation (installation, usage, profile alias)
-- `CHANGELOG.md`: Version history
-- `Microsoft.PowerShell_profile_example.ps1`: Example `$PROFILE` snippet showing how to add `verihash` alias
-- `Verihash Logging Concepting.md`: Design notes for logging system (planning artifact)
-- `Verihash Multifile Concepting.md` / `Verihash Multifile Concepting Review.md`: Design notes for multi-file sidecar support (planning artifacts)
+- `Tests\VeriHash.Tests.ps1`: Core tests for the main script (largest test file, ~47 KB).
+- `Tests\VeriHash.Config.Tests.ps1`: Config priority + round-trip tests.
+- `Tests\VeriHash.LogUtils.Tests.ps1`: Path sanitisation tests.
+- `Tests\VeriHash.Timing.Tests.ps1`: Performance / timing tests.
+- `Tests\QuickHash.Tests.ps1`: QuickHash tests.
+- `Test-All.ps1`: Developer-facing runner.
+- `.github\workflows\ci.yml`: CI invocation.
 
 ## Naming Conventions
 
-**Script Files:**
-- Pattern: `PascalCase` with dot-separated namespacing: `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`
-- Test files mirror their subject: `VeriHash.Config.ps1` → `Tests/VeriHash.Config.Tests.ps1`
-- Standalone scripts use simple PascalCase: `Build.ps1`, `QuickHash.ps1`, `Test-All.ps1`
+**Files:**
+- Production scripts: `PascalCase` with dot-separated sub-scope — `VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`.
+- Independent sibling tools at root use a single `PascalCase` word — `QuickHash.ps1`, `Build.ps1`.
+- Developer scripts use `PascalCase-PascalCase.ps1` — `Test-All.ps1`, `Profile-VeriHashTiming.ps1`.
+- Pester tests mirror the tested script with a `.Tests.ps1` suffix — `VeriHash.Config.ps1` → `Tests\VeriHash.Config.Tests.ps1`.
+- Settings files follow their tool's idiom — `PSScriptAnalyzerSettings.psd1` (PowerShell data file).
+- Planning documents are `SHOUTING-KEBAB-CASE.md` under `.planning\` — `REQUIREMENTS.md`, `MILESTONES.md`, plus phase-scoped `01-PATTERNS.md`, `02-RESEARCH.md`, etc.
 
-**Functions:**
-- Pattern: `Verb-Noun` following PowerShell approved verbs
-- Examples: `Get-VeriHashConfig`, `Set-VeriHashConfig`, `Invoke-HashFile`, `Test-HashSidecar`, `Get-And-SaveHash`, `ConvertTo-SanitizedPath`
-- Prefix `VeriHash` used for all public/reusable functions in companion modules: `Get-VeriHashConfig`, `Get-VeriHashLogPath`, `ConvertFrom-VeriHashLog`
+**Directories:**
+- Runtime directories: `PascalCase` (`Tests\`, `Icons\`).
+- Metadata / tooling directories: `.lowercase` (`.github\`, `.planning\`, `.claude\`, `.vscode\`).
+- Phase directories use a two-digit prefix + kebab-case slug: `01-privacy-logging-compliance\`, `02-ci-cd-pipeline\`.
+
+**Functions (PowerShell verb-noun):**
+- All public functions use approved PowerShell verbs followed by a `VeriHash`-prefixed noun or a descriptive noun: `Get-VeriHashConfig`, `Set-VeriHashConfig`, `Initialize-VeriHashConfig`, `Get-VeriHashLogPath`, `ConvertTo-SanitizedPath`, `Test-HashSidecar`, `Install-KDEContextMenu`, `Get-DesktopEnvironment`, `Invoke-HashFile`, `Select-File`, `Test-InputHash`, `Get-ClipboardHash`.
+- One legacy hyphenated exception: `Get-And-SaveHash` (non-standard compound verb). New code should prefer a single approved verb (e.g. `Save-VeriHashFileHash`).
 
 **Variables:**
-- Script-scope state: `$script:VeriHashConfig`, `$script:PSFrameworkAvailable`, `$script:SignableExtensions`
-- Local variables: camelCase — `$fileInfo`, `$hashValue`, `$sanitizedPath`, `$configDir`
-- Boolean platform flags: `$RunningOnWindows`, `$RunningOnLinux`, `$RunningOnMacOS`
+- Script-scoped constants: `$script:CamelCase` — `$script:RunningOnWindows`, `$script:DesktopEnvironments`, `$script:SignableExtensions`, `$script:VeriHashConfig`, `$script:VeriHashLogPath`, `$script:PSFrameworkAvailable`, `$script:ValidLogLevels`.
+- Local variables and parameters: `$camelCase` or `$PascalCase` — the codebase mixes both (`$configDir`, `$fileInfo`, `$FilePath`, `$InputHash`).
+- Environment variables are uppercase with `VERIHASH_` prefix: `VERIHASH_LOG_LEVEL`, `VERIHASH_TEST_MODE`.
 
-**Parameters:**
-- PascalCase: `$FilePath`, `$Algorithm`, `$InputHash`, `$OnlyVerify`, `$NoPause`
-
-**Sidecar File Extensions:**
-- Pattern: `originalfilename.ext.hashext` (e.g., `setup.exe.sha256`, `archive.tar.gz.md5`)
-- Hash extensions: `.sha256`, `.sha512`, `.md5`
-- Legacy extensions: `.sha2`, `.sha2_256` (detected for compatibility but not created)
-
-**Icon Files:**
-- Pattern: `VeriHash_{size}.{format}` (e.g., `VeriHash_256.ico`, `VeriHash_1024.png`)
+**Log tags:**
+- PSFramework `-Tag` values are `PascalCase` category + `PascalCase` sub-category: `'Config', 'Entry'`, `'Hash', 'Compute'`, `'Verify', 'Summary'`, `'Install', 'Windows'`.
 
 ## Where to Add New Code
 
-**New Hash Algorithm Support:**
-- Add algorithm to `ValidateSet` in `param()` block of `VeriHash.ps1` (line ~65)
-- Add extension mapping in `Get-And-SaveHash` switch block (line ~849)
-- Add length pattern to `Get-ClipboardHash` (line ~764)
-- Add length case to `Test-HashSidecar` switch (line ~1476)
-- Add test cases to `Tests/VeriHash.Tests.ps1`
+**New hashing feature / CLI flag:**
+- Extend the `param(...)` block near the top of `VeriHash.ps1`.
+- Implement logic inside `Invoke-HashFile` (line ~1024) or add a helper function above it.
+- Add tests in `Tests\VeriHash.Tests.ps1`.
 
-**New Configuration Setting:**
-- Add default value in `Get-VeriHashDefaultConfig` in `VeriHash.Config.ps1`
-- Add file merge logic in `Get-VeriHashConfig`
-- Add env var override in `Get-VeriHashConfig`
-- Add source tracking entry
-- Add tests in `Tests/VeriHash.Config.Tests.ps1`
+**New configuration key:**
+- Add the default to `Get-VeriHashDefaultConfig` in `VeriHash.Config.ps1`.
+- Extend file-merge, env-var-merge, and `$source` tracking blocks in `Get-VeriHashConfig`.
+- Add validation (e.g. against a new `$script:Valid...` list) if the value is enumerated.
+- Add tests in `Tests\VeriHash.Config.Tests.ps1` covering default / file / env priority.
 
-**New Context Menu Platform (e.g., GNOME):**
-- Add entry to `$script:DesktopEnvironments` table in `VeriHash.ps1` (line ~238) with `Handler` pointing to a new function name
-- Implement `Install-GNOMEContextMenu` function following the `Install-KDEContextMenu` pattern (lines 412–582)
-- Place the new function before the `-SendTo` handler block (~line 623)
+**New desktop environment (Linux context menu):**
+- Append an entry to `$script:DesktopEnvironments` in `VeriHash.ps1` (~line 213).
+- Define a new `Install-<DE>ContextMenu` function matching the `Handler` field.
+- No changes needed in `Install-LinuxContextMenu` — dispatch is data-driven via `Get-Command $config.Handler`.
 
-**New Log Utility Function:**
-- Add function to `VeriHash.LogUtils.ps1` following the `[CmdletBinding()]` + `[OutputType()]` + comment-based help pattern
-- Add tests to `Tests/VeriHash.LogUtils.Tests.ps1`
+**New log utility or path-privacy helper:**
+- Add to `VeriHash.LogUtils.ps1`; tests go in `Tests\VeriHash.LogUtils.Tests.ps1`.
+- This module is dot-sourced **first**, so do not reference `Get-VeriHashConfig` from it (that would create a cycle).
 
-**New Test:**
-- Place in `Tests/` directory as `SubjectName.Tests.ps1` or inside the matching existing test file
-- Use `$TestDrive` for any file output; use `$env:VERIHASH_TEST_MODE = '1'` in `BeforeAll` if PSFramework logging will be triggered
-- Use the existing `Tests/VeriHash_1024.ico` as a hash computation fixture rather than creating new binary fixtures
+**New Pester tests:**
+- Place at `Tests\<ScriptName>.Tests.ps1` (or extend an existing file if testing the same unit).
+- Use `BeforeAll { . $PSScriptRoot/../<ScriptName>.ps1 }` to dot-source the target.
+- Set `$env:VERIHASH_TEST_MODE = '1'` in `BeforeAll` when the test exercises logging paths — this routes logs to a `test\` subdirectory.
 
-**New Standalone Utility Script:**
-- Place at repository root following PascalCase naming (`MyTool.ps1`)
-- Add corresponding test file `Tests/MyTool.Tests.ps1`
-- Reference in `Test-All.ps1` if it should be covered by `PSScriptAnalyzer`
+**Utilities / shared helpers:**
+- There is no dedicated `Utils\` or `Common\` directory. Cross-cutting helpers live in `VeriHash.LogUtils.ps1` (path/log helpers) or inline in `VeriHash.ps1`.
+- When the v2.0 "Modular Rebuild" lands, utility code is expected to migrate into purpose-named `VeriHash.*.ps1` siblings. Until then, prefer adding a new `VeriHash.<Area>.ps1` sibling and dot-sourcing it from `VeriHash.ps1` rather than growing `VeriHash.ps1` further.
+
+**Release / build changes:**
+- Version string lives in the header comment of `VeriHash.ps1` (look for `Version:`). `Build.ps1 -Version <v> -UpdateVersion` rewrites it via regex.
+- Update `CHANGELOG.md` in the same commit as the version bump.
+
+**New planning phase:**
+- Create `.planning\milestones\v<X>-phases\<NN>-<kebab-slug>\` with the standard file set (`-CONTEXT`, `-PLAN`, `-RESEARCH`, `-PATTERNS`, `-VALIDATION`, `-VERIFICATION`, `-SUMMARY`, `-DISCUSSION-LOG`).
 
 ## Special Directories
 
-**`tmp/`:**
-- Purpose: Local scratch space during development
-- Generated: Yes (ad-hoc)
-- Committed: No
+**`.planning\`:**
+- Purpose: Full GSD planning history — milestones, per-phase documents, research, retrospectives, and the codebase map consumed by planning agents.
+- Generated: Partly (the `codebase\` subtree is regenerated by `/gsd-map-codebase`); the rest is authored.
+- Committed: Yes.
 
-**`.planning/`:**
-- Purpose: GSD agent planning and analysis documents
-- Generated: Yes (by GSD commands)
-- Committed: Yes
+**`Icons\`:**
+- Purpose: Committed branding assets referenced at runtime (`Install-WindowsSendTo` uses `Icons\VeriHash_256.ico`).
+- Generated: No — hand-authored, with `SourceIcons.7z` archiving originals.
+- Committed: Yes.
 
-**`.github/`:**
-- Purpose: GitHub Actions workflows and repository configuration
-- Generated: No
-- Committed: Yes
+**`tmp\`:**
+- Purpose: Scratch output.
+- Generated: Yes.
+- Committed: Directory kept; contents treated as transient.
+
+**`.claude\` / `.vscode\`:**
+- Purpose: Per-editor / per-agent local configuration.
+- Generated: Manually by developers.
+- Committed: Partially — `.vscode\.gitignore` filters sensitive local files.
 
 ---
 
-*Structure analysis: 2026-04-17*
+*Structure analysis: 2026-04-18*

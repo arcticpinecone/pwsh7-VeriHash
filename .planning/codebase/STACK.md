@@ -1,121 +1,117 @@
 # Technology Stack
 
-**Analysis Date:** 2026-04-17
+**Analysis Date:** 2026-04-18
 
 ## Languages
 
 **Primary:**
-- PowerShell 7+ (`pwsh`) - All application logic, tooling, and tests
-  - Explicit `#Requires PowerShell 7+` constraint in `VeriHash.ps1`
-  - Uses PS7-specific syntax: `-AsUTC`, `Get-Date -AsUTC`, `$PSVersionTable.Platform`
+- PowerShell 7+ (cross-platform, `pwsh`) — all production code lives in `.ps1` scripts
+  - `VeriHash.ps1` (~66 KB, ~1,500+ lines) — main entry point and all core logic
+  - `VeriHash.Config.ps1` — configuration module (dot-sourced)
+  - `VeriHash.LogUtils.ps1` — logging/path sanitization utilities (dot-sourced)
+  - `QuickHash.ps1` — standalone lightweight string/file hasher (independent)
 
 **Secondary:**
-- Batch Script (Windows CMD) - `VeriHash-OpenWith.bat`: Windows "Open With" / "Send To" launcher wrapper
+- Windows Batch (`.bat`) — `VeriHash-OpenWith.bat` wrapper for Windows Explorer "Send To" / "Open With" integration (locates `pwsh.exe`, auto-detects sidecar extensions, forwards args)
+- YAML — GitHub Actions CI pipeline at `.github\workflows\ci.yml`
+- JSON / JSONL — config file format (`config.json`) and log file format (`verihash-YYYY-MM-DD.jsonl`)
+- XDG `.desktop` file format — generated at runtime for KDE Plasma service menu integration
 
 ## Runtime
 
 **Environment:**
-- PowerShell 7+ (`pwsh`) — NOT Windows PowerShell 5.x
-- Cross-platform: Windows (Win32NT), Linux (Unix/Linux), macOS (Unix/Darwin)
-- Platform detection at runtime via `$PSVersionTable.Platform` and `$PSVersionTable.OS`
+- PowerShell 7.0 or later (required; Windows PowerShell 5.x is not supported)
+- Declared indirectly via `# Requires PowerShell 7+` comment in `VeriHash.ps1` line 55 and via `PSUseCompatibleSyntax` target version `7.0` in `PSScriptAnalyzerSettings.psd1`
+- Uses .NET APIs exposed by PowerShell 7 (e.g. `System.Security.Cryptography`, `System.Windows.Forms` on Windows, `System.IO.Path`)
 
 **Package Manager:**
-- PowerShellGet / PSGallery — modules installed via `Install-Module`
-- No lockfile (module installation is manual/documented)
+- PowerShell Gallery (`PSGallery`) — used via `Install-Module` for all dependencies
+- No lockfile (PowerShell ecosystem has no equivalent of `package-lock.json`); versions are pinned loosely in CI (`Pester -MaximumVersion 5.99`)
+- No `.psd1` module manifest — VeriHash is distributed as a script, not a module
 
 ## Frameworks
 
 **Core:**
-- None (pure PowerShell script tool — no module packaging, no framework)
-- Dot-sourced module pattern: `VeriHash.ps1` dot-sources `VeriHash.Config.ps1` and `VeriHash.LogUtils.ps1`
-
-**Logging:**
-- PSFramework (optional, from PSGallery) — structured JSON logging with tagged messages
-  - Install: `Install-Module PSFramework -Scope CurrentUser`
-  - Used via `Write-PSFMessage`, `Set-PSFLoggingProvider`, `Set-PSFConfig`
-  - Gracefully degrades: all PSFramework calls guarded by `$script:PSFrameworkAvailable` check
-  - Log format: JSON lines, UTC timestamps, compressed, stored as `verihash-%date%.json`
+- None — VeriHash is a plain PowerShell script that uses built-in cmdlets (`Get-FileHash`, `Get-AuthenticodeSignature`, `Get-Clipboard`, `Set-PSFLoggingProvider`) and .NET types directly
 
 **Testing:**
-- Pester 5.x (from PSGallery) — PowerShell BDD test framework
-  - Install: `Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser`
-  - Config API: `New-PesterConfiguration`, `Invoke-Pester -Configuration $pesterConfig`
-  - Test files: `Tests/VeriHash.Tests.ps1`, `Tests/VeriHash.Config.Tests.ps1`, `Tests/VeriHash.LogUtils.Tests.ps1`, `Tests/QuickHash.Tests.ps1`, `Tests/VeriHash.Timing.Tests.ps1`
-
-**Code Quality:**
-- PSScriptAnalyzer (from PSGallery) — static analysis / linting
-  - Install: `Install-Module PSScriptAnalyzer`
-  - Settings: `PSScriptAnalyzerSettings.psd1`
-  - Target: PowerShell 7.0 compatibility (`PSUseCompatibleSyntax` rule, `TargetVersions = @('7.0')`)
-  - Excluded rules: `PSAvoidUsingWriteHost` (intentional for interactive UI), `PSAvoidUsingBrokenHashAlgorithms` (MD5 legacy compatibility)
+- Pester 5.x — unit + integration + timing tests under `Tests\`
+  - Config path: `Test-All.ps1` (lines 84-89) builds `New-PesterConfiguration` inline; no dedicated config file
+  - Test files: `Tests\VeriHash.Tests.ps1`, `Tests\VeriHash.Config.Tests.ps1`, `Tests\VeriHash.LogUtils.Tests.ps1`, `Tests\VeriHash.Timing.Tests.ps1`, `Tests\QuickHash.Tests.ps1`
+- PSScriptAnalyzer — static lint checker, configured via `PSScriptAnalyzerSettings.psd1`
 
 **Build/Dev:**
-- `Build.ps1` — build script (runs Test-All.ps1, supports `-Version` / `-UpdateVersion` params)
-- `Test-All.ps1` — full QA runner: Pester → PSScriptAnalyzer → Performance profiler
-- `Profile-VeriHashTiming.ps1` — micro-benchmark profiler using `[System.Diagnostics.Stopwatch]`
+- `Build.ps1` — build script; runs `Test-All.ps1 -CI` then optionally rewrites `Version:` header in `VeriHash.ps1`
+- `Test-All.ps1` — unified runner for Pester + PSScriptAnalyzer + optional profiler
+- `Profile-VeriHashTiming.ps1` — performance profiler used by `Test-All.ps1` step 3/3
 
 ## Key Dependencies
 
-**Critical:**
-- `Get-FileHash` (built-in PowerShell cmdlet) — core hash computation (MD5, SHA256, SHA512)
-- `Get-AuthenticodeSignature` (built-in, Windows only) — Authenticode digital signature checking
-- `System.Windows.Forms` (.NET assembly) — Windows GUI file picker (`Add-Type -AssemblyName System.Windows.Forms`)
-- `System.Security.Cryptography` (.NET namespace) — hash computation in `QuickHash.ps1` (`[System.Security.Cryptography.MD5]::Create()`, `[System.Security.Cryptography.SHA256]::Create()`)
-- `WScript.Shell` (COM object, Windows only) — shortcut creation (`New-Object -ComObject WScript.Shell`)
+**Critical (required):**
+- Built-in PowerShell 7 cmdlets (no external modules required to run VeriHash at all):
+  - `Microsoft.PowerShell.Utility\Get-FileHash` — MD5/SHA256/SHA512 computation
+  - `Microsoft.PowerShell.Security\Get-AuthenticodeSignature` — Windows-only signature validation
+  - `Microsoft.PowerShell.Management\Get-Clipboard` — clipboard read (Windows/macOS)
 
-**Optional/External Modules:**
-- `PSFramework` — structured logging (degrades gracefully if absent)
-- `Pester` — testing only (dev dependency)
-- `PSScriptAnalyzer` — linting only (dev dependency)
+**Optional (graceful degradation via `$script:PSFrameworkAvailable` gate):**
+- `PSFramework` (PSGallery) — structured JSON-lines logging backend
+  - Checked once at startup: `$script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)` (`VeriHash.ps1:100`)
+  - Imported with `-ErrorAction SilentlyContinue` (`VeriHash.ps1:133`)
+  - Every `Write-PSFMessage` call is wrapped in `if ($script:PSFrameworkAvailable) { ... }`
+  - Warning emitted if user passes `-LogLevel` but module is missing (`VeriHash.ps1:128-130`)
 
-**Linux Clipboard Tools (optional, runtime detection):**
-- `wl-paste` — Wayland clipboard
-- `xclip` — X11 clipboard
-- `xsel` — X11 clipboard alternative
+**Development-only (PSGallery):**
+- `Pester` (< 6.0, pinned `-MaximumVersion 5.99` in CI) — test runner
+- `PSScriptAnalyzer` — linter
+
+**External CLI tools (Linux clipboard, probed at runtime via `Get-Command`):**
+- `wl-paste` (Wayland), `xclip` (X11), `xsel` (X11 fallback) — clipboard read on Linux (`VeriHash.ps1:688-716`)
+- `konsole`, `xterm`, `gnome-terminal`, `xfce4-terminal`, `alacritty`, `kitty` — terminal emulator discovery for KDE service menu (`VeriHash.ps1:482-489`)
+- `chmod`, `id` — used during `-SendTo -SystemWide` install on Linux
+- `pwsh` — looked up in `PATH` to build `Exec=` line of `.desktop` file
+
+**Not yet integrated (declared in config defaults only):**
+- VirusTotal API (v3) — config keys `virustotal.apiKey`, `virustotal.enabled`, `virustotal.preferApi`, `virustotal.autoOpen` exist in `VeriHash.Config.ps1:78-90` but no HTTP client / `Invoke-RestMethod` call is implemented yet. `enabled` defaults to `$false` with comment "VirusTotal integration not yet shipped; enable when implemented". See `.github\copilot-instructions.md` — Phase 3 is the active next milestone.
 
 ## Configuration
 
-**Environment Variables:**
-- `VERIHASH_LOG_LEVEL` — logging level: `DEBUG`, `VERBOSE`, `INFO`, `WARNING`, `ERROR`, `NONE`
-- `VERIHASH_LOG_FILE` — enable file logging: `true`/`false`
-- `VERIHASH_LOG_CONSOLE` — enable console logging: `true`/`false`
-- `VERIHASH_VT_APIKEY` — VirusTotal API key
-- `VERIHASH_VT_ENABLED` — enable VirusTotal integration: `true`/`false`
-- `VERIHASH_TEST_MODE` — redirects logs to `logs/test/` subdirectory: `1`
-- `VERIHASH_NO_CLEAR` — prevents terminal clear during profiling: `1`
-
-**Config File:**
-- Format: JSON
-- Windows path: `%APPDATA%\VeriHash\config.json`
-- Linux/macOS path: `~/.verihash/config.json`
-- Priority: Environment variables > Config file > Defaults
-- Managed by: `VeriHash.Config.ps1` (`Get-VeriHashConfig`, `Set-VeriHashConfig`, `Initialize-VeriHashConfig`)
-- Schema: `{ logging: { level, file, console }, virustotal: { apiKey, enabled, preferApi, autoOpen } }`
-
-**Log Files:**
-- Windows path: `%APPDATA%\VeriHash\logs\verihash-%date%.json`
-- Linux/macOS path: `~/.verihash/logs/verihash-%date%.json`
-- Format: JSON lines (PSFramework `logfile` provider), UTC timestamps, compressed
+**Environment:**
+- Config file (JSON): resolved by `Get-VeriHashConfigPath` in `VeriHash.Config.ps1:32-57`
+  - Windows: `%APPDATA%\VeriHash\config.json`
+  - Linux/macOS: `~/.verihash/config.json`
+- Priority order (highest → lowest): environment variables → config file → built-in defaults (`Get-VeriHashDefaultConfig`)
+- Recognised env vars (see `VeriHash.Config.ps1:231-261`):
+  - `VERIHASH_LOG_LEVEL` — `DEBUG` | `VERBOSE` | `INFO` | `WARNING` | `ERROR` | `NONE`
+  - `VERIHASH_LOG_FILE` — `true` / `false`
+  - `VERIHASH_LOG_CONSOLE` — `true` / `false`
+  - `VERIHASH_VT_APIKEY` — VirusTotal API key (forward-looking, unused today)
+  - `VERIHASH_VT_ENABLED` — `true` / `false`
+  - `VERIHASH_TEST_MODE` — `1` redirects log output under `logs\test\` to keep CI runs from polluting user logs
+  - `VERIHASH_NO_CLEAR` — `1` prevents the profiler from clearing the terminal
+- `.env` files are NOT used. Secrets (e.g. VT API key) flow via env vars or `config.json`.
 
 **Build:**
-- No build artifacts — pure script distribution
-- `Build.ps1` performs version string replacement via regex in `VeriHash.ps1` header comment
+- `PSScriptAnalyzerSettings.psd1` — linter rule set (excludes `PSAvoidUsingWriteHost`, `PSAvoidUsingBrokenHashAlgorithms`; enables `PSUseCompatibleSyntax` targeting `7.0`)
+- `.github\workflows\ci.yml` — GitHub Actions pipeline (matrix: `ubuntu-latest`, `windows-latest`)
+- No bundler, compiler, or transpiler — scripts are run directly by `pwsh`
 
 ## Platform Requirements
 
 **Development:**
-- PowerShell 7+ (`pwsh`)
-- Optional: Pester 5.x, PSScriptAnalyzer, PSFramework (all from PSGallery)
+- PowerShell 7.0+ installed as `pwsh`
+- Pester 5.x (`Install-Module Pester -Scope CurrentUser`)
+- PSScriptAnalyzer (`Install-Module PSScriptAnalyzer -Scope CurrentUser`)
+- PSFramework optional but recommended (`Install-Module PSFramework -Scope CurrentUser`)
+- Git (GitHub CLI `gh` recommended per `README.md`)
 
-**Production:**
-- PowerShell 7+ (`pwsh`) — mandatory
-- Windows: full feature support (file dialog, Authenticode signatures, SendTo integration)
-- Linux: KDE Plasma supported for context menu; clipboard requires `wl-paste`, `xclip`, or `xsel`
-- macOS: basic hash/verify supported; context menu integration not implemented
-
-**Version:**
-- VeriHash tool version: `1.3.0` (as of December 27, 2025 per `VeriHash.ps1` header)
+**Production (end-user):**
+- PowerShell 7.0+ on any of:
+  - Windows 10 / 11 (primary; full feature set including `Get-AuthenticodeSignature`, WScript.Shell COM, `System.Windows.Forms` file picker)
+  - Linux (Debian/Ubuntu/Arch/Garuda/Fedora; KDE Plasma context menu supported, GNOME/XFCE planned)
+  - macOS 12+ (no Authenticode, no native context menu integration)
+- Disk footprint: < 1 MB
+- Optional runtime tools on Linux: `wl-clipboard` or `xclip`/`xsel` for clipboard hash detection; a supported terminal emulator for KDE service menu output
 
 ---
 
-*Stack analysis: 2026-04-17*
+*Stack analysis: 2026-04-18*
