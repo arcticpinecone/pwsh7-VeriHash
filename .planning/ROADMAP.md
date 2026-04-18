@@ -57,7 +57,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. PSFramework log provider is configured with `LogRotatePath` and `LogRetentionTime` so log files rotate automatically with 30-day retention
   2. `Get-VeriHashDefaultConfig` returns `virustotal.enabled = $false` — users are not misled about unshipped VirusTotal integration
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Create CI workflow + expand local lint to all 3 files
+- [ ] 02-02-PLAN.md — Verify CI triggers and passes on GitHub Actions
 
 ## Progress
 
@@ -67,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Privacy & Logging Compliance | 3/3 | Complete | - |
-| 2. CI/CD Pipeline | 0/? | Not started | - |
+| 2. CI/CD Pipeline | 0/2 | Planned | - |
 | 3. Small Wins & Baseline Lock | 0/? | Not started | - |
