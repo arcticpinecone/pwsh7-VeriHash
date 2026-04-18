@@ -44,7 +44,11 @@ Plans:
   2. The same workflow runs PSScriptAnalyzer against all three `.ps1` files (`VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`) and fails on any finding
   3. A PR that introduces a PSScriptAnalyzer violation or a Pester failure cannot pass CI
   4. Pester is pinned to 5.x (`MaximumVersion 5.99`) in CI — a future Pester 6 release does not silently break the pipeline
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Create CI workflow + expand local lint to all 3 files
+- [ ] 02-02-PLAN.md — Verify CI triggers and passes on GitHub Actions
 
 ### Phase 3: Small Wins & Baseline Lock
 **Goal**: Remaining audit items from CONCERNS.md closed — the foundation is clean and self-maintaining before feature work begins
