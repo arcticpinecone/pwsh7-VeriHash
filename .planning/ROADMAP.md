@@ -72,3 +72,14 @@ Phases execute in numeric order: 1 → 2 → 3
 | 1. Privacy & Logging Compliance | 3/3 | Complete | - |
 | 2. CI/CD Pipeline | 2/2 | Complete | 2026-04-18 |
 | 3. Small Wins & Baseline Lock | 1/1 | Complete | 2026-04-18 |
+
+## Backlog
+
+### Phase 999.1: PSFramework missing notification (BACKLOG)
+
+**Goal:** Warn users at startup when PSFramework is not installed, so they know features like structured logging and log rotation are silently inactive. Keep the skip-and-continue behavior — just surface a one-time notice.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
