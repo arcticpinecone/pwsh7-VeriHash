@@ -41,6 +41,48 @@ function Get-VeriHashLogPath {
     }
 }
 
+function ConvertTo-SanitizedPath {
+    <#
+    .SYNOPSIS
+        Replaces user profile paths with platform-appropriate placeholders.
+    .DESCRIPTION
+        Implements data minimization by removing personally identifiable
+        information from file paths before logging (GDPR Article 5(1)(c)).
+
+        On Windows, replaces the user profile path with %USERPROFILE%.
+        On Linux/macOS, replaces the home directory with ~.
+    .PARAMETER Path
+        The file path to sanitize.
+    .OUTPUTS
+        String - The sanitized path with user-specific segments replaced.
+    .EXAMPLE
+        'C:\Users\john\Downloads\file.exe' | ConvertTo-SanitizedPath
+        # Returns: %USERPROFILE%\Downloads\file.exe
+    .EXAMPLE
+        '/home/john/Documents/file.tar.gz' | ConvertTo-SanitizedPath
+        # Returns: ~/Documents/file.tar.gz
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(ValueFromPipeline)]
+        [string]$Path
+    )
+    process {
+        if ([string]::IsNullOrEmpty($Path)) { return $Path }
+
+        $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform
+
+        if ($RunningOnWindows) {
+            # Replace C:\Users\username with %USERPROFILE%
+            $Path -replace [regex]::Escape($env:USERPROFILE), '%USERPROFILE%'
+        } else {
+            # Replace /home/username or /Users/username with ~
+            $Path -replace [regex]::Escape($HOME), '~'
+        }
+    }
+}
+
 function ConvertFrom-SanitizedPath {
     <#
     .SYNOPSIS

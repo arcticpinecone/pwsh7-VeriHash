@@ -23,9 +23,6 @@
 $script:RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform
 $script:RunningOnLinux = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
 $script:RunningOnMacOS = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Darwin'
-
-# Check if PSFramework is available for logging
-$script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)
 #endregion Platform Detection
 
 #region Valid Values

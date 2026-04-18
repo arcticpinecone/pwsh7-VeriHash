@@ -1,4 +1,8 @@
 BeforeAll {
+    # Import LogUtils first (Config depends on ConvertTo-SanitizedPath)
+    $script:LogUtilsPath = "$PSScriptRoot\..\VeriHash.LogUtils.ps1"
+    . $script:LogUtilsPath
+
     # Import the Config functions
     $script:ConfigPath = "$PSScriptRoot\..\VeriHash.Config.ps1"
     . $script:ConfigPath

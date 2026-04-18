@@ -96,42 +96,14 @@ param (
 $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
 $RunningOnLinux = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
 
+# Check if PSFramework is available (single authoritative check — used by all modules)
+$script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)
+
 #region Module Imports
-# Import configuration and logging utility modules
-. "$PSScriptRoot\VeriHash.Config.ps1"
+# Import logging utilities first (Config depends on ConvertTo-SanitizedPath)
 . "$PSScriptRoot\VeriHash.LogUtils.ps1"
+. "$PSScriptRoot\VeriHash.Config.ps1"
 #endregion Module Imports
-
-#region Path Sanitization (Data Minimization)
-# Principle: GDPR Article 5(1)(c) - collect only what's necessary
-# Paths can reveal usernames; sanitize before logging
-function ConvertTo-SanitizedPath {
-    <#
-    .SYNOPSIS
-        Replaces user profile paths with platform-appropriate placeholders.
-    .DESCRIPTION
-        Implements data minimization by removing personally identifiable
-        information from file paths before logging.
-    #>
-    [CmdletBinding()]
-    [OutputType([string])]
-    param(
-        [Parameter(ValueFromPipeline)]
-        [string]$Path
-    )
-    process {
-        if ([string]::IsNullOrEmpty($Path)) { return $Path }
-
-        if ($RunningOnWindows) {
-            # Replace C:\Users\username with %USERPROFILE%
-            $Path -replace [regex]::Escape($env:USERPROFILE), '%USERPROFILE%'
-        } else {
-            # Replace /home/username or /Users/username with ~
-            $Path -replace [regex]::Escape($HOME), '~'
-        }
-    }
-}
-#endregion Path Sanitization (Data Minimization)
 
 #region PSFramework Logging Initialization
 # Load configuration (env vars > config file > defaults)
@@ -150,9 +122,6 @@ if (-not $PSBoundParameters.ContainsKey('LogLevel')) {
         }
     }
 }
-
-# Check if PSFramework is available
-$script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)
 
 if (-not $script:PSFrameworkAvailable) {
     # PSFramework not installed - warn but continue (logging is optional)
