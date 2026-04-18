@@ -56,7 +56,7 @@ Describe 'Get-VeriHashLogPath' {
 Describe 'ConvertFrom-VeriHashLog' {
     BeforeAll {
         # Create sample log files with JSON content
-        $script:SampleLogFile = Join-Path $script:TestLogDir "verihash-2026-01-17.json"
+        $script:SampleLogFile = Join-Path $script:TestLogDir "verihash-2026-01-17.jsonl"
 
         $sampleEntries = @(
             '{"Timestamp":"2026-01-17T10:00:00.000Z","Level":"Verbose","Message":"Computing hash","FunctionName":"Get-And-SaveHash","Tags":["Hash","Compute"],"Data":{"Path":"C:\\test.txt","Algorithm":"SHA256"}}'

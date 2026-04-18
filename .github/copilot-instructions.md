@@ -95,9 +95,9 @@ if ($script:PSFrameworkAvailable) {
 }
 ```
 
-Log files: JSON lines format, daily rotation.
-- Windows: `%APPDATA%\VeriHash\logs\verihash-YYYY-MM-DD.json`
-- Unix: `~/.verihash/logs/verihash-YYYY-MM-DD.json`
+Log files: JSONL (JSON Lines) format, daily rotation.
+- Windows: `%APPDATA%\VeriHash\logs\verihash-YYYY-MM-DD.jsonl`
+- Unix: `~/.verihash/logs/verihash-YYYY-MM-DD.jsonl`
 
 When `VERIHASH_TEST_MODE=1`, logs go to `logs/test/` to avoid polluting production logs.
 

@@ -187,7 +187,7 @@ function ConvertFrom-VeriHashLog {
 
     # Get log files
     if (Test-Path $Path -PathType Container) {
-        $logFiles = Get-ChildItem -Path $Path -Filter "verihash-*.json" | Sort-Object LastWriteTime -Descending
+        $logFiles = Get-ChildItem -Path $Path -Filter "verihash-*.jsonl" | Sort-Object LastWriteTime -Descending
     } else {
         $logFiles = Get-Item $Path
     }

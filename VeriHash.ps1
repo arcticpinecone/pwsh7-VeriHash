@@ -146,15 +146,19 @@ if (-not $script:PSFrameworkAvailable) {
         New-Item -ItemType Directory -Path $script:VeriHashLogPath -Force | Out-Null
     }
 
-    # Configure file logging provider (JSON format for agent/programmatic parsing)
+    # Configure file logging provider (JSONL format for agent/programmatic parsing)
     # Data Minimization: Headers exclude File/ComputerName/Username; -Data paths sanitized
     # Reference: GDPR Article 5(1)(c), OWASP Logging Cheat Sheet, CWE-532
     Set-PSFLoggingProvider -Name 'logfile' -InstanceName 'VeriHash' `
-        -FilePath (Join-Path $script:VeriHashLogPath "verihash-%date%.json") `
+        -FilePath (Join-Path $script:VeriHashLogPath "verihash-%date%.jsonl") `
         -FileType Json `
         -JsonCompress $true `
+        -JsonNoComma $true `
+        -JsonNoEmptyFirstLine $true `
+        -JsonString $true `
         -UTC $true `
         -LogRotatePath $script:VeriHashLogPath `
+        -LogRotateFilter "verihash-*.jsonl" `
         -LogRetentionTime "30d" `
         -Headers 'FunctionName', 'Level', 'Line', 'Message', 'ModuleName', 'Runspace', 'Tags', 'TargetObject', 'Timestamp', 'Type', 'Data' `
         -Enabled $true
