@@ -805,10 +805,11 @@ function Get-And-SaveHash {
     # Log hash computation result
     if ($script:PSFrameworkAvailable) {
         $throughputMBs = if ($hashDuration.TotalSeconds -gt 0) { [Math]::Round($fileSize / 1MB / $hashDuration.TotalSeconds, 2) } else { 0 }
-        Write-PSFMessage -Level Verbose -Message "Hash computed: $hashValue" -Tag 'Hash', 'Result' -Data @{
+        $truncatedHash = $hashValue.Substring(0, [Math]::Min(16, $hashValue.Length)) + '...'
+        Write-PSFMessage -Level Verbose -Message "Hash computed: $truncatedHash" -Tag 'Hash', 'Result' -Data @{
             Path = $PathToFile | ConvertTo-SanitizedPath
             Algorithm = $Algorithm
-            Hash = $hashValue
+            Hash = $truncatedHash
             DurationMs = [Math]::Round($hashDuration.TotalMilliseconds, 2)
             ThroughputMBs = $throughputMBs
         }

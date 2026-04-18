@@ -155,8 +155,8 @@ function Get-VeriHashConfig {
     # Log config loading start
     if ($script:PSFrameworkAvailable) {
         Write-PSFMessage -Level Debug -Message "Loading VeriHash configuration" -Tag 'Config', 'Entry' -Data @{
-            ConfigDirectory = $configDir
-            ConfigFile = $configFile
+            ConfigDirectory = $configDir | ConvertTo-SanitizedPath
+            ConfigFile = $configFile | ConvertTo-SanitizedPath
         }
     }
 
@@ -209,7 +209,7 @@ function Get-VeriHashConfig {
 
             if ($script:PSFrameworkAvailable) {
                 Write-PSFMessage -Level Debug -Message "Loaded configuration from file" -Tag 'Config', 'File' -Data @{
-                    ConfigFile = $configFile
+                    ConfigFile = $configFile | ConvertTo-SanitizedPath
                 }
             }
         }
@@ -222,7 +222,7 @@ function Get-VeriHashConfig {
     } else {
         if ($script:PSFrameworkAvailable) {
             Write-PSFMessage -Level Debug -Message "No config file found, using defaults" -Tag 'Config' -Data @{
-                ConfigFile = $configFile
+                ConfigFile = $configFile | ConvertTo-SanitizedPath
             }
         }
     }
@@ -315,8 +315,8 @@ function Set-VeriHashConfig {
 
     if ($script:PSFrameworkAvailable) {
         Write-PSFMessage -Level Debug -Message "Saving VeriHash configuration" -Tag 'Config', 'Entry' -Data @{
-            ConfigDirectory = $configDir
-            ConfigFile = $configFile
+            ConfigDirectory = $configDir | ConvertTo-SanitizedPath
+            ConfigFile = $configFile | ConvertTo-SanitizedPath
         }
     }
 
@@ -325,7 +325,7 @@ function Set-VeriHashConfig {
         New-Item -ItemType Directory -Path $configDir -Force | Out-Null
         if ($script:PSFrameworkAvailable) {
             Write-PSFMessage -Level Debug -Message "Created config directory" -Tag 'Config' -Data @{
-                ConfigDirectory = $configDir
+                ConfigDirectory = $configDir | ConvertTo-SanitizedPath
             }
         }
     }
@@ -342,7 +342,7 @@ function Set-VeriHashConfig {
 
         if ($script:PSFrameworkAvailable) {
             Write-PSFMessage -Level Debug -Message "Configuration saved" -Tag 'Config', 'Success' -Data @{
-                ConfigFile = $configFile
+                ConfigFile = $configFile | ConvertTo-SanitizedPath
             }
         }
     }
@@ -388,7 +388,7 @@ function Initialize-VeriHashConfig {
 
     if ($script:PSFrameworkAvailable) {
         Write-PSFMessage -Level Debug -Message "Initializing VeriHash configuration" -Tag 'Config', 'Init' -Data @{
-            ConfigDirectory = $configDir
+            ConfigDirectory = $configDir | ConvertTo-SanitizedPath
             Force = $Force.IsPresent
         }
     }
@@ -398,7 +398,7 @@ function Initialize-VeriHashConfig {
         New-Item -ItemType Directory -Path $configDir -Force | Out-Null
         if ($script:PSFrameworkAvailable) {
             Write-PSFMessage -Level Debug -Message "Created config directory" -Tag 'Config', 'Init' -Data @{
-                ConfigDirectory = $configDir
+                ConfigDirectory = $configDir | ConvertTo-SanitizedPath
             }
         }
     }
@@ -417,7 +417,7 @@ function Initialize-VeriHashConfig {
 
     if ($script:PSFrameworkAvailable) {
         Write-PSFMessage -Level Verbose -Message "Created default configuration" -Tag 'Config', 'Init' -Data @{
-            ConfigFile = $configFile
+            ConfigFile = $configFile | ConvertTo-SanitizedPath
         }
     }
 
