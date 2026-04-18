@@ -154,6 +154,8 @@ if (-not $script:PSFrameworkAvailable) {
         -FileType Json `
         -JsonCompress $true `
         -UTC $true `
+        -LogRotatePath $script:VeriHashLogPath `
+        -LogRetentionTime "30d" `
         -Headers 'FunctionName', 'Level', 'Line', 'Message', 'ModuleName', 'Runspace', 'Tags', 'TargetObject', 'Timestamp', 'Type', 'Data' `
         -Enabled $true
 

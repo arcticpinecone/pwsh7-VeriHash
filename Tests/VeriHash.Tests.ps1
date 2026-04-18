@@ -1035,6 +1035,16 @@ Describe 'PSFramework Logging Integration' {
             # Assert
             Test-Path $expectedLogPath | Should -BeTrue
         }
+
+        It 'Should configure log rotation with 30-day retention' -Skip:(-not $script:PSFrameworkInstalled) {
+            # Arrange
+            $scriptContent = Get-Content "$PSScriptRoot\..\VeriHash.ps1" -Raw
+
+            # Assert - LogRotatePath must be present to activate rotation
+            $scriptContent | Should -Match 'LogRotatePath'
+            # Assert - LogRetentionTime must be "30d" for 30-day retention
+            $scriptContent | Should -Match 'LogRetentionTime.*"30d"'
+        }
     }
 
     Context 'When PSFramework is not available' {
