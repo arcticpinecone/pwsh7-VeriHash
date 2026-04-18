@@ -545,32 +545,39 @@ if ($Strict) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All five open questions resolved during planning. Each `RESOLVED:` marker cites the plan/task that implements the decision so the executor can trace it back.
 
 1. **Exact `WINTRUST_DATA` struct field list (and whether to include `pSignatureSettings`)**
    - What we know: structure exists; layout is `LayoutKind.Sequential`; `pSignatureSettings` was added in Win8.
    - What's unclear: any post-Win8 additions; whether passing `IntPtr.Zero` for `pSignatureSettings` is legal on Win10/11 (almost certainly yes; standard practice).
    - Recommendation: planner pins the struct from Microsoft `wintrust.h` (Windows 11 SDK) before Wave 1 executes; embeds the SDK URL/version as a comment in `Invoke-WinVerifyTrust.ps1`.
+   - **RESOLVED:** Plan `02-01` Task 0 (PINVOKE-PIN gate) produces `02-01-PINVOKE-PIN.md` with the verbatim struct field list and SDK citation BEFORE Task 2 writes the P/Invoke shim.
 
 2. **`Wait-Job -Any` timeout: 50ms (CONTEXT) vs. 1s (recommended) vs. `Receive-Job -Wait`?**
    - What we know: All three work for PERF-04. Streaming feel is identical for any timeout under ~1s because real jobs take 10ms–10s.
    - What's unclear: whether `Receive-Job -Wait -AutoRemoveJob` on the first-finishing job (no poll loop at all, just block twice) is cleaner than the loop.
    - Recommendation: prototype both during Wave 2; pick whichever is shorter and survives a kill-the-job test (Ctrl+C cleanup). 1-second `-Any` poll is the safe default.
+   - **RESOLVED:** Plan `02-02` Task 2 uses `Wait-Job -Any -Timeout 1` (the safe default).
 
 3. **Offline-network test for SC #1 — how to falsify the absence of network CRLs?**
    - What we know: CONTEXT.md SC #1 says "verified by an offline-network test."
    - What's unclear: whether to actually disable networking on the CI host (fragile, may not even work on GitHub Actions runners with deep net stack) or to test it through observation (Mock asserts the right flags were passed; integration test with `netsh wlan disconnect` only on developer Windows machine, marked Skip in CI).
    - Recommendation: **two layers** — (a) Pester `Mock Invoke-WinVerifyTrust` and assert `dwProvFlags -band 0x1010 -eq 0x1010` (= both required flags set) — runs everywhere; (b) optional manual integration test under `-Tag 'Offline'` that disconnects the runner network adapter — Skip-by-default. The first layer is the actual contract.
+   - **RESOLVED:** `02-VALIDATION.md` adopts the two-layer strategy (Mock-based assertion as the contract; `-Tag 'Offline'` manual integration test as opt-in QA). Implemented by Plan `02-01` Task 1 (RED tests) and Task 2 (GREEN flag-locked shim).
 
 4. **Where does `Invoke-VeriHashHotPath` get the absolute path to `VeriHash.Core.psd1` for the `-InitializationScript` Import-Module?**
    - What we know: ThreadJob `-InitializationScript` runs in a fresh runspace; relative paths from the orchestrator's `$PSScriptRoot` work as long as the path is captured *before* the ThreadJob starts and passed via `$using:`.
    - What's unclear: whether to compute it from `$PSScriptRoot` of `Invoke-VeriHashHotPath.ps1` (climbs `..\..\VeriHash.Core\VeriHash.Core.psd1`) or from `(Get-Module VeriHash.Core).Path`.
    - Recommendation: use `(Get-Module VeriHash.Core).Path` if Core is already imported in the caller; fall back to `$PSScriptRoot\..\..\VeriHash.Core\VeriHash.Core.psd1`. Either way, snapshot to a local before `Start-ThreadJob` and pass via `$using:`.
+   - **RESOLVED:** Plan `02-02` Task 2 uses `(Get-Module VeriHash.Core).Path` with `$PSScriptRoot\..\..\VeriHash.Core\VeriHash.Core.psd1` fallback; snapshots to a local before `Start-ThreadJob` and passes via `$using:`.
 
 5. **Should `Invoke-VeriHashBatch` accept a single file? (i.e., is "1 file" a degenerate batch?)**
    - What we know: MULTI-01 says "thin CLI accepts `[string[]] $FilePath`"; doesn't say `[string[]]` requires N>1.
    - What's unclear: whether single-file invocation should print a tally line (`1/1 matched, 0 mismatch, 0 missing`) or skip it.
    - Recommendation: ALWAYS print the tally for `Invoke-VeriHashBatch` (it's the loop function); the Phase 5 thin CLI is responsible for choosing `Invoke-VeriHashHotPath` (no tally) vs. `Invoke-VeriHashBatch` (tally) based on `$FilePath.Count`.
+   - **RESOLVED:** Plan `02-03` Task 1 asserts the literal `'1/1 matched, 0 mismatch, 0 missing'` tally for the single-file batch case; Task 2 always emits the tally line. CLI dispatch is deferred to Phase 5.
 
 ---
 

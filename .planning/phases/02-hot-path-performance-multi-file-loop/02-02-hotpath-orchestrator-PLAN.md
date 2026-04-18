@@ -408,13 +408,20 @@ function Invoke-VeriHashHotPath {
 }
 ```
 
-**Required deviations / clarifications:**
-- `Format-VeriHashReport` from Phase 1 has its own parameter contract — read its file and adapt the call site. If the Phase 1 signature is `Format-VeriHashReport -Result $r -CompareTo $clip -SidecarInfo $sidecar`, defer the call to AFTER clipboard/sidecar lookup so the printer can render the comparison. In that case, restructure: spawn jobs → wait for hash → do clip/sidecar lookup → call `Format-VeriHashReport -Result $hashResult -CompareTo $clip -SidecarInfo $sidecar` → wait for sig → render sig line. Verify against the actual `Format-VeriHashReport.ps1` signature before finalizing the printer call. The streaming contract (PERF-04: "hash line printed before sig line in common case") is preserved either way as long as the hash line emits before we await sig completion.
+**Required deviations / clarifications (call shape pinned):**
+- `Format-VeriHashReport`'s actual Phase 1 signature is **`Format-VeriHashReport -Result <pscustomobject> [-CompareTo <pscustomobject>] [-SidecarInfo <pscustomobject>]`** (verified at `VeriHash.Core/Public/Format-VeriHashReport.ps1`). The printer is a `[void]` host renderer, so `Out-Null` is unnecessary but harmless.
+- **Mandated orchestrator structure** (use this exact ordering — do NOT defer to runtime detection):
+  1. Spawn hash ThreadJob + sig ThreadJob (both with `-InitializationScript`).
+  2. `Wait-Job -Any -Timeout 1` until hash job completes; `Receive-Job` into `$hashResult`.
+  3. Resolve clipboard (`Read-ClipboardHash`) and sidecar (`Test-VeriHashSidecar`) on the main thread → `$clip`, `$sidecar`.
+  4. Call `Format-VeriHashReport -Result $hashResult -CompareTo $clip -SidecarInfo $sidecar` (omit the `-CompareTo` / `-SidecarInfo` parameters when their value is `$null`; splatting is acceptable).
+  5. Continue `Wait-Job -Any -Timeout 1` until sig job completes; `Receive-Job` into `$sigResult`.
+  6. Render the sig line via `Write-Host` directly (Phase 1 printer does not own the sig stanza).
+- Drop the conditional `Format-VeriHashReport -Result $payload | Out-Null` early-render shown in the sketch above — that path is rejected because it would require a second printer pass after `-CompareTo`/`-SidecarInfo` materialize. The streaming contract (PERF-04: "hash line printed before sig line in common case") is preserved by step 4 above (hash stanza emits before step 5 awaits sig completion).
 - `Write-VeriHashLog` — call exactly per its existing parameter list (read the file). If a parameter doesn't exist, drop it; do not invent.
 - `Read-ClipboardHash` — Phase 1 returns `$null` or an object with `.Hash`; verify with the actual implementation.
 - `Test-VeriHashSidecar` — same; verify shape.
-
-**Re-verify the PERF-02 contract still holds end-to-end:** add no flag passing inside the ThreadJob; `Get-VeriHashSignature` (Plan 01) is the only path to `Invoke-WinVerifyTrust`, and Plan 01's Mock-based tests already lock the flags.
+**Re-verify the PERF-02 contractstill holds end-to-end:** add no flag passing inside the ThreadJob; `Get-VeriHashSignature` (Plan 01) is the only path to `Invoke-WinVerifyTrust`, and Plan 01's Mock-based tests already lock the flags.
 
 **Run all HotPath tests (excluding Performance tag) and confirm GREEN. Then run the Performance test on Windows:**
 ```powershell
