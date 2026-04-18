@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Defined:** 2026-04-18
-**Total:** 32 requirements across 8 categories
+**Total:** 38 requirements across 8 categories
 
 ---
 
@@ -95,8 +95,45 @@
 
 ## Traceability
 
-*Filled by `gsd-roadmapper` when `.planning/ROADMAP.md` is generated.*
+*Filled by `gsd-roadmapper` on 2026-04-18.*
 
 | REQ-ID | Phase |
 |--------|-------|
-| (pending roadmapping) | |
+| CORE-01 | Phase 1: Core Module Foundation |
+| CORE-02 | Phase 1: Core Module Foundation |
+| CORE-03 | Phase 1: Core Module Foundation |
+| CORE-04 | Phase 1: Core Module Foundation |
+| CORE-05 | Phase 1: Core Module Foundation |
+| CORE-06 | Phase 1: Core Module Foundation |
+| CORE-07 | Phase 1: Core Module Foundation |
+| CORE-08 | Phase 1: Core Module Foundation |
+| PERF-01 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| PERF-02 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| PERF-03 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| PERF-04 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| PERF-05 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| MULTI-01 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| MULTI-02 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| MULTI-03 | Phase 2: Hot-Path Performance + Multi-File Loop |
+| MANIFEST-01 | Phase 3: Manifest Module |
+| MANIFEST-02 | Phase 3: Manifest Module |
+| MANIFEST-03 | Phase 3: Manifest Module |
+| MANIFEST-04 | Phase 3: Manifest Module |
+| MANIFEST-05 | Phase 3: Manifest Module |
+| MANIFEST-06 | Phase 3: Manifest Module |
+| MANIFEST-07 | Phase 3: Manifest Module |
+| MANIFEST-08 | Phase 3: Manifest Module |
+| INTEG-01 | Phase 4: Integrations + Config Trim |
+| INTEG-02 | Phase 4: Integrations + Config Trim |
+| INTEG-03 | Phase 4: Integrations + Config Trim |
+| CFG-01 | Phase 4: Integrations + Config Trim |
+| CFG-02 | Phase 4: Integrations + Config Trim |
+| CFG-03 | Phase 4: Integrations + Config Trim |
+| CLI-01 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLI-02 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLI-03 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLEAN-01 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLEAN-02 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLEAN-03 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLEAN-04 | Phase 5: Thin CLI + Cleanup & Docs |
+| CLEAN-05 | Phase 5: Thin CLI + Cleanup & Docs |
