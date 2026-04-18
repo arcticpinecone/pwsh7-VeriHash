@@ -16,16 +16,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### CI/CD Pipeline
 
-- [ ] **CICD-01**: GitHub Actions workflow runs Pester tests on every push and PR (`ubuntu-latest` + `windows-latest` matrix)
-- [ ] **CICD-02**: GitHub Actions workflow runs PSScriptAnalyzer on every push and PR (fail on any finding)
-- [ ] **CICD-03**: PSScriptAnalyzer lints all three `.ps1` files (`VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`)
-- [ ] **CICD-04**: Pester pinned to 5.x (`MaximumVersion 5.99`) in CI to prevent Pester 6 auto-install breakage
+- [x] **CICD-01**: GitHub Actions workflow runs Pester tests on every push and PR (`ubuntu-latest` + `windows-latest` matrix)
+- [x] **CICD-02**: GitHub Actions workflow runs PSScriptAnalyzer on every push and PR (fail on any finding)
+- [x] **CICD-03**: PSScriptAnalyzer lints all three `.ps1` files (`VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`)
+- [x] **CICD-04**: Pester pinned to 5.x (`MaximumVersion 5.99`) in CI to prevent Pester 6 auto-install breakage
 
 ### Logging & Configuration
 
-- [ ] **LOGC-01**: PSFramework log rotation enabled via `LogRotatePath` + `LogRetentionTime` parameters (30-day retention)
+- [x] **LOGC-01**: PSFramework log rotation enabled via `LogRotatePath` + `LogRetentionTime` parameters (30-day retention)
 - [x] **LOGC-02**: Single PSFramework bootstrap detection — eliminate redundant `Get-Module -ListAvailable -Name PSFramework` call between `VeriHash.Config.ps1` and `VeriHash.ps1`
-- [ ] **LOGC-03**: `virustotal.enabled` defaults to `$false` in `Get-VeriHashDefaultConfig` until VirusTotal integration ships
+- [x] **LOGC-03**: `virustotal.enabled` defaults to `$false` in `Get-VeriHashDefaultConfig` until VirusTotal integration ships
 
 ## v2 Requirements
 
@@ -62,15 +62,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PRIV-01 | Phase 1 | Complete |
 | PRIV-02 | Phase 1 | Complete |
-| PRIV-03 | Phase 1 | Pending |
+| PRIV-03 | Phase 1 | Complete |
 | PRIV-04 | Phase 1 | Complete |
-| LOGC-02 | Phase 1 | Pending |
-| CICD-01 | Phase 2 | Pending |
-| CICD-02 | Phase 2 | Pending |
-| CICD-03 | Phase 2 | Pending |
-| CICD-04 | Phase 2 | Pending |
-| LOGC-01 | Phase 3 | Pending |
-| LOGC-03 | Phase 3 | Pending |
+| LOGC-02 | Phase 1 | Complete |
+| CICD-01 | Phase 2 | Complete |
+| CICD-02 | Phase 2 | Complete |
+| CICD-03 | Phase 2 | Complete |
+| CICD-04 | Phase 2 | Complete |
+| LOGC-01 | Phase 3 | Complete |
+| LOGC-03 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 11 total
@@ -79,4 +79,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-17*
-*Last updated: 2026-04-17 after roadmap creation*
+*Last updated: 2026-04-18 — all v1 requirements verified complete per milestone audit*

@@ -12,9 +12,9 @@ Close the audit gaps between the privacy-first logging guide and actual code, th
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Privacy & Logging Compliance** - Fix all privacy violations so log output matches the logging guide's contract
-- [ ] **Phase 2: CI/CD Pipeline** - Automate test and lint on every push/PR so compliance can't regress
-- [ ] **Phase 3: Small Wins & Baseline Lock** - Close remaining audit items (log rotation, VT default) under CI protection
+- [x] **Phase 1: Privacy & Logging Compliance** - Fix all privacy violations so log output matches the logging guide's contract
+- [x] **Phase 2: CI/CD Pipeline** - Automate test and lint on every push/PR so compliance can't regress
+- [x] **Phase 3: Small Wins & Baseline Lock** - Close remaining audit items (log rotation, VT default) under CI protection
 
 ## Phase Details
 
