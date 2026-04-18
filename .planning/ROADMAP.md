@@ -60,7 +60,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Enable log rotation (LOGC-01) and flip VT default (LOGC-03)
+- [x] 03-01-PLAN.md — Enable log rotation (LOGC-01) and flip VT default (LOGC-03)
 
 ## Progress
 
@@ -71,4 +71,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Privacy & Logging Compliance | 3/3 | Complete | - |
 | 2. CI/CD Pipeline | 2/2 | Complete | 2026-04-18 |
-| 3. Small Wins & Baseline Lock | 0/1 | Planned | - |
+| 3. Small Wins & Baseline Lock | 1/1 | Complete | 2026-04-18 |
