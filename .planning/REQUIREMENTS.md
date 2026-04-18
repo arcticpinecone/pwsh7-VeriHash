@@ -12,7 +12,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **PRIV-01**: Hash values truncated to 16 chars + `...` in all `Write-PSFMessage` data payloads (closes `Get-And-SaveHash:839`)
 - [x] **PRIV-02**: All config-path log payloads in `VeriHash.Config.ps1` pass through `ConvertTo-SanitizedPath` (closes 11 unsanitized-path violations)
 - [x] **PRIV-03**: `ConvertTo-SanitizedPath` relocated to `VeriHash.LogUtils.ps1` so it is available to all dot-sourced modules (dot-source order: LogUtils → Config → VeriHash)
-- [ ] **PRIV-04**: After fixes, `Verihash Logging Concepting.md` describes actual code behavior with zero caveats
+- [x] **PRIV-04**: After fixes, `Verihash Logging Concepting.md` describes actual code behavior with zero caveats
 
 ### CI/CD Pipeline
 
@@ -63,7 +63,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRIV-01 | Phase 1 | Complete |
 | PRIV-02 | Phase 1 | Complete |
 | PRIV-03 | Phase 1 | Pending |
-| PRIV-04 | Phase 1 | Pending |
+| PRIV-04 | Phase 1 | Complete |
 | LOGC-02 | Phase 1 | Pending |
 | CICD-01 | Phase 2 | Pending |
 | CICD-02 | Phase 2 | Pending |
