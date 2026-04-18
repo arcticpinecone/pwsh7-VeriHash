@@ -113,12 +113,20 @@ if (-not $SkipAnalyzer) {
     Write-Host "─────────────────────────────────────────────" -ForegroundColor DarkGray
 
     $settingsPath = Join-Path $scriptRoot "PSScriptAnalyzerSettings.psd1"
-    $scriptPath = Join-Path $scriptRoot "VeriHash.ps1"
+    $scriptPaths = @(
+        (Join-Path $scriptRoot "VeriHash.ps1"),
+        (Join-Path $scriptRoot "VeriHash.Config.ps1"),
+        (Join-Path $scriptRoot "VeriHash.LogUtils.ps1")
+    )
 
-    if (Test-Path $settingsPath) {
-        $analysisResults = Invoke-ScriptAnalyzer -Path $scriptPath -Settings $settingsPath
-    } else {
-        $analysisResults = Invoke-ScriptAnalyzer -Path $scriptPath
+    $analysisResults = @()
+    foreach ($path in $scriptPaths) {
+        if (Test-Path $settingsPath) {
+            $results = Invoke-ScriptAnalyzer -Path $path -Settings $settingsPath
+        } else {
+            $results = Invoke-ScriptAnalyzer -Path $path
+        }
+        if ($results) { $analysisResults += $results }
     }
 
     if ($analysisResults) {
