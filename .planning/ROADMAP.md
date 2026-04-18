@@ -43,7 +43,10 @@
   3. The hash line prints to the console before the signature line on the same invocation; the signature line is appended once its job completes; displayed elapsed time matches wall-clock duration of the whole call.
   4. Invoking the CLI with N file paths in a single call renders one full result block per file followed by a final tally row of the form `X/N matched, Y mismatch, Z missing`.
   5. Each per-file result in loop mode still performs clipboard compare, sidecar compare, and parallel PE signature — i.e., loop mode does not regress single-file behavior.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 02-01-module-skeleton-pe-detect-signature-PLAN.md — VeriHash.HotPath module skeleton + Test-IsPEFile + Get-VeriHashSignature wrapper + WinVerifyTrust P/Invoke shim with locked flags (PERF-01, PERF-02) [Wave 1]
+- [ ] 02-02-hotpath-orchestrator-PLAN.md — Invoke-VeriHashHotPath: two ThreadJobs (hash + sig), Wait-Job -Any polling, Stopwatch wall-clock, hybrid streaming (PERF-03, PERF-04, PERF-05) [Wave 2]
+- [ ] 02-03-batch-loop-tally-profiler-PLAN.md — Invoke-VeriHashBatch sequential loop + byte-locked tally + continue-and-tally; Profile-VeriHashTiming.ps1 -Strict gate (MULTI-01, MULTI-02, MULTI-03) [Wave 3]
 
 ### Phase 3: Manifest Module
 **Goal**: A `VeriHash.Manifest` module creates and verifies GNU `sha256sum`-compatible manifests with atomic writes, path-traversal-safe verification, and machine-readable exit codes — usable from CLI today and a second SendTo entry tomorrow.
