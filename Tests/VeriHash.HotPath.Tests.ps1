@@ -25,7 +25,7 @@ Describe 'VeriHash.HotPath module manifest + exports (Plan 01 surface)' {
     }
 
     It 'Exports exactly the locked Plan 02 public surface' {
-        $expected = @('Get-VeriHashSignature', 'Invoke-VeriHashHotPath') | Sort-Object
+        $expected = @('Get-VeriHashSignature', 'Invoke-VeriHashHotPath', 'Invoke-VeriHashBatch') | Sort-Object
         $actual   = (Get-Command -Module VeriHash.HotPath).Name | Sort-Object
         Compare-Object $actual $expected | Should -BeNullOrEmpty
     }

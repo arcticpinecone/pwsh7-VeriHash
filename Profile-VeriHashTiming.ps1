@@ -12,7 +12,9 @@ param(
     [ValidateSet('SHA256', 'MD5', 'SHA512')]
     [string]$Algorithm = 'SHA256',
 
-    [switch]$Quiet
+    [switch]$Quiet,
+
+    [switch]$Strict
 )
 
 if (-not $Quiet) {
@@ -164,4 +166,16 @@ if (-not $Quiet) {
 }
 
 # Return the result object for programmatic access (Pester tests can use this!)
+if ($Strict) {
+    $hashMs = $measurements['Hash Computation']
+    $sigMs  = $measurements['Digital Signature Check']
+    $wallMs = $resultObject.Total
+    if ($null -ne $hashMs -and $null -ne $sigMs -and $null -ne $wallMs) {
+        $bound = (1.2 * [math]::Max($hashMs, $sigMs)) + 100
+        if ($wallMs -gt $bound) {
+            throw "Strict perf assertion failed: wallClock=${wallMs}ms > 1.2*max(${hashMs},${sigMs})+100 = ${bound}ms"
+        }
+    }
+}
+
 return $resultObject

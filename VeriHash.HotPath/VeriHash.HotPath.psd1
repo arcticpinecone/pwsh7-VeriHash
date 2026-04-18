@@ -36,7 +36,7 @@ Description = 'Hot-path orchestration: PE-detect, parallel hash+Authenticode, mu
 PowerShellVersion = '7.0'
 
 # Functions to export from this module
-FunctionsToExport = 'Get-VeriHashSignature', 'Invoke-VeriHashHotPath'
+FunctionsToExport = 'Get-VeriHashSignature', 'Invoke-VeriHashHotPath', 'Invoke-VeriHashBatch'
 
 # Cmdlets to export from this module
 CmdletsToExport = @()
