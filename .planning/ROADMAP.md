@@ -57,11 +57,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. PSFramework log provider is configured with `LogRotatePath` and `LogRetentionTime` so log files rotate automatically with 30-day retention
   2. `Get-VeriHashDefaultConfig` returns `virustotal.enabled = $false` — users are not misled about unshipped VirusTotal integration
-**Plans**: 2 plans
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md — Create CI workflow + expand local lint to all 3 files
-- [ ] 02-02-PLAN.md — Verify CI triggers and passes on GitHub Actions
+- [ ] 03-01-PLAN.md — Enable log rotation (LOGC-01) and flip VT default (LOGC-03)
 
 ## Progress
 
