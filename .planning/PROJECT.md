@@ -39,18 +39,32 @@ Trustworthy file integrity verification — fast, scriptable, privacy-respecting
 
 ### Active
 
-<!-- Next milestone requirements will be defined via /gsd-new-milestone -->
-
-(None — define with `/gsd-new-milestone`)
+See `.planning/REQUIREMENTS.md` for v2.0 requirements (32 items across CORE, PERF, MULTI, MANIFEST, INTEG, CFG, CLI, CLEAN categories).
 
 ### Out of Scope
 
-- **Monolith split of `VeriHash.ps1`** — High blast radius (every test depends on the dot-source hack). Deferred to its own milestone where it can get focused planning and a test migration.
-- **VirusTotal integration** — Next feature milestone after foundation is honest.
-- **Multifile / batch hashing** — Tracked in `Verihash Multifile Concepting.md`; valuable but a feature, not a foundation fix.
-- **`QuickHash.ps1` deprecation or rewrite** — Diverged tool with its own tests; decide its fate in a dedicated cleanup milestone.
+- **VirusTotal integration** — **Cut from project scope per v2.0 decision.** Config scaffolding (`virustotal.*` fields, `VERIHASH_VT_*` env vars) is removed in v2.0. Keeps VeriHash focused on hashes + signatures. May be revisited as a separate tool, but not under VeriHash.
 - **macOS context-menu integration** — Not implemented today and not driven by user demand.
-- **Test coverage for legacy extensions, Select-File fallback, sidecar interactive branches** — Real gaps; address in a test-coverage milestone.
+- **Test coverage for legacy `.sha2`/`.sha2_256` extensions, Select-File fallback, and sidecar interactive Update/Rename branches** — Real gaps from v1.0 audit; addressed opportunistically in v2.0 test rewrites where the same code is touched, but not a v2.0 milestone goal in itself.
+- **Module signing / PSGallery publish** — Out of scope for v2.0; revisit if VeriHash is ever distributed outside this repo.
+- **Recursive folder hashing for manifest mode** — Manifest MVP is flat-files-in-one-directory only. Recursion deferred per the manifest concept doc.
+
+## Current Milestone: v2.0 Modular Rebuild
+
+**Goal:** Replace the 1,527-line `VeriHash.ps1` monolith with a tested, modular architecture (real `.psm1` modules) that keeps the hot path fast — hash + clipboard/sidecar compare + parallel signature for PE files — and ships multi-file loop mode plus GNU-compatible manifest mode in a single push.
+
+**Target features:**
+- Real PowerShell module structure (`VeriHash.Core`, `VeriHash.Manifest`) with manifests; tests use `Import-Module` (no more dot-source hack)
+- Hot-path performance: parallel signing for PE files only, no CRL network checks, streaming output (hash first, signature appended)
+- Multi-file loop mode via single SendTo entry (right-click N files → per-file results + tally)
+- Manifest mode (`-Manifest`) — GNU `sha256sum`-compatible create/verify with second SendTo entry, atomic write, path-traversal guard, machine-readable exit codes
+- Built-in plain-text logger (opt-in via `-Log` / `$env:VERIHASH_LOG`); PSFramework dependency removed
+- VirusTotal scaffolding cut entirely
+- `QuickHash.ps1` and `VeriHash.LogUtils.ps1` retired
+- Clipboard detection learns the `<algo>:<hex>` prefix form (e.g., `sha256:abc...`)
+- Thin `VeriHash.ps1` dispatcher (param parse → import module → render → pause)
+
+**Key context:** v2 is a clean break — no CLI backwards-compat commitment, breaking changes documented in README/CHANGELOG. Sidecar file format compatibility preserved (existing v1.x `.sha256/.sha512/.md5` files still verify). Single user (project author) on `dev`. Skipping the formal research phase: this is internal restructuring, not a new domain.
 
 ## Context
 
@@ -105,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after v1.0 milestone*
+*Last updated: 2026-04-18 — v2.0 Modular Rebuild milestone started*
