@@ -1,9 +1,9 @@
 ---
 phase: 3
 slug: small-wins-baseline-lock
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-18
 ---
 
@@ -38,8 +38,8 @@ created: 2026-04-18
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | LOGC-01 | — | Log rotation prevents disk exhaustion | integration | `Invoke-Pester -Path "Tests/VeriHash.Tests.ps1" -Output Detailed` | ❌ W0 | ⬜ pending |
-| 03-01-02 | 01 | 1 | LOGC-03 | — | VT disabled by default prevents user confusion | unit | `Invoke-Pester -Path "Tests/VeriHash.Config.Tests.ps1" -Output Detailed` | ✅ (needs value flip) | ⬜ pending |
+| 03-01-01 | 01 | 1 | LOGC-01 | — | Log rotation prevents disk exhaustion | integration | `Invoke-Pester -Path "Tests/VeriHash.Tests.ps1" -Output Detailed` | ✅ | ✅ green |
+| 03-01-02 | 01 | 1 | LOGC-03 | — | VT disabled by default prevents user confusion | unit | `Invoke-Pester -Path "Tests/VeriHash.Config.Tests.ps1" -Output Detailed` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -47,9 +47,9 @@ created: 2026-04-18
 
 ## Wave 0 Requirements
 
-- [ ] Add test assertion in `Tests/VeriHash.Tests.ps1` verifying `LogRotatePath` and `LogRetentionTime` are configured when PSFramework is available
+- [x] Add test assertion in `Tests/VeriHash.Tests.ps1` verifying `LogRotatePath` and `LogRetentionTime` are configured when PSFramework is available
 
-*Existing test infrastructure covers LOGC-03 — just needs value updates from `$true` to `$false`.*
+*Existing test infrastructure covers LOGC-03 — values updated from `$true` to `$false`.*
 
 ---
 
@@ -61,11 +61,11 @@ created: 2026-04-18
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
