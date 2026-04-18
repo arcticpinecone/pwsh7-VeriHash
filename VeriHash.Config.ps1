@@ -20,9 +20,10 @@
 #>
 
 #region Platform Detection
-$script:RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform
-$script:RunningOnLinux = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
-$script:RunningOnMacOS = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Darwin'
+$verihashCoreManifest = Join-Path (Split-Path -Parent $PSCommandPath) 'VeriHash.Core/VeriHash.Core.psd1'
+if (Test-Path -LiteralPath $verihashCoreManifest) {
+    Import-Module $verihashCoreManifest -Force -Global
+}
 #endregion Platform Detection
 
 #region Valid Values
@@ -49,7 +50,7 @@ function Get-VeriHashConfigPath {
     [OutputType([string])]
     param()
 
-    if ($script:RunningOnWindows) {
+    if ((Get-VeriHashPlatform) -eq 'Windows') {
         Join-Path $env:APPDATA "VeriHash"
     } else {
         Join-Path $HOME ".verihash"

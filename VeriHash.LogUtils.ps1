@@ -15,6 +15,11 @@
     - Use ConvertFrom-SanitizedPath to expand paths for local debugging
 #>
 
+$verihashCoreManifest = Join-Path (Split-Path -Parent $PSCommandPath) 'VeriHash.Core/VeriHash.Core.psd1'
+if (Test-Path -LiteralPath $verihashCoreManifest) {
+    Import-Module $verihashCoreManifest -Force -Global
+}
+
 function Get-VeriHashLogPath {
     <#
     .SYNOPSIS
@@ -32,9 +37,7 @@ function Get-VeriHashLogPath {
     [OutputType([string])]
     param()
 
-    $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
-
-    if ($RunningOnWindows) {
+    if ((Get-VeriHashPlatform) -eq 'Windows') {
         Join-Path $env:APPDATA "VeriHash\logs"
     } else {
         Join-Path $HOME ".verihash/logs"
@@ -71,9 +74,7 @@ function ConvertTo-SanitizedPath {
     process {
         if ([string]::IsNullOrEmpty($Path)) { return $Path }
 
-        $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform
-
-        if ($RunningOnWindows) {
+        if ((Get-VeriHashPlatform) -eq 'Windows') {
             # Replace C:\Users\username with %USERPROFILE%
             $Path -replace [regex]::Escape($env:USERPROFILE), '%USERPROFILE%'
         } else {
@@ -113,9 +114,7 @@ function ConvertFrom-SanitizedPath {
     process {
         if ([string]::IsNullOrEmpty($Path)) { return $Path }
 
-        $RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
-
-        if ($RunningOnWindows) {
+        if ((Get-VeriHashPlatform) -eq 'Windows') {
             $Path -replace '%USERPROFILE%', $env:USERPROFILE
         } else {
             $Path -replace '^~', $HOME

@@ -93,8 +93,7 @@ param (
 )
 
 # Initialize variables early
-$RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT'
-$RunningOnLinux = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
+Import-Module "$PSScriptRoot\VeriHash.Core\VeriHash.Core.psd1" -Force -Global
 
 # Check if PSFramework is available (single authoritative check — used by all modules)
 $script:PSFrameworkAvailable = $null -ne (Get-Module -ListAvailable -Name PSFramework)
@@ -182,7 +181,7 @@ if (-not $script:PSFrameworkAvailable) {
     Write-PSFMessage -Level Debug -Message "VeriHash logging initialized" -Tag 'Init' -Data @{
         LogPath = $script:VeriHashLogPath | ConvertTo-SanitizedPath
         LogLevel = $LogLevel
-        Platform = if ($RunningOnWindows) { 'Windows' } elseif ($RunningOnLinux) { 'Linux' } else { 'macOS' }
+        Platform = Get-VeriHashPlatform
     }
 }
 #endregion PSFramework Logging Initialization
@@ -598,10 +597,10 @@ if ($Help) {
 ## Handle context menu integration installation
 if ($SendTo) {
     try {
-        if ($RunningOnWindows) {
+        if ((Get-VeriHashPlatform) -eq 'Windows') {
             Install-WindowsSendTo
         }
-        elseif ($RunningOnLinux) {
+        elseif ((Get-VeriHashPlatform) -eq 'Linux') {
             Install-LinuxContextMenu -SystemWide:$SystemWide
         }
         else {
@@ -617,7 +616,7 @@ if ($SendTo) {
 }
 
 function Select-File {
-    if ($RunningOnWindows) {
+    if ((Get-VeriHashPlatform) -eq 'Windows') {
         try {
             Add-Type -AssemblyName System.Windows.Forms
             $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
@@ -668,12 +667,12 @@ function Get-ClipboardHash {
     # Log clipboard check attempt
     if ($script:PSFrameworkAvailable) {
         Write-PSFMessage -Level Debug -Message "Checking clipboard for hash" -Tag 'Clipboard', 'Entry' -Data @{
-            Platform = if ($RunningOnWindows) { 'Windows' } elseif ($RunningOnLinux) { 'Linux' } else { 'macOS' }
+            Platform = Get-VeriHashPlatform
         }
     }
 
     # Try different methods to get clipboard based on platform
-    if ($RunningOnWindows) {
+    if ((Get-VeriHashPlatform) -eq 'Windows') {
         # Windows: Use built-in Get-Clipboard
         try {
             $clipboard = Get-Clipboard -ErrorAction Stop
@@ -683,7 +682,7 @@ function Get-ClipboardHash {
             return $null
         }
     }
-    elseif ($RunningOnLinux) {
+    elseif ((Get-VeriHashPlatform) -eq 'Linux') {
         # Linux: Try multiple clipboard tools
         $clipboardTools = @(
             @{ Name = 'wl-paste'; Args = @() },                    # Wayland
@@ -1123,7 +1122,7 @@ function Invoke-HashFile {
 
             # Check digital signature (unless -SkipSignatureCheck is specified)
             if (-not $SkipSignatureCheck) {
-                if ($RunningOnWindows) {
+                if ((Get-VeriHashPlatform) -eq 'Windows') {
                     $fileExtension = $fileInfo.Extension.ToLower()
 
                     if ($fileExtension -in $script:SignableExtensions) {
