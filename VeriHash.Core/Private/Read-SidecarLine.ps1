@@ -1,12 +1,13 @@
 function Read-SidecarLine {
     <#
     .SYNOPSIS
-        Parses a single sidecar line into @{ Hash; Filename } or $null.
+        Parses a v1 sidecar line into hash + filename.
     .DESCRIPTION
-        Private helper. Recognizes both v1 sidecar shapes:
-            HASH  filename     (two-space, GNU coreutils text mode)
-            HASH *filename     (one-space + asterisk, GNU coreutils binary mode)
-        Hash is returned lowercase. Returns $null on no match.
+        Accepts both v1 sidecar formats:
+          'HASH  filename'  (two-space, GNU coreutils text mode)
+          'HASH *filename'  (one-space + asterisk, GNU coreutils binary mode)
+    .OUTPUTS
+        System.Collections.Hashtable -- @{ Hash; Filename } or $null.
     #>
     [CmdletBinding()]
     [OutputType([hashtable])]
@@ -14,6 +15,8 @@ function Read-SidecarLine {
         [Parameter(Mandatory)]
         [string]$Line
     )
-    $null = $PSBoundParameters
-    throw 'NotImplemented: Read-SidecarLine -- implemented in plan 01-02'
+    if ($Line -match '^([A-Fa-f0-9]+)\s+\*?(.+)$') {
+        return @{ Hash = $matches[1].ToLowerInvariant(); Filename = $matches[2].Trim() }
+    }
+    return $null
 }

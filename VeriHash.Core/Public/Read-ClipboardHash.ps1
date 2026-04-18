@@ -14,6 +14,29 @@ function Read-ClipboardHash {
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param()
-    $null = $PSBoundParameters
-    throw 'NotImplemented: Read-ClipboardHash -- implemented in plan 01-02'
+
+    if ((Get-VeriHashPlatform) -ne 'Windows') {
+        Write-Verbose 'Clipboard reading not supported on this platform yet.'
+        return $null
+    }
+
+    $raw = Get-Clipboard -ErrorAction SilentlyContinue
+    if (-not $raw) { return $null }
+
+    $text = ($raw -join "`n").Trim()
+    if (-not $text) { return $null }
+
+    $algo = ConvertTo-VeriHashAlgorithm -Hash $text
+    if (-not $algo) { return $null }
+
+    if ($text -match '^(?:md5|sha256|sha512):(?<hex>[A-Fa-f0-9]+)$') {
+        $hex = $matches.hex
+    } else {
+        $hex = $text
+    }
+
+    return [pscustomobject]@{
+        Algorithm = $algo
+        Hash      = $hex.ToLowerInvariant()
+    }
 }

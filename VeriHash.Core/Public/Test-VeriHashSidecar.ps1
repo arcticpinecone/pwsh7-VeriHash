@@ -18,6 +18,37 @@ function Test-VeriHashSidecar {
         [Parameter(Mandatory)]
         [string]$Path
     )
-    $null = $PSBoundParameters
-    throw 'NotImplemented: Test-VeriHashSidecar -- implemented in plan 01-02'
+
+    $sidecar = Get-PreferredSidecar -TargetPath $Path
+    if (-not $sidecar) { return $null }
+
+    $sidecarLeaf = Split-Path -Leaf $sidecar.Path
+    $line = Get-Content -LiteralPath $sidecar.Path -TotalCount 1
+    $parsed = Read-SidecarLine -Line $line
+
+    $actual = Get-VeriHashResult -Path $Path -Algorithm $sidecar.Algorithm
+
+    if (-not $parsed) {
+        return [pscustomobject]@{
+            PSTypeName = 'VeriHash.Result'
+            FilePath   = $actual.FilePath
+            Size       = $actual.Size
+            Algorithm  = $actual.Algorithm
+            Hash       = $actual.Hash
+            ElapsedMs  = $actual.ElapsedMs
+            Sidecar    = "error ($sidecarLeaf)"
+        }
+    }
+
+    $status = if ($actual.Hash -eq $parsed.Hash) { 'matched' } else { 'mismatch' }
+
+    return [pscustomobject]@{
+        PSTypeName = 'VeriHash.Result'
+        FilePath   = $actual.FilePath
+        Size       = $actual.Size
+        Algorithm  = $actual.Algorithm
+        Hash       = $actual.Hash
+        ElapsedMs  = $actual.ElapsedMs
+        Sidecar    = "$status ($sidecarLeaf)"
+    }
 }
