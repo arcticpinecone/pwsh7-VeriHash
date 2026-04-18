@@ -58,7 +58,12 @@
   3. Verify resolves every entry relative to the manifest file's directory (not CWD) and hard-rejects (does not warn) any entry whose resolved path escapes that directory.
   4. Manifest verify exit codes are exactly `0` (all pass), `1` (≥1 hash mismatch), `2` (≥1 missing/unreadable, no mismatches), `3` (parse error) — covered by a dedicated Pester test per code.
   5. A manifest produced by `New-VeriHashManifest` round-trips successfully through `sha256sum -c <manifest>` on Linux/WSL (Pester test marked `Skip` when WSL/`sha256sum` is unavailable).
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 03-01-PLAN.md — Module skeleton + private helpers (Resolve-ManifestTargetPath, Write-ManifestAtomically, Read-ManifestLine, Test-PathTraversal) + module surface test GREEN [Wave 1]
+- [ ] 03-02-PLAN.md — New-VeriHashManifest implementation + create tests (MANIFEST-01, -02, -03) [Wave 2]
+- [ ] 03-03-PLAN.md — Test-VeriHashManifest implementation + verify/exit code tests (MANIFEST-04, -05, -06) [Wave 2, parallel with 03-02]
+- [ ] 03-04-PLAN.md — WSL sha256sum round-trip test (MANIFEST-08) + Test-All.ps1 linter update + full suite gate [Wave 3]
 
 ### Phase 4: Integrations + Config Trim
 **Goal**: SendTo/KDE installers live in a lazily-loaded helper that installs both the regular and manifest entries; VirusTotal scaffolding and the PSFramework optional dependency are removed from production source and tests.
@@ -89,7 +94,7 @@
 |-------|----------------|--------|-----------|
 | 1. Core Module Foundation | 3/3 | ✅ Complete | 2026-04-18 |
 | 2. Hot-Path Performance + Multi-File Loop | 3/3 | ✅ Complete + UAT-verified | 2026-04-18 |
-| 3. Manifest Module | 0/0 | Unblocked, awaiting plan | - |
+| 3. Manifest Module | 0/4 | Planned (4 plans, 3 waves) | - |
 | 4. Integrations + Config Trim | 0/0 | Blocked on P3 | - |
 | 5. Thin CLI + Cleanup & Docs | 0/0 | Blocked on P2–P4 | - |
 
