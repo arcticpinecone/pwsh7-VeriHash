@@ -11,7 +11,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [ ] **PRIV-01**: Hash values truncated to 16 chars + `...` in all `Write-PSFMessage` data payloads (closes `Get-And-SaveHash:839`)
 - [ ] **PRIV-02**: All config-path log payloads in `VeriHash.Config.ps1` pass through `ConvertTo-SanitizedPath` (closes 11 unsanitized-path violations)
-- [ ] **PRIV-03**: `ConvertTo-SanitizedPath` relocated to `VeriHash.LogUtils.ps1` so it is available to all dot-sourced modules (dot-source order: LogUtils → Config → VeriHash)
+- [x] **PRIV-03**: `ConvertTo-SanitizedPath` relocated to `VeriHash.LogUtils.ps1` so it is available to all dot-sourced modules (dot-source order: LogUtils → Config → VeriHash)
 - [ ] **PRIV-04**: After fixes, `Verihash Logging Concepting.md` describes actual code behavior with zero caveats
 
 ### CI/CD Pipeline
@@ -24,7 +24,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Logging & Configuration
 
 - [ ] **LOGC-01**: PSFramework log rotation enabled via `LogRotatePath` + `LogRetentionTime` parameters (30-day retention)
-- [ ] **LOGC-02**: Single PSFramework bootstrap detection — eliminate redundant `Get-Module -ListAvailable -Name PSFramework` call between `VeriHash.Config.ps1` and `VeriHash.ps1`
+- [x] **LOGC-02**: Single PSFramework bootstrap detection — eliminate redundant `Get-Module -ListAvailable -Name PSFramework` call between `VeriHash.Config.ps1` and `VeriHash.ps1`
 - [ ] **LOGC-03**: `virustotal.enabled` defaults to `$false` in `Get-VeriHashDefaultConfig` until VirusTotal integration ships
 
 ## v2 Requirements
