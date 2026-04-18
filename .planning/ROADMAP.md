@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Core Module Foundation** — Real `VeriHash.Core` module replaces monolith helpers; golden tests pin v1-compatible behavior.
+- [x] **Phase 1: Core Module Foundation** — Real `VeriHash.Core` module replaces monolith helpers; golden tests pin v1-compatible behavior.
 - [ ] **Phase 2: Hot-Path Performance + Multi-File Loop** — PE-only signature, parallel hash/sig via `Start-ThreadJob`, streaming output, multi-file SendTo.
 - [ ] **Phase 3: Manifest Module** — `VeriHash.Manifest` with GNU `sha256sum`-compatible create/verify, atomic writes, traversal guard, machine-readable exit codes.
 - [ ] **Phase 4: Integrations + Config Trim** — Lazy-loaded SendTo/KDE installers (incl. manifest entry); VirusTotal and PSFramework excised from source + tests.
@@ -29,9 +29,9 @@
   4. Existing v1.x sidecars (both `HASH  filename` and `HASH *filename`) verify against the new Core module without modification; `Format-VeriHashReport` output passes a golden-text test pinned to v1 visual layout.
   5. `Write-VeriHashLog` appends exactly one line to `~/.verihash/verihash.log` only when `-Log` or `$env:VERIHASH_LOG=1` is set; platform detection (`Windows`/`Linux`/`macOS`) is exported by Core and has zero duplicate definitions in any other file.
 **Plans**: 3 plans
-- [ ] 01-01-PLAN.md — Module skeleton + manifest + .psm1 loader + 11 stub function files + Tests/Fixtures (icon move + 2 sidecars + 3 golden text fixtures) + 7 Pester test files (RED for per-function, GREEN for module sanity) [Wave 1]
-- [ ] 01-02-PLAN.md — Implement 6 public functions + 5 private helpers (CORE-02..CORE-07); turns 6 of 7 test files GREEN; lowercase contract + -LiteralPath discipline + no PSFramework [Wave 2]
-- [ ] 01-03-PLAN.md — Migrate Tests/VeriHash.Tests.ps1 to Import-Module; delete duplicate platform-detection from VeriHash.ps1, VeriHash.Config.ps1, VeriHash.LogUtils.ps1 (CORE-08); update Test-All.ps1; close Phase 1 with full Test-All -CI green [Wave 3]
+- [x] 01-01-PLAN.md — Module skeleton + manifest + .psm1 loader + 11 stub function files + Tests/Fixtures (icon move + 2 sidecars + 3 golden text fixtures) + 7 Pester test files (RED for per-function, GREEN for module sanity) [Wave 1]
+- [x] 01-02-PLAN.md — Implement 6 public functions + 5 private helpers (CORE-02..CORE-07); turns 6 of 7 test files GREEN; lowercase contract + -LiteralPath discipline + no PSFramework [Wave 2]
+- [x] 01-03-PLAN.md — Migrate Tests/VeriHash.Tests.ps1 to Import-Module; delete duplicate platform-detection from VeriHash.ps1, VeriHash.Config.ps1, VeriHash.LogUtils.ps1 (CORE-08); update Test-All.ps1; close Phase 1 with full Test-All -CI green [Wave 3]
 
 ### Phase 2: Hot-Path Performance + Multi-File Loop
 **Goal**: A single VeriHash invocation processes one or many files with hash and Authenticode signature running in parallel for PE files only, streaming output progressively, and reporting a tally for batches.

@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: Modular Rebuild
-status: phase_1_context_ready
-stopped_at: Phase 1 CONTEXT.md complete (7 gray areas resolved); ready for /gsd-plan-phase 1
-last_updated: "2026-04-18T13:00:49.602Z"
-last_activity: 2026-04-18 — Phase 1 discuss-phase complete: module layout, result type, platform helper, log format, clipboard cross-platform behavior, sidecar precedence, folder location all locked
+milestone_name: milestone
+status: executing
+last_updated: "2026-04-18T15:12:40.164Z"
+last_activity: 2026-04-18
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -21,32 +20,33 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-18 for v2.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.0 Modular Rebuild — Phase 1 (Core Module Foundation) ready to plan.
+**Current focus:** v2.0 Modular Rebuild — Phase 1 (Core Module Foundation) complete; Phase 2 (Hot-Path Performance + Multi-File Loop) ready to plan.
 
 ## Current Position
 
 **Milestone:** v2.0 Modular Rebuild
-**Phase:** 1 — Core Module Foundation (CONTEXT complete; awaiting `/gsd-plan-phase 1`)
+**Phase:** 1 — Core Module Foundation ✅ COMPLETE (3/3 plans, all 5 ROADMAP success criteria met)
 **Plan:** —
-**Status:** CONTEXT.md written — 7 gray areas resolved, ready to plan
-**Last activity:** 2026-04-18 — `/gsd-discuss-phase 1` complete; CONTEXT.md at `.planning/phases/01-core-module-foundation/01-CONTEXT.md`
+**Status:** Phase 1 done; awaiting `/gsd-plan-phase 2`
+**Last activity:** 2026-04-18
 
-Progress: [░░░░░░░░░░] 0% (0/5 phases complete)
+Progress: [██░░░░░░░░] 20% (1/5 phases complete)
 
 ### Phase Pipeline
 
 | # | Phase | Status | Reqs | Depends on |
 |---|-------|--------|------|------------|
-| 1 | Core Module Foundation | CONTEXT ready, awaiting plan | 8 | — |
-| 2 | Hot-Path Performance + Multi-File Loop | Blocked on P1 | 8 | Phase 1 |
-| 3 | Manifest Module | Blocked on P1 | 8 | Phase 1 |
-| 4 | Integrations + Config Trim | Blocked on P1, P3 | 6 | Phases 1, 3 |
-| 5 | Thin CLI + Cleanup & Docs | Blocked on P1–P4 | 8 | Phases 1–4 |
+| 1 | Core Module Foundation | ✅ COMPLETE (commits 9b5e54a..ccd2fff) | 8 | — |
+| 2 | Hot-Path Performance + Multi-File Loop | Unblocked, awaiting plan | 8 | Phase 1 |
+| 3 | Manifest Module | Unblocked, awaiting plan | 8 | Phase 1 |
+| 4 | Integrations + Config Trim | Blocked on P3 | 6 | Phases 1, 3 |
+| 5 | Thin CLI + Cleanup & Docs | Blocked on P2–P4 | 8 | Phases 1–4 |
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed (this milestone): 0
+
+- Total plans completed (this milestone): 3 (01-01, 01-02, 01-03)
 - Milestone duration: started 2026-04-18
 
 ## Accumulated Context
@@ -58,7 +58,7 @@ Decisions are logged in `PROJECT.md` Key Decisions table. v2.0-specific decision
 ### Pending Todos
 
 - [ ] Correct `REQUIREMENTS.md` header: states "Total: 32" but file defines 38 requirements. Fix on next edit.
-- [ ] Run `/gsd-plan-phase 1` to decompose Core Module Foundation into executable plans.
+- [ ] Run `/gsd-plan-phase 2` to decompose Hot-Path Performance + Multi-File Loop into executable plans.
 
 ### Blockers/Concerns
 
@@ -71,4 +71,4 @@ None.
 
 ## Session Continuity
 
-**Next action:** `/gsd-plan-phase 1` — decompose Phase 1 (Core Module Foundation) into plans with must-haves derived from its 5 success criteria.
+**Next action:** `/gsd-plan-phase 2` — decompose Phase 2 (Hot-Path Performance + Multi-File Loop) into plans with must-haves derived from its 5 success criteria. Phase 3 (Manifest Module) is also unblocked and could be planned in parallel.
