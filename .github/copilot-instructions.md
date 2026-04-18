@@ -63,12 +63,7 @@ Test-All.ps1          # Unified test runner
 ```
 
 ### Module loading
-`VeriHash.ps1` dot-sources its modules at startup:
-```powershell
-. "$PSScriptRoot\VeriHash.Config.ps1"
-. "$PSScriptRoot\VeriHash.LogUtils.ps1"
-```
-There is no module manifest (`.psd1`) — scripts are run directly, not installed as a module.
+**All Phase 1+ tests load Core via** `Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force` **in `BeforeAll`.** The v1 dot-source-with-dummy-path hack (`. "$PSScriptRoot\..\VeriHash.ps1" "dummy"`) is retired. Legacy files (`VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`) still exist in Phase 1 — they now `Import-Module VeriHash.Core` themselves so the canonical helpers (`Get-VeriHashPlatform`, etc.) are available everywhere — but Phase 5 (CLEAN-XX) will thin them further.
 
 ### Configuration system (`VeriHash.Config.ps1`)
 Priority: **env vars > config file > defaults**
@@ -87,38 +82,13 @@ Schema:
 ```
 Log path is **not** stored in config — it is always derived from platform at runtime.
 
-### Logging (`PSFramework`)
-Logging is optional; PSFramework may not be installed. Every call to `Write-PSFMessage` must be guarded:
-```powershell
-if ($script:PSFrameworkAvailable) {
-    Write-PSFMessage -Level Verbose -Message "..." -Tag 'Hash', 'Result' -Data @{ ... }
-}
-```
+### Logging
+See `VeriHash.Core/Public/Write-VeriHashLog.ps1` (plain-text, gated by `-Log` or `$env:VERIHASH_LOG=1`, locked timestamp format `yyyy-MM-ddTHH:mm:ssZ`). **PSFramework was removed in Phase 1** (from `VeriHash.Core/`); legacy files (`VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`) continue to use `Write-PSFMessage` with the `if ($script:PSFrameworkAvailable) { ... }` guard until Phase 4 retires those call-sites.
 
-Log files: JSONL (JSON Lines) format, daily rotation.
-- Windows: `%APPDATA%\VeriHash\logs\verihash-YYYY-MM-DD.jsonl`
-- Unix: `~/.verihash/logs/verihash-YYYY-MM-DD.jsonl`
-
-When `VERIHASH_TEST_MODE=1`, logs go to `logs/test/` to avoid polluting production logs.
-
-**Standard tags** (use these for consistency):
-
-| Tag | Use For |
-|-----|---------|
-| `Hash` | Hash computation |
-| `Verify` | Verification operations |
-| `Compute` | Computing a hash |
-| `Result` | Operation result |
-| `Entry` | Function entry |
-| `Success` | Successful operation |
-| `Error` | Error condition |
-| `Install` | Installation operations |
-| `Windows` / `Linux` / `KDE` | Platform-specific |
-| `Clipboard` | Clipboard operations |
-| `Config` | Configuration loading |
+Tests redirect logging by setting `$env:VERIHASH_LOG_PATH = (Join-Path $TestDrive 'verihash.log')` in `BeforeAll`. The legacy `VERIHASH_TEST_MODE=1` switch was retired in Phase 1.
 
 ### Privacy / GDPR
-Paths logged via PSFramework must be sanitized first:
+Paths logged in legacy files must be sanitized first:
 ```powershell
 $filePath | ConvertTo-SanitizedPath   # replaces $env:USERPROFILE with %USERPROFILE%, $HOME with ~
 ```
@@ -149,7 +119,8 @@ function Get-Something {
 }
 ```
 
-### Function entry/exit logging pattern
+### Function entry/exit logging pattern (legacy files only)
+Legacy files (`VeriHash.ps1`, `VeriHash.Config.ps1`, `VeriHash.LogUtils.ps1`) still use PSFramework with the availability guard:
 ```powershell
 function Invoke-SomeOperation {
     param($FilePath)
@@ -160,9 +131,6 @@ function Invoke-SomeOperation {
     }
     try {
         # ... logic ...
-        if ($script:PSFrameworkAvailable) {
-            Write-PSFMessage -Level Verbose -Message "Operation completed" -Tag 'Success'
-        }
     } catch {
         if ($script:PSFrameworkAvailable) {
             Write-PSFMessage -Level Warning -Message "Operation failed" -Tag 'Error' -ErrorRecord $_
@@ -171,13 +139,16 @@ function Invoke-SomeOperation {
     }
 }
 ```
+**New code in `VeriHash.Core/` must NOT use PSFramework.** Use `Write-VeriHashLog` (plain-text, gated) instead. PSFramework will be removed from the legacy files in Phase 4.
 
 ### Platform detection
 ```powershell
-$script:RunningOnWindows = $PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform
-$script:RunningOnLinux   = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Linux'
-$script:RunningOnMacOS   = $PSVersionTable.Platform -eq 'Unix' -and $PSVersionTable.OS -match 'Darwin'
+Import-Module .\VeriHash.Core\VeriHash.Core.psd1 -Force
+if ((Get-VeriHashPlatform) -eq 'Windows') {
+    # Windows-only branch
+}
 ```
+Platform detection lives once in `VeriHash.Core/Public/Get-VeriHashPlatform.ps1` (CORE-08). Inline `$RunningOn*` redefinitions were eliminated in Phase 1.
 
 ### Desktop environment / context menu
 Linux desktop environments are registered in `$script:DesktopEnvironments` (a hashtable). Each entry names a handler function (`Install-KDEContextMenu`, etc.). To add GNOME or XFCE support, add an entry to this hashtable and implement the named handler — no other dispatch code changes needed.
@@ -186,13 +157,20 @@ Linux desktop environments are registered in `$script:DesktopEnvironments` (a ha
 **Never modify tests to make them pass. Modify the code.** This is a hard rule documented in `AGENTS.md` and `.agents/context/testing.md`.
 
 ### Non-interactive test invocations
-When calling `VeriHash.ps1` inside Pester tests, always pass `-NoPause -Force` to suppress interactive prompts:
+Phase 1+ tests load Core via `Import-Module`, not by executing the v1 monolith:
 ```powershell
-. "$PSScriptRoot\..\VeriHash.ps1" -FilePath "dummy" -NoPause -Force -ErrorAction SilentlyContinue 2>$null
+Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force
 ```
+The legacy dot-source-with-dummy-path hack (`. "$PSScriptRoot\..\VeriHash.ps1" -FilePath "dummy" -NoPause -Force`) is retired.
 
 ### Test environment isolation
-All Pester `BeforeAll` blocks set `$env:VERIHASH_TEST_MODE = '1'` and clean it up in `AfterAll`. Do not skip this — it prevents test runs from polluting production logs.
+All Pester `BeforeAll` blocks redirect logging by setting `$env:VERIHASH_LOG_PATH = (Join-Path $TestDrive 'verihash.log')` and clean it up in `AfterAll`. The legacy `VERIHASH_TEST_MODE=1` switch was retired in Phase 1.
+
+---
+
+## Out of Scope for Phase 1
+
+Full README and CHANGELOG rewrite for v2 conventions is deferred to **Phase 5 (CLEAN-XX)**. This file (`.github/copilot-instructions.md`) is the minimum surface needed for AI-assisted contributions to use v2 idioms; the user-facing docs catch up in Phase 5.
 
 ---
 
