@@ -11,5 +11,9 @@ function Get-VeriHashPlatform {
     [CmdletBinding()]
     [OutputType([string])]
     param()
-    throw 'NotImplemented: Get-VeriHashPlatform -- implemented in plan 01-02'
+    if ($IsWindows) { return 'Windows' }
+    if ($IsLinux)   { return 'Linux'   }
+    if ($IsMacOS)   { return 'macOS'   }
+    if ($null -eq $PSVersionTable.Platform -or $PSVersionTable.Platform -eq 'Win32NT') { return 'Windows' }
+    throw "Unable to detect platform: PSVersionTable.Platform=$($PSVersionTable.Platform), OS=$($PSVersionTable.OS)"
 }

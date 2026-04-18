@@ -22,6 +22,17 @@ function Get-VeriHashResult {
         [ValidateSet('MD5', 'SHA256', 'SHA512')]
         [string]$Algorithm = 'SHA256'
     )
-    $null = $PSBoundParameters
-    throw 'NotImplemented: Get-VeriHashResult -- implemented in plan 01-02'
+    $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
+    $info = Get-Item -LiteralPath $resolved
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $hash = (Get-FileHash -LiteralPath $resolved -Algorithm $Algorithm).Hash.ToLowerInvariant()
+    $sw.Stop()
+    return [pscustomobject]@{
+        PSTypeName = 'VeriHash.Result'
+        FilePath   = $resolved
+        Size       = [long]$info.Length
+        Algorithm  = $Algorithm
+        Hash       = $hash
+        ElapsedMs  = [int]$sw.ElapsedMilliseconds
+    }
 }
