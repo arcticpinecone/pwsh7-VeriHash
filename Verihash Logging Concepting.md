@@ -10,6 +10,9 @@ VeriHash logging follows **data minimization principles** (GDPR Article 5(1)(c),
 
 Path sanitization is the primary privacy protection—file paths often contain usernames and reveal directory structures.
 
+- **Hash values are truncated**: Only the first 16 characters of hash values appear in logs (e.g., `D7A8FBB307D78094...`), preventing file fingerprinting via hash correlation
+- **Config paths are sanitized**: Configuration file paths (`ConfigDirectory`, `ConfigFile`) are sanitized using the same `ConvertTo-SanitizedPath` function as hash operation paths
+
 ## Log Location
 
 Logs are written to:
@@ -99,8 +102,8 @@ $logs | ForEach-Object {
 {
   "Timestamp": "2025-01-17T10:30:45.123Z",
   "Level": "Verbose",
-  "Message": "Hash computed: ABC123...",
-  "FunctionName": "Invoke-ComputeHash",
+  "Message": "Hash computed: D7A8FBB307D78094...",
+  "FunctionName": "Get-And-SaveHash",
   "ModuleName": "VeriHash",
   "Tags": ["Hash", "Result"],
   "ComputerName": "DESKTOP-ABC123",
@@ -108,6 +111,7 @@ $logs | ForEach-Object {
   "Data": {
     "Path": "%USERPROFILE%\\Downloads\\file.exe",
     "Algorithm": "SHA256",
+    "Hash": "D7A8FBB307D78094...",
     "DurationMs": 42.5,
     "ThroughputMBs": 190.2
   }
