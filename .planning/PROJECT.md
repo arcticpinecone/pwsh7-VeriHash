@@ -6,13 +6,11 @@ VeriHash is a cross-platform PowerShell 7+ tool that computes and verifies file 
 
 ## Core Value
 
-Close the audit gaps so the privacy-first logging guide is the **honest contract**, and put a CI/CD safety net in place — before any new feature work lands on the foundation.
+Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
 
 ## Requirements
 
 ### Validated
-
-<!-- Capabilities already shipped in v1.3.0 (inferred from codebase map). Locked. -->
 
 - ✓ Compute MD5 / SHA256 / SHA512 hashes for any file via `Get-FileHash` — v1.3.0
 - ✓ Auto-detect hash from clipboard (algorithm inferred from hex length) — v1.3.0
@@ -29,48 +27,42 @@ Close the audit gaps so the privacy-first logging guide is the **honest contract
 - ✓ Pester 5.x test suite (133 passing, 7 platform-skipped) and PSScriptAnalyzer linting on `VeriHash.ps1` — v1.3.0
 - ✓ Performance profiler (`Profile-VeriHashTiming.ps1`) with throughput measurement — v1.3.0
 - ✓ Standalone `QuickHash.ps1` for raw file/string hashing without VeriHash overhead — v1.3.0
+- ✓ Hash values truncated to 16 chars in all log output (PRIV-01, PRIV-02) — v1.0 milestone
+- ✓ Config path sanitization via `ConvertTo-SanitizedPath` in all modules — v1.0 milestone
+- ✓ `ConvertTo-SanitizedPath` relocated to `VeriHash.LogUtils.ps1` for cross-module use — v1.0 milestone
+- ✓ Single PSFramework bootstrap detection (LOGC-02) — v1.0 milestone
+- ✓ Logging guide updated to match actual behavior (PRIV-04) — v1.0 milestone
+- ✓ GitHub Actions CI: Pester + PSScriptAnalyzer on every push/PR (CICD-01–04) — v1.0 milestone
+- ✓ PSScriptAnalyzer lints all 3 `.ps1` files (CICD-03) — v1.0 milestone
+- ✓ PSFramework log rotation with 30-day retention (LOGC-01) — v1.0 milestone
+- ✓ VirusTotal defaults to disabled until integration ships (LOGC-03) — v1.0 milestone
 
 ### Active
 
-<!-- This milestone: foundation hardening before Phase 3 (VirusTotal). -->
+<!-- Next milestone requirements will be defined via /gsd-new-milestone -->
 
-- [ ] Truncate hash values to 16 chars in all `Write-PSFMessage` calls (close `Get-And-SaveHash:839` privacy violation)
-- [ ] Sanitize all path arguments in `VeriHash.Config.ps1` log payloads (close 10+ unsanitized-path violations)
-- [ ] Run Pester + PSScriptAnalyzer automatically on every push and PR via GitHub Actions
-- [ ] Lint `VeriHash.Config.ps1` and `VeriHash.LogUtils.ps1` with PSScriptAnalyzer (currently only `VeriHash.ps1` is linted)
-- [ ] Enable log-file rotation (`LogRotatePath` + `LogRetentionTime` on the PSFramework provider) so logs don't grow unbounded
-- [ ] Default `virustotal.enabled` to `false` in `Get-VeriHashDefaultConfig` until Phase 3 ships (avoid misleading users)
-- [ ] Eliminate the redundant `Get-Module -ListAvailable -Name PSFramework` call (single bootstrap detection)
-- [ ] After fixes, the `Verihash Logging Concepting.md` guide describes actual behavior with no caveats
+(None — define with `/gsd-new-milestone`)
 
 ### Out of Scope
 
 - **Monolith split of `VeriHash.ps1`** — High blast radius (every test depends on the dot-source hack). Deferred to its own milestone where it can get focused planning and a test migration.
-- **VirusTotal integration (Phase 3)** — Already on the roadmap as the next feature milestone; do not start until the foundation is honest.
+- **VirusTotal integration** — Next feature milestone after foundation is honest.
 - **Multifile / batch hashing** — Tracked in `Verihash Multifile Concepting.md`; valuable but a feature, not a foundation fix.
-- **`QuickHash.ps1` deprecation or rewrite** — Diverged tool with its own tests; decide its fate in a dedicated cleanup milestone, not while hardening.
-- **Test coverage for legacy `.sha2` / `.sha2_256` extensions, `Select-File` fallback, sidecar `'u'`/`'r'` interactive branches** — Real gaps but secondary to privacy + CI; address opportunistically or in a later test-coverage milestone.
+- **`QuickHash.ps1` deprecation or rewrite** — Diverged tool with its own tests; decide its fate in a dedicated cleanup milestone.
 - **macOS context-menu integration** — Not implemented today and not driven by user demand.
+- **Test coverage for legacy extensions, Select-File fallback, sidecar interactive branches** — Real gaps; address in a test-coverage milestone.
 
 ## Context
 
-**Brownfield, mid-life project.** VeriHash is at v1.3.0, has a working test suite (133 passing), supports Windows + Linux (KDE), and has well-established conventions documented in `.github/copilot-instructions.md`. The `.planning/codebase/` map (committed 2026-04-17) is the authoritative inventory of current behaviour.
+**Shipped v1.0 milestone** (2026-04-18). VeriHash is at v1.3.0 codebase with v1.0 foundation hardening complete. Privacy-first logging is the honest contract — code matches the guide. CI/CD runs on every push (Pester cross-platform + PSScriptAnalyzer on all 3 files). Log rotation enabled, VT default flipped.
 
-**Two documents are in tension** and motivated this milestone:
+**Test suite:** 133 passing, 8 skipped (4 PSFramework-gated, 2 platform-gated, 2 user-file dependent).
+**Tech stack:** PowerShell 7+, PSFramework (optional), Pester 5.x, PSScriptAnalyzer, GitHub Actions.
+**Active branch:** `dev`. Last release tag: v1.3.0 (2025-12-27). Milestone tag: v1.0.
 
-- `Verihash Logging Concepting.md` (root) — User-facing guide describing a privacy-first logging design.
-- `.planning/codebase/CONCERNS.md` — Audit revealing real gaps between that design and the code (full hashes logged in `Get-And-SaveHash:839`; ~10 unsanitized config-path log calls in `VeriHash.Config.ps1`).
-
-The decision: the **guide is the contract**, and the code is brought into compliance.
-
-**Key existing constraints to preserve:**
-
-- PowerShell 7+ only (`#Requires`); no Windows PowerShell 5.x compatibility.
-- PSFramework remains optional — every `Write-PSFMessage` call must stay guarded by `$script:PSFrameworkAvailable`.
-- TDD rule (project policy): never modify a test to make it pass; modify the code.
-- Test isolation: `$env:VERIHASH_TEST_MODE = '1'` in every Pester `BeforeAll`.
-
-**Active branch:** `dev`. Last release: v1.3.0 (2025-12-27).
+**Known tech debt:**
+- PSFramework tests skip silently when module absent (Backlog 999.1)
+- Monolith `VeriHash.ps1` (~66KB) — deferred to dedicated milestone
 
 ## Constraints
 
@@ -85,11 +77,15 @@ The decision: the **guide is the contract**, and the code is brought into compli
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Logging guide is the contract; fix code to match | Aspirational doc + audit reveals the gap; code drift is the bug | — Pending |
-| Defer monolith split to its own milestone | Highest blast-radius change in CONCERNS; deserves dedicated planning and test migration | — Pending |
-| Bundle small wins (log rotation, VT default flip, PSFramework dedup) into this milestone | Thematically aligned ("honest baseline"), small surface area, removes audit noise cheaply | — Pending |
-| CI/CD before new features | Phase 3 (VirusTotal) is risky to ship without an automated regression net | — Pending |
-| Expand PSScriptAnalyzer to all three `.ps1` modules | Currently only `VeriHash.ps1` is linted; Config and LogUtils have no automated style enforcement | — Pending |
+| Logging guide is the contract; fix code to match | Aspirational doc + audit reveals the gap; code drift is the bug | ✅ Good — all privacy gaps closed |
+| Defer monolith split to its own milestone | Highest blast-radius change in CONCERNS; deserves dedicated planning and test migration | ✅ Good — kept v1.0 scope focused |
+| Bundle small wins (log rotation, VT default flip, PSFramework dedup) into this milestone | Thematically aligned ("honest baseline"), small surface area, removes audit noise cheaply | ✅ Good — closed under CI protection |
+| CI/CD before new features | Phase 3 (VirusTotal) is risky to ship without an automated regression net | ✅ Good — every push auto-validated |
+| Expand PSScriptAnalyzer to all three `.ps1` modules | Currently only `VeriHash.ps1` is linted; Config and LogUtils have no automated style enforcement | ✅ Good — full lint coverage |
+| Single workflow file with parallel test+lint jobs | Simplest structure for 2 concerns; no need for separate workflow files | ✅ Good |
+| LOGC-02 grouped with Phase 1 | Shares dot-source order changes with PRIV-03 | ✅ Good — avoided rework |
+| fail-fast: false on CI test matrix | Both OS jobs complete even if one fails — better diagnostics | ✅ Good |
+| Pester pinned to 5.x | Prevents silent Pester 6 breakage | ✅ Good — future-proofed |
 
 ## Evolution
 
@@ -109,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after initialization*
+*Last updated: 2026-04-18 after v1.0 milestone*
