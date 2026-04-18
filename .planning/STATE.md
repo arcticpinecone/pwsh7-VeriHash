@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-18T19:05:00.000Z"
+last_updated: "2026-04-18T22:50:00.000Z"
 last_activity: 2026-04-18
 progress:
   total_phases: 5
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-18 for v2.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.0 Modular Rebuild — Phase 2 (Hot-Path Performance + Multi-File Loop) complete; Phase 3 (Manifest Module) ready to plan.
+**Current focus:** v2.0 Modular Rebuild — Phase 2 (Hot-Path Performance + Multi-File Loop) complete and UAT-verified; Phase 3 (Manifest Module) ready to plan.
 
 ## Current Position
 
 **Milestone:** v2.0 Modular Rebuild
-**Phase:** 2 — Hot-Path Performance + Multi-File Loop ✅ COMPLETE (3/3 plans, all 8 requirements PERF-01..05 + MULTI-01..03 met)
+**Phase:** 2 — Hot-Path Performance + Multi-File Loop ✅ COMPLETE + UAT-VERIFIED (3/3 plans, all 8 requirements PERF-01..05 + MULTI-01..03 met; UAT 10/10 pass, commit 0ed3609)
 **Plan:** —
-**Status:** Awaiting `/gsd-verify-work 2` then `/gsd-plan-phase 3`
+**Status:** Awaiting `/gsd-plan-phase 3`
 **Last activity:** 2026-04-18
 
 Progress: [████░░░░░░] 40% (2/5 phases complete)
@@ -58,8 +58,8 @@ Decisions are logged in `PROJECT.md` Key Decisions table. v2.0-specific decision
 ### Pending Todos
 
 - [ ] Correct `REQUIREMENTS.md` header: states "Total: 32" but file defines 38 requirements. Fix on next edit.
-- [ ] Run `/gsd-verify-work 2` to verify Phase 2 success criteria.
 - [ ] Run `/gsd-plan-phase 3` to decompose Manifest Module into executable plans.
+- [ ] Backlog 999.2: add `VeriHash.HotPath.format.ps1xml` so `Invoke-VeriHashBatch` interactive output isn't followed by a default-format object dump (cosmetic; surfaced in 02-UAT.md test 7).
 
 ### Blockers/Concerns
 
@@ -72,4 +72,4 @@ None.
 
 ## Session Continuity
 
-**Next action:** `/gsd-verify-work 2` — verify Phase 2 (Hot-Path Performance + Multi-File Loop) achieves all 5 ROADMAP success criteria and 8 requirements (PERF-01..05, MULTI-01..03). Then `/gsd-plan-phase 3` to start Phase 3 (Manifest Module).
+**Next action:** `/gsd-plan-phase 3` — start Phase 3 (Manifest Module): decompose into executable plans for `New-VeriHashManifest` / `Test-VeriHashManifest` (MANIFEST-01..08). Phase 2 is UAT-verified (commit 0ed3609); 1 cosmetic gap deferred to backlog `999.2`.

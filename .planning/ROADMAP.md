@@ -11,7 +11,7 @@
 ## Phases
 
 - [x] **Phase 1: Core Module Foundation** — Real `VeriHash.Core` module replaces monolith helpers; golden tests pin v1-compatible behavior.
-- [ ] **Phase 2: Hot-Path Performance + Multi-File Loop** — PE-only signature, parallel hash/sig via `Start-ThreadJob`, streaming output, multi-file SendTo.
+- [x] **Phase 2: Hot-Path Performance + Multi-File Loop** — PE-only signature, parallel hash/sig via `Start-ThreadJob`, streaming output, multi-file SendTo. (UAT 10/10 pass — commit 0ed3609; 1 cosmetic gap → backlog 999.2.)
 - [ ] **Phase 3: Manifest Module** — `VeriHash.Manifest` with GNU `sha256sum`-compatible create/verify, atomic writes, traversal guard, machine-readable exit codes.
 - [ ] **Phase 4: Integrations + Config Trim** — Lazy-loaded SendTo/KDE installers (incl. manifest entry); VirusTotal and PSFramework excised from source + tests.
 - [ ] **Phase 5: Thin CLI + Cleanup & Docs** — ≤200-line dispatcher, end-to-end CLI tests, retired files deleted, README/CHANGELOG/concepting docs reorganized for ship.
@@ -44,9 +44,9 @@
   4. Invoking the CLI with N file paths in a single call renders one full result block per file followed by a final tally row of the form `X/N matched, Y mismatch, Z missing`.
   5. Each per-file result in loop mode still performs clipboard compare, sidecar compare, and parallel PE signature — i.e., loop mode does not regress single-file behavior.
 **Plans**: 3 plans
-- [ ] 02-01-module-skeleton-pe-detect-signature-PLAN.md — VeriHash.HotPath module skeleton + Test-IsPEFile + Get-VeriHashSignature wrapper + WinVerifyTrust P/Invoke shim with locked flags (PERF-01, PERF-02) [Wave 1]
-- [ ] 02-02-hotpath-orchestrator-PLAN.md — Invoke-VeriHashHotPath: two ThreadJobs (hash + sig), Wait-Job -Any polling, Stopwatch wall-clock, hybrid streaming (PERF-03, PERF-04, PERF-05) [Wave 2]
-- [ ] 02-03-batch-loop-tally-profiler-PLAN.md — Invoke-VeriHashBatch sequential loop + byte-locked tally + continue-and-tally; Profile-VeriHashTiming.ps1 -Strict gate (MULTI-01, MULTI-02, MULTI-03) [Wave 3]
+- [x] 02-01-module-skeleton-pe-detect-signature-PLAN.md — VeriHash.HotPath module skeleton + Test-IsPEFile + Get-VeriHashSignature wrapper + WinVerifyTrust P/Invoke shim with locked flags (PERF-01, PERF-02) [Wave 1]
+- [x] 02-02-hotpath-orchestrator-PLAN.md — Invoke-VeriHashHotPath: two ThreadJobs (hash + sig), Wait-Job -Any polling, Stopwatch wall-clock, hybrid streaming (PERF-03, PERF-04, PERF-05) [Wave 2]
+- [x] 02-03-batch-loop-tally-profiler-PLAN.md — Invoke-VeriHashBatch sequential loop + byte-locked tally + continue-and-tally; Profile-VeriHashTiming.ps1 -Strict gate (MULTI-01, MULTI-02, MULTI-03) [Wave 3]
 
 ### Phase 3: Manifest Module
 **Goal**: A `VeriHash.Manifest` module creates and verifies GNU `sha256sum`-compatible manifests with atomic writes, path-traversal-safe verification, and machine-readable exit codes — usable from CLI today and a second SendTo entry tomorrow.
@@ -87,11 +87,11 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Module Foundation | 0/3 | Planned | - |
-| 2. Hot-Path Performance + Multi-File Loop | 0/0 | Not started | - |
-| 3. Manifest Module | 0/0 | Not started | - |
-| 4. Integrations + Config Trim | 0/0 | Not started | - |
-| 5. Thin CLI + Cleanup & Docs | 0/0 | Not started | - |
+| 1. Core Module Foundation | 3/3 | ✅ Complete | 2026-04-18 |
+| 2. Hot-Path Performance + Multi-File Loop | 3/3 | ✅ Complete + UAT-verified | 2026-04-18 |
+| 3. Manifest Module | 0/0 | Unblocked, awaiting plan | - |
+| 4. Integrations + Config Trim | 0/0 | Blocked on P3 | - |
+| 5. Thin CLI + Cleanup & Docs | 0/0 | Blocked on P2–P4 | - |
 
 ## Coverage Verification
 
