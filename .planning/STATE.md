@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
-status: Phase 3 context gathered, awaiting `/gsd-plan-phase 3`
-last_updated: "2026-04-18T20:39:41.471Z"
+status: Ready to execute Phase 3 (4 plans, 3 waves)
+last_updated: "2026-04-18T20:41:49.987Z"
 last_activity: 2026-04-18
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 6
+  total_plans: 10
   completed_plans: 6
-  percent: 100
+  percent: 60
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-18 for v2.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.0 Modular Rebuild — Phase 2 (Hot-Path Performance + Multi-File Loop) complete and UAT-verified; Phase 3 (Manifest Module) ready to plan.
+**Current focus:** v2.0 Modular Rebuild — Phase 3 (Manifest Module) planned with 4 plans in 3 waves; ready to execute.
 
 ## Current Position
 
 **Milestone:** v2.0 Modular Rebuild
-**Phase:** 2 — Hot-Path Performance + Multi-File Loop ✅ COMPLETE + UAT-VERIFIED (3/3 plans, all 8 requirements PERF-01..05 + MULTI-01..03 met; UAT 10/10 pass, commit 0ed3609)
+**Phase:** 3 — Manifest Module (4 plans in 3 waves, ready to execute)
 **Plan:** —
-**Status:** Phase 3 context gathered (03-CONTEXT.md, commit 47910cc), awaiting `/gsd-plan-phase 3`
+**Status:** Ready to execute Phase 3
 **Last activity:** 2026-04-18
 
 Progress: [████░░░░░░] 40% (2/5 phases complete)
@@ -59,7 +59,7 @@ Decisions are logged in `PROJECT.md` Key Decisions table. v2.0-specific decision
 
 - [ ] Correct `REQUIREMENTS.md` header: states "Total: 32" but file defines 38 requirements. Fix on next edit.
 - [x] Run `/gsd-discuss-phase 3` to gather Phase 3 context (03-CONTEXT.md, 18 decisions, commit 47910cc).
-- [ ] Run `/gsd-plan-phase 3` to decompose Manifest Module into executable plans.
+- [x] Run `/gsd-plan-phase 3` to decompose Manifest Module into executable plans (4 plans, 3 waves).
 - [ ] Backlog 999.2: add `VeriHash.HotPath.format.ps1xml` so `Invoke-VeriHashBatch` interactive output isn't followed by a default-format object dump (cosmetic; surfaced in 02-UAT.md test 7).
 
 ### Blockers/Concerns
@@ -73,4 +73,4 @@ None.
 
 ## Session Continuity
 
-**Next action:** `/gsd-plan-phase 3` — decompose Phase 3 (Manifest Module) into executable plans for `New-VeriHashManifest` / `Test-VeriHashManifest` (MANIFEST-01..08). Context gathered in 03-CONTEXT.md (18 decisions, commit 47910cc). Phase 2 is UAT-verified (commit 0ed3609); 1 cosmetic gap deferred to backlog `999.2`.
+**Next action:** `/gsd-execute-phase 3` — execute the 4 plans for Phase 3 (Manifest Module). Wave 1: module skeleton + helpers. Wave 2: New-VeriHashManifest + Test-VeriHashManifest (parallel). Wave 3: WSL round-trip test + Test-All.ps1 integration.
