@@ -97,7 +97,7 @@ Describe 'Get-VeriHashDefaultConfig' {
 
             # Assert
             $result.virustotal.apiKey | Should -Be ''
-            $result.virustotal.enabled | Should -Be $true
+            $result.virustotal.enabled | Should -Be $false
             $result.virustotal.preferApi | Should -Be $true
             $result.virustotal.autoOpen | Should -Be $false
         }
@@ -124,7 +124,7 @@ Describe 'Get-VeriHashConfig' {
 
             # Assert
             $result.logging.level | Should -Be 'INFO'
-            $result.virustotal.enabled | Should -Be $true
+            $result.virustotal.enabled | Should -Be $false
         }
     }
 
@@ -177,7 +177,7 @@ Describe 'Get-VeriHashConfig' {
             $result.logging.level | Should -Be 'WARNING'
             $result.logging.file | Should -Be $true  # Default
             $result.logging.console | Should -Be $true  # Default
-            $result.virustotal.enabled | Should -Be $true  # Default
+            $result.virustotal.enabled | Should -Be $false  # Default
         }
     }
 

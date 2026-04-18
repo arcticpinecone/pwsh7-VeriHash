@@ -83,7 +83,7 @@ function Get-VeriHashDefaultConfig {
         }
         virustotal = @{
             apiKey    = ''
-            enabled   = $true
+            enabled   = $false   # VirusTotal integration not yet shipped; enable when implemented
             preferApi = $true
             autoOpen  = $false
         }
