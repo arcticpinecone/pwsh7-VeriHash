@@ -5,7 +5,7 @@ milestone_name: Privacy + Foundation
 status: shipped
 stopped_at: Milestone v1.0 archived
 last_updated: "2026-04-18T13:30:00.000Z"
-last_activity: 2026-04-18 — Milestone v1.0 archived and tagged
+last_activity: 2026-04-18 — Completed quick task 260418: Rename log files from .json to .jsonl
 progress:
   total_phases: 3
   completed_phases: 3
@@ -59,6 +59,12 @@ None.
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260418 | Rename log files from .json to .jsonl | 2026-04-18 | d5d348e | [260418-rename-log-jsonl](./quick/260418-rename-log-jsonl/) |
 
 ## Deferred Items
 
