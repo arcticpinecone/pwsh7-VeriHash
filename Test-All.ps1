@@ -124,6 +124,18 @@ if (-not $SkipAnalyzer) {
         $scriptPaths += (Get-ChildItem -Path $coreRoot -Recurse -Filter '*.ps1' -File).FullName
     }
 
+    # VeriHash.HotPath public + private function files
+    $hotPathRoot = Join-Path $scriptRoot "VeriHash.HotPath"
+    if (Test-Path $hotPathRoot) {
+        $scriptPaths += (Get-ChildItem -Path $hotPathRoot -Recurse -Filter '*.ps1' -File).FullName
+    }
+
+    # VeriHash.Manifest public + private function files
+    $manifestRoot = Join-Path $scriptRoot "VeriHash.Manifest"
+    if (Test-Path $manifestRoot) {
+        $scriptPaths += (Get-ChildItem -Path $manifestRoot -Recurse -Filter '*.ps1' -File).FullName
+    }
+
     $analysisResults = @()
     foreach ($path in $scriptPaths) {
         if (Test-Path $settingsPath) {
