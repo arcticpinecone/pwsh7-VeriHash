@@ -65,9 +65,9 @@ Describe 'Install-KDEContextMenu (INTEG-03)' {
 }
 
 Describe 'Lazy loading (INTEG-01 - integration isolation)' {
-    It 'VeriHash.ps1 contains lazy dot-source inside SendTo block' {
+    It 'VeriHash.ps1 contains lazy dot-source inside InstallSendTo/InstallKDE block' {
         $mainScript = Get-Content "$PSScriptRoot/../VeriHash.ps1" -Raw
-        $mainScript | Should -Match 'if \(\$SendTo\)[\s\S]*?VeriHash\.Integrations\.ps1'
+        $mainScript | Should -Match 'if \(\$InstallSendTo[\s\S]*?VeriHash\.Integrations\.ps1'
     }
 
     It 'Install functions are NOT defined directly in VeriHash.ps1' {
