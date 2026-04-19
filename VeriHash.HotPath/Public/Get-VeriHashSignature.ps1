@@ -21,11 +21,11 @@ function Get-VeriHashSignature {
         [Parameter(Mandatory)] [string] $Path,
         [switch] $IsPE
     )
-    if ((Get-VeriHashPlatform) -ne 'Windows') {
-        return [pscustomobject]@{ Status = 'skipped'; Reason = 'not supported on this platform' }
-    }
     if (-not $IsPE) {
         return [pscustomobject]@{ Status = 'skipped'; Reason = 'not a PE file' }
+    }
+    if ((Get-VeriHashPlatform) -ne 'Windows') {
+        return [pscustomobject]@{ Status = 'skipped'; Reason = 'not supported on this platform' }
     }
     $hresult = Invoke-WinVerifyTrust -Path $Path
     return ConvertFrom-WinTrustHResult -HResult $hresult

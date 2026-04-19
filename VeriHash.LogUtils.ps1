@@ -228,8 +228,16 @@ function ConvertFrom-VeriHashLog {
                 if ($Tag -and $entry.Tags -notcontains $Tag) { continue }
 
                 # Flatten Data property for CSV compatibility
+                # Parse timestamp to DateTime for consistent output regardless of culture
+                $parsedTimestamp = if ($entry.Timestamp -is [datetime]) {
+                    $entry.Timestamp
+                } elseif ([datetime]::TryParse($entry.Timestamp, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$null)) {
+                    [datetime]::Parse($entry.Timestamp, [System.Globalization.CultureInfo]::InvariantCulture)
+                } else {
+                    $entry.Timestamp
+                }
                 $flatEntry = [PSCustomObject]@{
-                    Timestamp    = $entry.Timestamp
+                    Timestamp    = $parsedTimestamp
                     Level        = $entry.Level
                     Message      = $entry.Message
                     FunctionName = $entry.FunctionName

@@ -23,6 +23,10 @@ function Test-PathTraversal {
         [Parameter(Mandatory)]
         [string]$BaseDirectory
     )
+    # Reject absolute paths on any platform (covers /unix and C:\windows styles)
+    if ([System.IO.Path]::IsPathRooted($EntryPath)) { return $false }
+    if ($EntryPath -match '^[A-Za-z]:') { return $false }
+
     $resolved = [System.IO.Path]::GetFullPath(
         [System.IO.Path]::Combine($BaseDirectory, $EntryPath)
     )

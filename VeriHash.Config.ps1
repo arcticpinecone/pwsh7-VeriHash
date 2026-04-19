@@ -165,7 +165,7 @@ function Get-VeriHashConfig {
             }
         }
         catch {
-            # Config file exists but is malformed - use defaults
+            Write-Verbose "Config file is malformed, using defaults: $_"
         }
     }
 

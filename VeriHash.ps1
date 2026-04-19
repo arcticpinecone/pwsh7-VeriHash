@@ -53,6 +53,8 @@
 
 #>
 # Requires PowerShell 7+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'LogLevel',
+    Justification = 'Forward-declared for Phase 5 logging integration')]
 param (
     [Parameter(Mandatory = $false, Position = 0)]
     [string]$FilePath,
