@@ -91,7 +91,7 @@ Plans:
   5. `Verihash Multifile Concepting.md`, `Verihash Multifile Concepting Review.md`, and `Verihash Logging Concepting.md` are no longer at the repo root; they live in `.planning/archive/`.
 **Plans**: 3 plans
 Plans:
-- [ ] 05-01-PLAN.md — Thin CLI rewrite + dead code deletion + archive concepting docs
+- [x] 05-01-PLAN.md — Thin CLI rewrite + dead code deletion + archive concepting docs
 - [ ] 05-02-PLAN.md — CLI end-to-end tests (VeriHash.Cli.Tests.ps1)
 - [ ] 05-03-PLAN.md — README rewrite + CHANGELOG v2.0 entry
 
@@ -102,8 +102,8 @@ Plans:
 | 1. Core Module Foundation | 3/3 | ✅ Complete | 2026-04-18 |
 | 2. Hot-Path Performance + Multi-File Loop | 3/3 | ✅ Complete + UAT-verified | 2026-04-18 |
 | 3. Manifest Module | 4/4 | ✅ Complete | 2026-04-19 |
-| 4. Integrations + Config Trim | 0/2 | ◆ Planned | - |
-| 5. Thin CLI + Cleanup & Docs | 0/0 | Blocked on P2–P4 | - |
+| 4. Integrations + Config Trim | 2/2 | ✅ Complete | 2026-04-19 |
+| 5. Thin CLI + Cleanup & Docs | 1/3 | ⏳ Executing | - |
 
 ## Coverage Verification
 

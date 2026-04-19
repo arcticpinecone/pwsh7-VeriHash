@@ -20,16 +20,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-18 for v2.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.0 Modular Rebuild — Phase 4 complete. Phase 5 (Thin CLI + Cleanup & Docs) is next.
+**Current focus:** v2.0 Modular Rebuild — Phase 5 executing. Plan 05-01 complete (thin CLI + cleanup).
 
 ## Current Position
 
 **Milestone:** v2.0 Modular Rebuild
-**Phase:** 5 — Thin CLI + Cleanup & Docs (context gathered)
-**Status:** Ready to execute
+**Phase:** 5 — Thin CLI + Cleanup & Docs (executing — plan 05-01 complete)
+**Status:** Executing
 **Last activity:** 2026-04-19
 
-Progress: [████████░░] 80% (4/5 phases complete)
+Progress: [█████████░] 90% (4/5 phases complete, plan 1/3 in P5 done)
 
 ### Phase Pipeline
 
@@ -39,7 +39,7 @@ Progress: [████████░░] 80% (4/5 phases complete)
 | 2 | Hot-Path Performance + Multi-File Loop | ✅ COMPLETE (commits 1b9af56..756767e) | 8 | Phase 1 |
 | 3 | Manifest Module | ✅ COMPLETE (commits 2cb6661..b07b95f) | 8 | Phase 1 |
 | 4 | Integrations + Config Trim | ✅ COMPLETE (commits 08dd19d..84d571a) | 6 | Phases 1, 3 |
-| 5 | Thin CLI + Cleanup & Docs | Context gathered → ready for plan | 8 | Phases 1–4 |
+| 5 | Thin CLI + Cleanup & Docs | ⏳ Executing (1/3 plans) | 8 | Phases 1–4 |
 
 ## Performance Metrics
 
@@ -72,4 +72,4 @@ None.
 
 ## Session Continuity
 
-**Next action:** `/gsd-plan-phase 5` — Phase 5 context is gathered, ready to decompose into executable plans.
+**Next action:** Execute Plan 05-03 (README/CHANGELOG rewrite), then Plan 05-02 (CLI end-to-end tests).
