@@ -22,5 +22,55 @@ function New-VeriHashManifest {
         [Parameter(Mandatory)]
         [string[]]$Path
     )
-    throw 'Not implemented — Plan 03-02 will implement this function.'
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # ── Step 1: Resolve all input paths ──────────────────────────────────
+    $resolvedPaths = $Path | ForEach-Object {
+        (Resolve-Path -LiteralPath $_ -ErrorAction Stop).ProviderPath
+    }
+
+    # ── Step 2: Filter out hash-extension files (D-18, MANIFEST-03) ─────
+    $hashExtensions = @('.sha256', '.sha512', '.sha384', '.sha1', '.md5', '.sha2_256', '.sha2')
+    $filtered = @($resolvedPaths | Where-Object {
+        [System.IO.Path]::GetExtension($_).ToLowerInvariant() -notin $hashExtensions
+    })
+    if ($filtered.Count -eq 0) {
+        throw 'No files to hash — all inputs were filtered (hash-extension files).'
+    }
+
+    # ── Step 3: Validate single common parent (MANIFEST-02) ─────────────
+    $parents = $filtered | ForEach-Object { Split-Path -Parent $_ }
+    $uniqueParents = @($parents | Select-Object -Unique)
+    if ($uniqueParents.Count -ne 1) {
+        throw 'Selected files span multiple directories. Manifests use relative paths — select files under one root.'
+    }
+    $commonParent = $uniqueParents[0]
+
+    # ── Step 4: Determine manifest target path (D-01, D-02) ─────────────
+    $manifestPath = Resolve-ManifestTargetPath -Directory $commonParent -Algorithm 'sha256'
+
+    # ── Step 5: Hash files sequentially, build manifest lines (D-08, D-09)
+    $lines = [System.Collections.Generic.List[string]]::new()
+    foreach ($file in $filtered) {
+        $result = Get-VeriHashResult -Path $file -Algorithm SHA256
+        $fileName = [System.IO.Path]::GetFileName($file)
+        $fileName = $fileName -replace '\\', '/'   # D-03: forward slashes
+        $line = "$($result.Hash) *$fileName"        # D-05: binary mode
+        $lines.Add($line)
+    }
+
+    # ── Step 6: Atomic write (D-10, D-06) ────────────────────────────────
+    Write-ManifestAtomically -Lines $lines.ToArray() -TargetPath $manifestPath
+
+    $sw.Stop()
+
+    # ── Step 7: Return result object (D-15) ──────────────────────────────
+    return [pscustomobject]@{
+        PSTypeName   = 'VeriHash.ManifestCreateResult'
+        ManifestPath = $manifestPath
+        FileCount    = $filtered.Count
+        Algorithm    = 'SHA256'
+        ElapsedMs    = [int]$sw.ElapsedMilliseconds
+    }
 }
