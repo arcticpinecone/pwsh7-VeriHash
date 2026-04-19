@@ -59,7 +59,7 @@ Decisions are logged in `PROJECT.md` Key Decisions table. v2.0-specific decision
 - [ ] Correct `REQUIREMENTS.md` header: states "Total: 32" but file defines 38 requirements. Fix on next edit.
 - [x] Run `/gsd-discuss-phase 3` to gather Phase 3 context (03-CONTEXT.md, 18 decisions, commit 47910cc).
 - [x] Run `/gsd-plan-phase 3` to decompose Manifest Module into executable plans (4 plans, 3 waves).
-- [ ] Backlog 999.2: add `VeriHash.HotPath.format.ps1xml` so `Invoke-VeriHashBatch` interactive output isn't followed by a default-format object dump (cosmetic; surfaced in 02-UAT.md test 7).
+- [x] Backlog 999.2: add `VeriHash.HotPath.format.ps1xml` — ✅ resolved (commit `e7bb55a`).
 
 ### Blockers/Concerns
 
