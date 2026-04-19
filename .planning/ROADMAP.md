@@ -11,6 +11,16 @@ _Not yet planned. Use `/gsd-new-milestone` to start._
 
 ## Backlog
 
+### Phase 999.6: Sidecar auto-detect — right-click .sha256 verifies companion
+
+When a `.sha256`/`.sha512`/`.md5` file is passed (with or without `-Manifest`), auto-detect:
+- 1 non-blank line → sidecar mode: verify companion file against stored hash
+- Multiple lines → manifest mode: verify all entries
+
+Currently, right-clicking a sidecar hashes the text file itself (useless). Users expect verification.
+
+See: `.planning/notes/sidecar-autodetect-exploration.md`
+
 ### Phase 999.5: Output formatting — rich single-file report + batch table
 
 Redesign VeriHash output presentation with two modes:
