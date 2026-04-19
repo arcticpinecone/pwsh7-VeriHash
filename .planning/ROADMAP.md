@@ -14,7 +14,7 @@
 - [x] **Phase 2: Hot-Path Performance + Multi-File Loop** — PE-only signature, parallel hash/sig via `Start-ThreadJob`, streaming output, multi-file SendTo. (UAT 10/10 pass — commit 0ed3609; 1 cosmetic gap → backlog 999.2.)
 - [x] **Phase 3: Manifest Module** — `VeriHash.Manifest` with GNU `sha256sum`-compatible create/verify, atomic writes, traversal guard, machine-readable exit codes.
 - [x] **Phase 4: Integrations + Config Trim** — Lazy-loaded SendTo/KDE installers (incl. manifest entry); VirusTotal and PSFramework excised from source + tests.
-- [ ] **Phase 5: Thin CLI + Cleanup & Docs** — ≤200-line dispatcher, end-to-end CLI tests, retired files deleted, README/CHANGELOG/concepting docs reorganized for ship.
+- [x] **Phase 5: Thin CLI + Cleanup & Docs** — ≤200-line dispatcher, end-to-end CLI tests, retired files deleted, README/CHANGELOG/concepting docs reorganized for ship.
 
 ## Phase Details
 
