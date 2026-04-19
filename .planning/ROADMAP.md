@@ -98,7 +98,7 @@ Plans:
 | 1. Core Module Foundation | 3/3 | ✅ Complete | 2026-04-18 |
 | 2. Hot-Path Performance + Multi-File Loop | 3/3 | ✅ Complete + UAT-verified | 2026-04-18 |
 | 3. Manifest Module | 4/4 | ✅ Complete | 2026-04-19 |
-| 4. Integrations + Config Trim | 0/2 | Unblocked | - |
+| 4. Integrations + Config Trim | 0/2 | ◆ Planned | - |
 | 5. Thin CLI + Cleanup & Docs | 0/0 | Blocked on P2–P4 | - |
 
 ## Coverage Verification
