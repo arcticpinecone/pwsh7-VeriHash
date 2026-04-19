@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: none
-status: idle
-last_updated: "2026-04-19T16:00:00.000Z"
+milestone: v2.1
+milestone_name: UX Polish & Smart Routing
+status: defining_requirements
+last_updated: "2026-04-19T18:54:00.000Z"
 last_activity: 2026-04-19
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,16 +17,17 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-19 for post-v2.0)
+See: `.planning/PROJECT.md` (updated 2026-04-19 for v2.1)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** Between milestones. v2.0 shipped 2026-04-19.
+**Current focus:** v2.1 — UX Polish & Smart Routing
 
 ## Current Position
 
-**Milestone:** None active
-**Status:** Idle — awaiting next milestone
-**Last activity:** 2026-04-19
+**Milestone:** v2.1 — UX Polish & Smart Routing
+**Phase:** Not started (defining requirements)
+**Status:** Defining requirements
+**Last activity:** 2026-04-19 — Milestone v2.1 started
 
 ### Shipped Milestones
 
@@ -39,4 +40,4 @@ See `.planning/MILESTONES.md` for full archive.
 
 ## Session Continuity
 
-**Next action:** Use `/gsd-new-milestone` to start the next milestone.
+**Next action:** Define requirements, then create roadmap.
