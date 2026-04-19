@@ -55,7 +55,8 @@ function New-VeriHashManifest {
     foreach ($file in $filtered) {
         $result = Get-VeriHashResult -Path $file -Algorithm SHA256
         $fileName = [System.IO.Path]::GetFileName($file)
-        $fileName = $fileName -replace '\\', '/'   # D-03: forward slashes
+        # D-03 future-proof: normalize any backslashes to forward slashes (no-op for single-dir MVP)
+        $fileName = $fileName -replace '\\', '/'
         $line = "$($result.Hash) *$fileName"        # D-05: binary mode
         $lines.Add($line)
     }
