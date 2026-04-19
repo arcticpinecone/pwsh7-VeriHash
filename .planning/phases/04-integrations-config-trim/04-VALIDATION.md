@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: integrations-config-trim
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-19
+updated: 2026-04-19
 ---
 
 # Phase 4 — Validation Strategy
@@ -38,12 +39,12 @@ created: 2026-04-19
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | CFG-01 | grep | `Select-String -i 'virustotal\|VERIHASH_VT_' *.ps1,*.psm1,*.psd1 -Recurse` | ✅ manual verify | ⬜ pending |
-| 04-01-02 | 01 | 1 | CFG-02 | grep | `Select-String -i 'virustotal\|VERIHASH_VT_' Tests/ -Recurse` | ✅ manual verify | ⬜ pending |
-| 04-02-01 | 02 | 1 | CFG-03 | grep | `Select-String -i 'PSFramework\|Write-PSFMessage\|PSFrameworkAvailable' **/*.ps1,**/*.psm1,**/*.psd1 -Recurse` | ✅ manual verify | ⬜ pending |
-| 04-03-01 | 03 | 2 | INTEG-01 | integration | `Invoke-Pester Tests/VeriHash.Integrations.Tests.ps1 -Output Detailed` | ❌ W0 | ⬜ pending |
-| 04-03-02 | 03 | 2 | INTEG-02 | unit (mock) | `Invoke-Pester Tests/VeriHash.Integrations.Tests.ps1 -Output Detailed` | ❌ W0 | ⬜ pending |
-| 04-03-03 | 03 | 2 | INTEG-03 | unit | `Invoke-Pester Tests/VeriHash.Integrations.Tests.ps1 -Output Detailed` | ❌ W0 | ⬜ pending |
+| 04-01-01 | 01 | 1 | CFG-01 | grep | `Invoke-Pester -Path Tests/VeriHash.ConfigTrim.Tests.ps1 -Output Detailed` | ✅ | ✅ green |
+| 04-01-02 | 01 | 1 | CFG-02 | grep | `Invoke-Pester -Path Tests/VeriHash.ConfigTrim.Tests.ps1 -Output Detailed` | ✅ | ✅ green |
+| 04-02-01 | 02 | 1 | CFG-03 | grep | `Invoke-Pester -Path Tests/VeriHash.ConfigTrim.Tests.ps1 -Output Detailed` | ✅ | ✅ green |
+| 04-03-01 | 02 | 2 | INTEG-01 | integration | `Invoke-Pester Tests/VeriHash.Integrations.Tests.ps1 -Output Detailed` | ✅ | ✅ green |
+| 04-03-02 | 02 | 2 | INTEG-02 | unit (mock) | `Invoke-Pester Tests/VeriHash.Integrations.Tests.ps1 -Output Detailed` | ✅ | ✅ green |
+| 04-03-03 | 02 | 2 | INTEG-03 | unit | `Invoke-Pester Tests/VeriHash.Integrations.Tests.ps1 -Output Detailed` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,8 +52,9 @@ created: 2026-04-19
 
 ## Wave 0 Requirements
 
-- [ ] `Tests/VeriHash.Integrations.Tests.ps1` — stubs for INTEG-01, INTEG-02, INTEG-03
-- [ ] No new framework install needed — Pester 5.7.1 already installed and passing
+- [x] `Tests/VeriHash.ConfigTrim.Tests.ps1` — tree-wide regression for CFG-01, CFG-02, CFG-03
+- [x] `Tests/VeriHash.Integrations.Tests.ps1` — INTEG-01, INTEG-02, INTEG-03 (already existed)
+- [x] No new framework install needed — Pester 5.7.1 already installed and passing
 
 ---
 
@@ -67,11 +69,24 @@ created: 2026-04-19
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-19
+
+---
+
+## Validation Audit 2026-04-19
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 3 |
+| Resolved | 3 |
+| Escalated | 0 |
+
+**Tests created:** `Tests/VeriHash.ConfigTrim.Tests.ps1` (3 tests: CFG-01, CFG-02, CFG-03 tree-wide regression)
+**All 6 requirements now have automated verification.**
