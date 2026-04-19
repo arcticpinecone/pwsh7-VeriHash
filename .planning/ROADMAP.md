@@ -89,7 +89,11 @@ Plans:
   3. `QuickHash.ps1`, `Tests/QuickHash.Tests.ps1`, `VeriHash.LogUtils.ps1`, and `Tests/VeriHash.LogUtils.Tests.ps1` are deleted from the repo (`git ls-files` returns none of them); the test suite still passes.
   4. README documents the v2 module architecture (`VeriHash.Core` + `VeriHash.Manifest` + thin CLI), the new CLI surface with breaking changes called out, and the simplified install path (no PSFramework). CHANGELOG has a `v2.0` entry listing removals (VirusTotal, PSFramework, QuickHash, LogUtils), additions (manifest mode, multi-file loop, prefixed clipboard parsing), and breaking CLI changes.
   5. `Verihash Multifile Concepting.md`, `Verihash Multifile Concepting Review.md`, and `Verihash Logging Concepting.md` are no longer at the repo root; they live in `.planning/archive/`.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — Thin CLI rewrite + dead code deletion + archive concepting docs
+- [ ] 05-02-PLAN.md — CLI end-to-end tests (VeriHash.Cli.Tests.ps1)
+- [ ] 05-03-PLAN.md — README rewrite + CHANGELOG v2.0 entry
 
 ## Progress Table
 
