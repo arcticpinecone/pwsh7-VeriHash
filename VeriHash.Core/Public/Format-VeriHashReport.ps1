@@ -52,7 +52,7 @@ function Format-VeriHashReport {
             Write-Host ("Compare:      " + $verdict + " (" + $CompareTo.Algorithm + ")") -ForegroundColor Cyan
         }
         if ($SidecarInfo) {
-            Write-Host ("Sidecar:      " + $SidecarInfo.Status) -ForegroundColor Cyan
+            Write-Host ("Sidecar:      " + $SidecarInfo.Sidecar) -ForegroundColor Cyan
         }
     }
 }

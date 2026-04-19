@@ -7,6 +7,7 @@ BeforeAll {
     $script:ExcludedTestFiles = @(
         'VeriHash.ConfigTrim.Tests.ps1'      # this file (self-reference)
         'VeriHash.Integrations.Tests.ps1'     # lines 19-29: targeted negative-assertion checks
+        'VeriHash.Cli.Tests.ps1'              # dead-code-removal block: negative-assertion checks
     )
 }
 
