@@ -55,15 +55,24 @@ $null = $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 $sw.Stop()
 $measurements['DateTime Operations'] = $sw.Elapsed.TotalMilliseconds
 
-# 4. Digital signature check (Windows only)
+# 4. Digital signature check (Windows only, PE files only)
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 if ($IsWindows) {
-    $signature = Get-AuthenticodeSignature -LiteralPath $FilePath -ErrorAction SilentlyContinue
-    # Suppress unused variable warning - we're measuring the operation, not using the result
-    $null = $signature -and $signature.Status -eq 'Valid'
+    # Only run Authenticode on PE files — mirrors VeriHash.HotPath behavior
+    $isPE = $false
+    try {
+        $stream = [System.IO.File]::OpenRead($FilePath)
+        try {
+            $buf = [byte[]]::new(2)
+            $read = $stream.Read($buf, 0, 2)
+            $isPE = ($read -eq 2 -and $buf[0] -eq 0x4D -and $buf[1] -eq 0x5A)
+        } finally { $stream.Dispose() }
+    } catch { }
+    if ($isPE) {
+        $signature = Get-AuthenticodeSignature -LiteralPath $FilePath -ErrorAction SilentlyContinue
+        $null = $signature -and $signature.Status -eq 'Valid'
+    }
 } else {
-    # On Linux/macOS, Get-AuthenticodeSignature doesn't exist
-    # Just assign null to simulate the operation without doing anything
     $signature = $null
 }
 $sw.Stop()

@@ -228,11 +228,11 @@ function ConvertFrom-VeriHashLog {
                 if ($Tag -and $entry.Tags -notcontains $Tag) { continue }
 
                 # Flatten Data property for CSV compatibility
-                # Parse timestamp to DateTime for consistent output regardless of culture
+                # Parse timestamp and normalize to ISO format string for culture-independent output
                 $parsedTimestamp = if ($entry.Timestamp -is [datetime]) {
-                    $entry.Timestamp
+                    $entry.Timestamp.ToString('yyyy-MM-ddTHH:mm:ss', [System.Globalization.CultureInfo]::InvariantCulture)
                 } elseif ([datetime]::TryParse($entry.Timestamp, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$null)) {
-                    [datetime]::Parse($entry.Timestamp, [System.Globalization.CultureInfo]::InvariantCulture)
+                    ([datetime]::Parse($entry.Timestamp, [System.Globalization.CultureInfo]::InvariantCulture)).ToString('yyyy-MM-ddTHH:mm:ss', [System.Globalization.CultureInfo]::InvariantCulture)
                 } else {
                     $entry.Timestamp
                 }
