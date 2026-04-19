@@ -349,17 +349,17 @@ function Invoke-VeriHashSidecarDetect {
 
 **All other claims are verified from codebase inspection.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Invoke-VeriHashSidecarDetect return the manifest result directly or a wrapped result?**
    - What we know: For N-line path, it delegates to `Test-VeriHashManifest` which returns `VeriHash.ManifestVerifyResult`. For 1-line path, it returns a new `VeriHash.SidecarVerifyResult`.
    - What's unclear: Should the function return two different types (output type union) or wrap both in a common envelope?
-   - Recommendation: Return different types — PowerShell handles polymorphic returns naturally, and the CLI can inspect `PSTypeName` to render appropriately. This matches existing patterns (e.g., `Get-PreferredSidecar` returns `$null` or object).
+   - RESOLVED: Return different types — PowerShell handles polymorphic returns naturally, and the CLI can inspect `PSTypeName` to render appropriately. This matches existing patterns (e.g., `Get-PreferredSidecar` returns `$null` or object).
 
 2. **Should the VeriHash.ps1 output for sidecar verify be minimal text or reuse Format-VeriHashReport?**
    - What we know: D-01 says "focused verify — show pass/fail result only". Format-VeriHashReport generates a full sectioned report.
    - What's unclear: Exact output format (single line? few lines?).
-   - Recommendation: Minimal output — companion path, algorithm, status (PASS/FAIL), and computed hash. Don't use Format-VeriHashReport. Phase 7 (Output Formatting) can enhance this later.
+   - RESOLVED: Minimal output — companion path, algorithm, status (PASS/FAIL), and computed hash. Don't use Format-VeriHashReport. Phase 7 (Output Formatting) can enhance this later.
 
 ## Validation Architecture
 
