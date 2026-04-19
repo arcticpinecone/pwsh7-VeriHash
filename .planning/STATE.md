@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: UX Polish & Smart Routing
 status: ready_to_plan
-last_updated: "2026-04-19T19:30:00.000Z"
+last_updated: "2026-04-19T21:30:00.000Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 3
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-19 for v2.1)
 **Phase:** 6 of 8 (Sidecar Auto-Detect) — first phase of v2.1
 **Plan:** 0 of TBD — ready to plan
 **Status:** Ready to plan Phase 6
-**Last activity:** 2026-04-19 — Roadmap created for v2.1 (Phases 6–8, 18 requirements mapped)
+**Last activity:** 2026-04-19 — Phase 6 context gathered (4 decisions locked)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -59,4 +59,6 @@ None yet.
 
 ## Session Continuity
 
+**Stopped at:** Phase 6 context gathered
+**Resume file:** `.planning/phases/6-sidecar-autodetect/06-CONTEXT.md`
 **Next action:** `/gsd-plan-phase 6` to plan the Sidecar Auto-Detect phase.
