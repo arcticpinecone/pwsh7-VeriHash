@@ -29,10 +29,10 @@ function Format-VeriHashReport {
     process {
         $fileName = Split-Path -Leaf $Result.FilePath
         Write-Host ("File selected:    " + $fileName) -ForegroundColor Green
-        Write-Host "---" -ForegroundColor Cyan
+        Write-Host "---" -ForegroundColor DarkGray
         $currentUTC = (Get-Date).ToUniversalTime()
-        Write-Host ("Start UTC:    " + $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")) -ForegroundColor Cyan
-        Write-Host "---" -ForegroundColor Cyan
+        Write-Host ("Start UTC:    " + $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")) -ForegroundColor Gray
+        Write-Host "---" -ForegroundColor DarkGray
         Write-Host "[Metadata]" -ForegroundColor White
         Write-Host ("File Path:    " + $Result.FilePath) -ForegroundColor Cyan
         $formattedBytes = $Result.Size.ToString("N0").Replace(",", " ")
@@ -40,13 +40,13 @@ function Format-VeriHashReport {
         Write-Host ("File Size:    " + $sizeMb + " MB  (" + $formattedBytes + " bytes)") -ForegroundColor Yellow
         $createdStr  = if ($Result.CreationTime)  { $Result.CreationTime.ToString("yyyy-MM-dd HH:mm:ss UTC") } else { '<CREATED>' }
         $modifiedStr = if ($Result.LastWriteTime) { $Result.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss UTC") } else { '<MODIFIED>' }
-        Write-Host ("Created:      " + $createdStr) -ForegroundColor Cyan
-        Write-Host ("Modified:     " + $modifiedStr) -ForegroundColor Cyan
-        Write-Host "---" -ForegroundColor Cyan
+        Write-Host ("Created:      " + $createdStr) -ForegroundColor Gray
+        Write-Host ("Modified:     " + $modifiedStr) -ForegroundColor Gray
+        Write-Host "---" -ForegroundColor DarkGray
         Write-Host "[Hash]" -ForegroundColor White
         Write-Host ("Algorithm:    " + $Result.Algorithm) -ForegroundColor Cyan
-        Write-Host ("Hash:         " + $Result.Hash) -ForegroundColor Cyan
-        Write-Host ("Elapsed:      " + $Result.ElapsedMs + " ms") -ForegroundColor Cyan
+        Write-Host ("Hash:         " + $Result.Hash) -ForegroundColor Green
+        Write-Host ("Elapsed:      " + $Result.ElapsedMs + " ms") -ForegroundColor Yellow
 
         if ($CompareTo) {
             $match = ($Result.Hash -eq $CompareTo.Hash.ToLowerInvariant())

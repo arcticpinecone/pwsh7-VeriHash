@@ -15,7 +15,7 @@
           <TableColumnHeader><Label>Hash</Label><Width>20</Width></TableColumnHeader>
           <TableColumnHeader><Label>Match</Label><Width>10</Width></TableColumnHeader>
           <TableColumnHeader><Label>Signature</Label><Width>12</Width></TableColumnHeader>
-          <TableColumnHeader><Label>ms</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Wall ms</Label><Width>8</Width><Alignment>Right</Alignment></TableColumnHeader>
         </TableHeaders>
         <TableRowEntries>
           <TableRowEntry>

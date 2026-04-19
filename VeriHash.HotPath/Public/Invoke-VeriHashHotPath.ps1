@@ -96,7 +96,7 @@ function Invoke-VeriHashHotPath {
         $sigResult = [pscustomobject]@{ Status = 'error'; Reason = 'sig job returned no payload' }
     }
 
-    $sigLine = "Signature: $($sigResult.Status)" + $(if ($sigResult.Reason) { " ($($sigResult.Reason))" } else { '' })
+    $sigLine = "Signature:    $($sigResult.Status)" + $(if ($sigResult.Reason) { " ($($sigResult.Reason))" } else { '' })
     $sigColor = switch ($sigResult.Status) {
         'valid'    { 'Green' }
         'invalid'  { 'Red' }
