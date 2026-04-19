@@ -43,6 +43,47 @@
 
 ---
 
+## Milestone: v2.0 — Modular Rebuild
+
+**Shipped:** 2026-04-19
+**Phases:** 5 | **Plans:** 15 | **Requirements:** 38/38
+**Duration:** 2 days (2026-04-18 → 2026-04-19)
+
+### What Was Built
+- Three-module architecture: `VeriHash.Core` (hash, clipboard, sidecar, format, log, platform), `VeriHash.HotPath` (parallel PE signature, batch, tally), `VeriHash.Manifest` (GNU sha256sum create/verify)
+- 196-line thin CLI dispatcher replacing 1,527-line monolith
+- P/Invoke WinVerifyTrust for PE-only Authenticode with ThreadJob parallelism
+- Multi-file batch mode with byte-locked tally
+- Manifest mode with atomic writes, path-traversal guard, machine-readable exit codes (0/1/2/3)
+- Full cleanup: VirusTotal removed, PSFramework removed, QuickHash + LogUtils retired
+- README and CHANGELOG rewritten for v2 architecture
+
+### What Worked
+- **Coarse phases** — Compressing 9 user-sketched phases into 5 dependency-ordered phases was the right call; each had clear boundaries and the dependency graph prevented integration conflicts
+- **TDD caught real bugs** — "Never modify tests to pass" surfaced a real bug in `Format-VeriHashReport` (`.Status` vs `.Sidecar` property name) and clipboard contamination in batch tests
+- **Module isolation** — Three separate modules with clean public APIs made testing straightforward; each testable in isolation via `Import-Module`
+- **Audit-before-close** — Milestone audit caught 4 tech debt items that would have been embarrassing in the archive
+
+### What Was Inefficient
+- **Plan 05-02 checkbox drift** — ROADMAP showed `[ ] 05-02-PLAN.md` despite CLI tests being written and passing; fixed during tech debt pass but shouldn't have been necessary
+- **Quick task state tracking** — The `260418-rename-log-jsonl` false positive from `audit-open` shows v1-era quick tasks don't cleanly survive milestone transitions
+
+### Patterns Established
+- `Import-Module` loading in all tests (no dot-source hack)
+- Plain-text `Write-VeriHashLog` replacing PSFramework logging
+- `Get-VeriHashPlatform` as single-source platform detection
+- ThreadJob parallelism for hash + signature with explicit cleanup
+- GNU sha256sum format validation via WSL round-trip
+- `Format.ps1xml` with `FormatsToProcess` in module manifests
+
+### Key Lessons
+1. **P/Invoke for Windows APIs is viable** in PowerShell modules — WinVerifyTrust shim was cleaner and faster than `Get-AuthenticodeSignature`
+2. **ThreadJob parallelism is easy to add** but clipboard/environment contamination between jobs needs explicit cleanup
+3. **GNU sha256sum interop via WSL** is a strong validation for standards compliance
+4. **Tick checkboxes as you go** — still not automated; same lesson from v1.0
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -50,14 +91,18 @@
 | Milestone | Sessions | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.0 | 1 | 3 | Established GSD workflow, CI pipeline, privacy compliance |
+| v2.0 | 1 | 5 | Full modular rebuild, three-module architecture, monolith eliminated |
 
 ### Cumulative Quality
 
-| Milestone | Tests | Skipped | Lint Files |
-|-----------|-------|---------|------------|
-| v1.0 | 133 | 8 | 3/3 |
+| Milestone | Tests | Skipped | Prod LOC | Test LOC |
+|-----------|-------|---------|----------|----------|
+| v1.0 | 133 | 8 | ~2,000 (monolith) | ~1,200 |
+| v2.0 | 176 | 5 | 2,039 (3 modules) | 1,817 |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Treat documentation as spec — fix code to match, not the other way around
 2. Ship CI early — automated validation saves manual re-checking on every subsequent change
+3. Tick checkboxes as you go — waiting creates unnecessary remediation at audit time (repeated v1.0 → v2.0)
+4. Module isolation pays off — clean APIs make testing straightforward and integration predictable
