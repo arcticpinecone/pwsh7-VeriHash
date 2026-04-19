@@ -98,8 +98,8 @@ function Install-WindowsSendTo {
     $sendToPath    = Join-Path $env:AppData "Microsoft\Windows\SendTo"
     $shortcutPath  = Join-Path $sendToPath "VeriHash.lnk"
     $pwshCommand   = "pwsh"
-    $scriptFullPath = $PSCommandPath
-    $scriptDir     = Split-Path $scriptFullPath -Parent
+    $scriptFullPath = Join-Path $PSScriptRoot "VeriHash.ps1"
+    $scriptDir     = $PSScriptRoot
 
     # Check execution policy
     $currentExecutionPolicy = Get-ExecutionPolicy
@@ -196,8 +196,8 @@ function Install-KDEContextMenu {
         [switch]$SystemWide
     )
 
-    $scriptFullPath = $PSCommandPath
-    $scriptDir = Split-Path $scriptFullPath -Parent
+    $scriptFullPath = Join-Path $PSScriptRoot "VeriHash.ps1"
+    $scriptDir = $PSScriptRoot
 
     # Determine installation path
     if ($SystemWide) {
