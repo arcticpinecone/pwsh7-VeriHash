@@ -72,9 +72,13 @@ jobs:
         run: |
           $files = @(
               './VeriHash.ps1',
-              './VeriHash.Config.ps1',
-              './VeriHash.LogUtils.ps1'
+              './VeriHash.Integrations.ps1'
           )
+          $modules = @('VeriHash.Core', 'VeriHash.HotPath', 'VeriHash.Manifest')
+          foreach ($mod in $modules) {
+              $files += Get-ChildItem -Path "./$mod" -Recurse -Filter '*.ps1' |
+                  Select-Object -ExpandProperty FullName
+          }
           $settings = './PSScriptAnalyzerSettings.psd1'
           $totalIssues = 0
 
