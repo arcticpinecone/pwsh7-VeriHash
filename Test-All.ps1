@@ -116,7 +116,8 @@ if (-not $SkipAnalyzer) {
     $scriptPaths = @(
         (Join-Path $scriptRoot "VeriHash.ps1"),
         (Join-Path $scriptRoot "VeriHash.Config.ps1"),
-        (Join-Path $scriptRoot "VeriHash.LogUtils.ps1")
+        (Join-Path $scriptRoot "VeriHash.LogUtils.ps1"),
+        (Join-Path $scriptRoot "VeriHash.Integrations.ps1")
     )
     # VeriHash.Core public + private function files
     $coreRoot = Join-Path $scriptRoot "VeriHash.Core"
