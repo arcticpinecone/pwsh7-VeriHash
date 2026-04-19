@@ -38,6 +38,9 @@ PowerShellVersion = '7.0'
 # Functions to export from this module
 FunctionsToExport = 'Get-VeriHashSignature', 'Invoke-VeriHashHotPath', 'Invoke-VeriHashBatch'
 
+# Format file for custom type display (VeriHash.HotPathResult, VeriHash.BatchResult)
+FormatsToProcess = @('VeriHash.HotPath.format.ps1xml')
+
 # Cmdlets to export from this module
 CmdletsToExport = @()
 

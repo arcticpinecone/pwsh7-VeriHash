@@ -2,10 +2,17 @@ BeforeAll {
     Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force
     Import-Module "$PSScriptRoot/../VeriHash.Manifest/VeriHash.Manifest.psd1" -Force
     $env:VERIHASH_LOG_PATH = (Join-Path $TestDrive 'verihash.log')
+    # Add repo root to PSModulePath so Test-ModuleManifest can resolve VeriHash.Core by name (999.3)
+    $script:origPSModulePath = $env:PSModulePath
+    $repoRoot = (Resolve-Path "$PSScriptRoot/..").Path
+    if ($env:PSModulePath -notlike "*$repoRoot*") {
+        $env:PSModulePath = "$repoRoot$([IO.Path]::PathSeparator)$env:PSModulePath"
+    }
 }
 AfterAll {
     Remove-Module VeriHash.Manifest -ErrorAction SilentlyContinue
     Remove-Item Env:VERIHASH_LOG_PATH -ErrorAction SilentlyContinue
+    $env:PSModulePath = $script:origPSModulePath
 }
 
 Describe 'VeriHash.Manifest module manifest + exports' {
