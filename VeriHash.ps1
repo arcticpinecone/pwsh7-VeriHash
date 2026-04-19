@@ -35,7 +35,7 @@
     .\VeriHash.ps1 file1.txt, file2.txt -Manifest
 #>
 param(
-    [Parameter(Position = 0)]
+    [Parameter(Position = 0, ValueFromRemainingArguments)]
     [string[]]$FilePath,
     [switch]$Manifest,
     [switch]$InstallSendTo,
