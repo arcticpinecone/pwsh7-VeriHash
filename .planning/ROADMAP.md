@@ -74,7 +74,10 @@ Plans:
   2. Windows `-InstallSendTo` installs both `VeriHash.lnk` and `VeriHash - Manifest.lnk` in the user's SendTo folder; system-wide install requires manual elevation (no auto-elevation prompt). Linux KDE install preserves v1 user-level and `--SystemWide` (root-checked) behavior.
   3. `Select-String -i 'virustotal|VERIHASH_VT_'` over `*.ps1`, `*.psm1`, `*.psd1`, and `Tests/` returns zero matches; `VeriHash.Config.ps1` no longer exposes any `virustotal.*` defaults or env-var handling.
   4. `Select-String -i 'PSFramework|Write-PSFMessage|PSFrameworkAvailable'` over the entire source + tests tree returns zero matches; the ~33 `if ($script:PSFrameworkAvailable)` guard sites are gone and the test suite passes without PSFramework installed.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — VirusTotal config trim + PSFramework removal from all source/tests (CFG-01, CFG-02, CFG-03) [Wave 1]
+- [ ] 04-02-PLAN.md — Integration extraction to VeriHash.Integrations.ps1 + manifest shortcuts + tests (INTEG-01, INTEG-02, INTEG-03) [Wave 2]
 
 ### Phase 5: Thin CLI + Cleanup & Docs
 **Goal**: A ≤200-line `VeriHash.ps1` dispatcher replaces the 1,527-line monolith, end-to-end Pester tests pin the locked v2 contract, retired files are deleted, and README/CHANGELOG/concepting docs are reorganized for ship.
@@ -95,7 +98,7 @@ Plans:
 | 1. Core Module Foundation | 3/3 | ✅ Complete | 2026-04-18 |
 | 2. Hot-Path Performance + Multi-File Loop | 3/3 | ✅ Complete + UAT-verified | 2026-04-18 |
 | 3. Manifest Module | 4/4 | ✅ Complete | 2026-04-19 |
-| 4. Integrations + Config Trim | 0/0 | Unblocked | - |
+| 4. Integrations + Config Trim | 0/2 | Unblocked | - |
 | 5. Thin CLI + Cleanup & Docs | 0/0 | Blocked on P2–P4 | - |
 
 ## Coverage Verification
