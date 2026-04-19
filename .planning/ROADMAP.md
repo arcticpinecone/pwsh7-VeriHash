@@ -11,6 +11,16 @@ _Not yet planned. Use `/gsd-new-milestone` to start._
 
 ## Backlog
 
+### Phase 999.5: Output formatting — rich single-file report + batch table
+
+Redesign VeriHash output presentation with two modes:
+- **Single-file:** Rich sectioned report with `[Metadata]`, `[Hash]`, `[Signature]`, `[Verification]` headers, friendly dates, hash speed, start/end timestamps, clean dividers.
+- **Batch:** Compact `Format-Table` with auto-fit columns (File, Size, Hash, Time, Speed, Status), coloured tally, totals.
+
+Consistent 6-colour palette (Green/Red/Yellow/Cyan/Gray/White). No emoji. No magenta.
+
+See: `.planning/notes/output-formatting-exploration.md`
+
 ### Phase 999.4: Manifest spot-check — single-file verify against existing manifest
 
 When a single file is passed with `-Manifest` and a manifest already exists in the same directory, auto-detect and verify just that entry instead of creating a new manifest. Enables "right-click one ISO → confirm it matches the snapshot" workflow without re-hashing all files.
