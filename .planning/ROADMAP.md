@@ -11,6 +11,17 @@ _Not yet planned. Use `/gsd-new-milestone` to start._
 
 ## Backlog
 
+### Phase 999.4: Manifest spot-check — single-file verify against existing manifest
+
+When a single file is passed with `-Manifest` and a manifest already exists in the same directory, auto-detect and verify just that entry instead of creating a new manifest. Enables "right-click one ISO → confirm it matches the snapshot" workflow without re-hashing all files.
+
+**Key decisions needed:**
+- Auto-detect (manifest present → spot-check) vs explicit flag
+- Multiple manifests in directory: pick most recent? Ask?
+- File not in manifest: clear "not found in manifest" error
+
+Depends on: SendTo multi-file bug fix (todo)
+
 ### Phase 999.2: VeriHash.BatchResult default format view — ✅ RESOLVED
 
 Resolved in commit `e7bb55a`. Added `VeriHash.HotPath.format.ps1xml` with `FormatsToProcess` in manifest.
