@@ -2,1095 +2,303 @@
 
 ![VeriHash Logo](https://github.com/arcticpinecone/pwsh7-VeriHash/blob/main/Icons/VeriHash_256.webp?raw=true)
 
-## A modern, cross-platform PowerShell tool for computing and verifying file hashes
+## Modular file integrity verification for PowerShell 7+
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
----
-
-**Version: 1.3.0 - 2025-12-27**
-**Linux Desktop Integration & Cross-Platform Enhancements**
-
-**NEW FEATURES:**
-
-- 🐧 **Linux context menu integration**: Right-click files in Dolphin to compute/verify hashes
-  - ✅ **KDE Plasma/Dolphin support**: Native .desktop service menu integration
-  - 📂 **User-level & system-wide installation**: `./VeriHash.ps1 -SendTo` or with `-SystemWide` flag
-  - 🎨 **Icon integration**: VeriHash icon appears in context menu
-  - 🔧 **Two actions**: "Compute Hash" and "Verify Hash" (with -OnlyVerify)
-  - 🖥️ **Terminal window output**: Opens in Konsole/xterm for visual feedback
-  - 🚀 **Extensible architecture**: Easy to add GNOME, XFCE support in future
-
-[See full changelog](CHANGELOG.md)
+> **v2.0 — Modular Rewrite** · [See what changed](CHANGELOG.md)
 
 ---
 
 ## 📋 Table of Contents
 
 - [Features](#-features)
-- [Why PowerShell 7?](#-why-powershell-7)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Usage Examples](#-usage-examples)
-- [Advanced Usage](#-advanced-usage)
+- [Usage](#-usage)
+- [OS Integration](#️-os-integration)
+- [Module Architecture](#️-module-architecture)
 - [Speed Benchmarks](#-speed-benchmarks)
-- [PowerShell Profile Integration](#-powershell-profile-integration)
-- [Use Cases](#-use-cases)
-- [QuickHash](#-quickhash---lightweight-string--file-hasher)
+- [Why PowerShell 7?](#-why-powershell-7)
+- [PowerShell Profile Integration](#️-powershell-profile-integration)
+- [Privacy](#-privacy)
+- [Upgrading from v1](#️-upgrading-from-v1)
 - [Contributing](#-contributing)
 - [Running Tests](#-running-tests)
-- [Privacy & Data Minimization](#-privacy--data-minimization)
 - [License](#-license)
 
 ---
 
 ## ✨ Features
 
-- 🔐 **Multiple Hash Algorithms**: MD5, SHA256, SHA512
-- ⚡ **Blazing Fast**: Optimized for modern SSDs (190+ MB/s)
-- 🎯 **Smart Verification**: Auto-detects hash type from clipboard or file
-- 📁 **Standard Sidecar Files**: GNU-compatible `.sha256`, `.sha512`, and `.md5` files
-- 🔄 **Multi-File Verification**: Verify checksum files with multiple entries
+- 🔐 **Multiple Hash Algorithms**: SHA256 (default), MD5, SHA512
+- ⚡ **Parallel Processing**: Hash + Authenticode signature run concurrently for PE files
+- 🎯 **Smart Verification**: Auto-detects hash from clipboard (plain hex or `algo:hex` prefix)
+- 📁 **Sidecar Files**: GNU-compatible `.sha256`, `.sha512`, `.md5` — create, verify, and resolve mismatches
+- 📦 **Manifest Mode**: Create and verify `sha256sum`-compatible manifests with atomic writes
+- 🔄 **Multi-File Batch**: Process multiple files in one invocation with match/mismatch/missing tally
 - 🖥️ **Cross-Platform**: Windows, macOS, Linux
-- 🎨 **Interactive GUI** (Windows): File picker dialog when no path provided
-- ✅ **Digital Signatures**: Validates Authenticode signatures (Windows)
-- 🔧 **Flexible Workflows**: Verify-only mode or compute multiple hashes at once
+- ✅ **Digital Signatures**: PE-only Authenticode verification (skips non-PE files)
+- 📋 **Clipboard Matching**: Automatic hash comparison from clipboard on all platforms
+- 🐧 **Linux Integration**: KDE Dolphin context menu support
+- 📝 **Plain-Text Logging**: One line per file to `~/.verihash/verihash.log` (opt-in)
 
 ---
 
-## 🌟 Why PowerShell 7?
+## 📋 Requirements
 
-PowerShell 7 is a modern, open-source, cross-platform shell that brings powerful scripting capabilities to all major operating systems.
+- **PowerShell 7.0+** (not Windows PowerShell 5.1)
+  - Windows: `winget install Microsoft.PowerShell`
+  - Linux: [Install instructions](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux)
+  - macOS: `brew install powershell`
 
-**Key Benefits:**
-
-- 🔁 **Cross-Platform**: Runs on Windows, macOS, and Linux
-- 🧑‍💻 **Actively Maintained**: Regular updates and new features
-- 🛟 **Safe Installation**: Installs alongside Windows PowerShell (no conflicts)
-- 🚀 **Better Performance**: Optimized for modern systems
-
-**New to PowerShell 7?**
-
-- **Windows**: Install from [Microsoft Store](https://aka.ms/PSWindows) or [GitHub Releases](https://github.com/PowerShell/PowerShell/releases)
-- **macOS/Linux**: Follow the [official installation guide](https://docs.microsoft.com/powershell/)
+No external dependencies. PSFramework is **not** required (removed in v2).
 
 ---
 
-## 📦 Requirements
-
-- **PowerShell 7.0+** (required)
-- **Operating System**: Windows 10/11, macOS 12+, or Linux (Debian, Ubuntu, etc.)
-- **Disk Space**: < 1 MB
-
----
-
-## 💾 Installation
-
-### Option 1: GitHub CLI (Recommended)
-
-```bash
-gh auth login
-gh repo clone arcticpinecone/pwsh7-VeriHash VeriHash
-cd VeriHash
-```
-
-### Option 2: Git Clone
-
-```bash
-git clone https://github.com/arcticpinecone/pwsh7-VeriHash VeriHash
-cd VeriHash
-```
-
-### Optional: Execution Policy (Windows)
-
-On Windows, you may need to allow script execution:
+## 🚀 Installation
 
 ```powershell
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Clone the repository
+git clone https://github.com/arcticpinecone/pwsh7-VeriHash.git
+cd pwsh7-VeriHash
+
+# Verify it works
+.\VeriHash.ps1 -Help
 ```
+
+No module installation or `Install-Module` needed — run directly from the cloned directory.
 
 ---
 
-## 🏃 Quick Start
+## 💻 Usage
 
-### Compute a SHA256 hash
-
+### Hash a single file
 ```powershell
-.\VeriHash.ps1 "C:\path\to\file.exe"
+.\VeriHash.ps1 file.exe
 ```
+Computes SHA256, checks clipboard for a matching hash, checks for a sibling `.sha256` sidecar file, and displays Authenticode signature status for PE files.
 
-### Verify with a hash
-
+### Hash multiple files
 ```powershell
-.\VeriHash.ps1 "C:\path\to\file.exe" -Hash "ABC123..."
+.\VeriHash.ps1 file1.exe, file2.dll, file3.zip
 ```
+Processes each file with full hash/sidecar/clipboard/signature checks, then prints a tally: `2/3 matched, 1 mismatch, 0 missing`.
 
-### Verify using sidecar file
-
+### Create a manifest
 ```powershell
-.\VeriHash.ps1 "C:\path\to\file.exe.sha256"
+.\VeriHash.ps1 file1.txt, file2.txt -Manifest
 ```
+Creates a `sha256sum`-compatible manifest in the files' parent directory. Atomic write (no partial manifests on Ctrl+C).
 
-### Interactive mode
-
+### Verify a manifest
 ```powershell
-.\VeriHash.ps1
+.\VeriHash.ps1 manifest.sha256 -Manifest
 ```
+Extension auto-detect: `.sha256`, `.sha512`, `.md5` files are verified. Returns exit code 0 (all pass), 1 (mismatch), 2 (missing), 3 (parse error).
+
+### Clipboard matching
+Copy a hash to your clipboard before running VeriHash. Supported formats:
+- Plain hex: `71792c028e07b0fdd30f...` (length auto-detects MD5/SHA256/SHA512)
+- Prefixed: `sha256:71792c028e07b0fdd30f...` (prefix overrides length detection)
+
+### Logging
+```powershell
+.\VeriHash.ps1 file.exe -Log
+# or set environment variable:
+$env:VERIHASH_LOG = '1'
+```
+Appends one line per file to `~/.verihash/verihash.log`.
+
+### All switches
+| Switch | Description |
+|--------|-------------|
+| `-Manifest` | Create or verify a sha256sum manifest |
+| `-InstallSendTo` | Install Windows SendTo / Linux context menu |
+| `-InstallKDE` | Install KDE Dolphin context menu |
+| `-NoPause` | Never pause at exit |
+| `-SystemWide` | System-wide install (Linux, requires sudo) |
+| `-Log` | Log each file to `~/.verihash/verihash.log` |
+| `-Help` | Show help |
 
 ---
 
-## 📚 Usage Examples
+## 🖥️ OS Integration
 
-### 1. **Compute SHA256 (Default)**
-
+### Windows (SendTo)
 ```powershell
-.\VeriHash.ps1 "C:\Downloads\app.exe"
+.\VeriHash.ps1 -InstallSendTo
 ```
+Installs two shortcuts in your SendTo folder:
+- **VeriHash** — right-click → Send to → VeriHash to hash files
+- **VeriHash - Manifest** — right-click → Send to → create/verify manifest
 
-**Output**: Creates `app.exe.sha256` sidecar file
-
----
-
-### 2. **Compute Multiple Algorithms**
-
+### Linux (KDE Dolphin)
 ```powershell
-# Compute MD5 and SHA512
-.\VeriHash.ps1 "file.zip" -Algorithm MD5,SHA512
+# User-level
+./VeriHash.ps1 -InstallSendTo
 
-# Compute all supported algorithms
-.\VeriHash.ps1 "file.zip" -Algorithm All
+# System-wide (requires sudo)
+sudo pwsh -File VeriHash.ps1 -InstallSendTo -SystemWide
+
+# KDE-specific
+./VeriHash.ps1 -InstallKDE
 ```
-
-**Output**: Creates `file.zip.md5`, `file.zip.sha256`, and `file.zip.sha512`
+Creates `.desktop` service menu entries with Compute Hash, Verify Hash, and Manifest Hash actions.
 
 ---
 
-### 3. **Verify Hash (with automatic SHA256)**
+## 🏗️ Module Architecture
 
-```powershell
-.\VeriHash.ps1 "installer.exe" -Hash "A1B2C3D4..."
+VeriHash v2 is a modular rewrite. The ~900-line v1 monolith has been replaced with focused modules and a thin CLI dispatcher.
+
+```
+VeriHash.ps1                  ← Thin CLI dispatcher (≤200 lines)
+│
+├── VeriHash.Core/            ← Core module
+│   ├── Get-VeriHashResult      Hash computation (MD5, SHA256, SHA512)
+│   ├── Read-ClipboardHash      Clipboard auto-detect (plain hex + algo:hex)
+│   ├── Test-VeriHashSidecar    Sidecar file verification
+│   ├── Format-VeriHashReport   Formatted console output
+│   ├── Write-VeriHashLog       Plain-text logging
+│   └── Get-VeriHashPlatform    Cross-platform detection
+│
+├── VeriHash.HotPath/         ← Performance module
+│   ├── Invoke-VeriHashHotPath  Single-file: parallel hash + Authenticode sig
+│   ├── Invoke-VeriHashBatch    Multi-file loop with tally
+│   └── Get-VeriHashSignature   PE-only Authenticode wrapper
+│
+├── VeriHash.Manifest/        ← Manifest module
+│   ├── New-VeriHashManifest    Create sha256sum-compatible manifests
+│   └── Test-VeriHashManifest   Verify manifests (exit codes 0/1/2/3)
+│
+└── VeriHash.Integrations.ps1 ← OS integration (lazy-loaded)
+    ├── Install-WindowsSendTo   Windows SendTo shortcuts
+    └── Install-LinuxContextMenu  KDE Dolphin .desktop entries
 ```
 
-**Behavior**:
-
-1. Detects hash type (MD5/SHA256/SHA512) by length
-2. Verifies the provided hash
-3. Also computes SHA256 (unless the input was already SHA256)
-
----
-
-### 4. **Verify Hash ONLY (No Extra Hashing)**
-
-```powershell
-.\VeriHash.ps1 "installer.exe" -Hash "A1B2C3D4..." -OnlyVerify
-```
-
-**Behavior**: Only verifies the hash, skips additional computations
-
----
-
-### 5. **Clipboard Detection**
-
-Copy a hash to your clipboard, then:
-
-```powershell
-.\VeriHash.ps1 "file.exe"
-```
-
-**Behavior**: Automatically detects and verifies the hash from clipboard
-
-**Cross-Platform Support**:
-
-- **Windows**: Built-in clipboard support
-- **Linux**: Requires clipboard tool
-  - Wayland: `sudo pacman -S wl-clipboard` (or `sudo apt install wl-clipboard`)
-  - X11: `sudo pacman -S xclip` (or `sudo apt install xclip`)
-- **macOS**: Built-in clipboard support
-
----
-
-### 6. **Sidecar File Verification**
-
-```powershell
-# Verifies the referenced file against stored hash
-.\VeriHash.ps1 "document.pdf.sha256"
-```
-
----
-
-### 7. **Multi-File Checksum Verification**
-
-Verify multiple files from a single checksum file (GNU `sha256sum` compatible):
-
-```powershell
-# Verify all files listed in checksums.sha256
-.\VeriHash.ps1 "checksums.sha256"
-```
-
-**Example `checksums.sha256` file**:
-
-```text
-E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855  file1.exe
-D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2D2  file2.dll
-A1B1C1D1E1F1A1B1C1D1E1F1A1B1C1D1E1F1A1B1C1D1E1F1A1B1C1D1E1F1A1B1  file3.txt
-```
-
-**Output**:
-
-```text
-Checksum file:      checksums.sha256
-Total entries:      3
----
-file1.exe - OK ✅
-file2.dll - FAILED 🚫
-  Expected: D2D2D2D2...
-  Got:      C3C3C3C3...
-file3.txt - MISSING ⚠️
----
-Summary:
-  Passed:  1
-  Failed:  1
-  Missing: 1
-```
-
----
-
-## 🔧 Advanced Usage
-
-### All Parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `FilePath` | String | Path to file (or sidecar file) |
-| `-Hash` / `-InputHash` | String | Hash to verify against |
-| `-Algorithm` | String[] | Algorithms to compute: `MD5`, `SHA256`, `SHA512`, `All` |
-| `-OnlyVerify` | Switch | Only verify provided hash (no extra computations) |
-| `-Force` | Switch | Auto-update sidecars without prompting when mismatches detected |
-| `-SkipSignatureCheck` | Switch | Skip digital signature verification (faster for small files) |
-| `-SendTo` | Switch | Install Windows "Send To" menu shortcut (or Linux context menu) |
-| `-SystemWide` | Switch | Install context menu system-wide (Linux only, requires sudo) |
-| `-LogLevel` | String | Enable logging: `None` (default), `Verbose`, or `Debug` |
-| `-Help` | Switch | Display detailed help message |
-
-### Examples with Multiple Parameters
-
-```powershell
-# Verify MD5 and also compute SHA512
-.\VeriHash.ps1 "file.bin" -Hash "D41D8CD98F00B204..." -Algorithm SHA512
-
-# Compute all algorithms for a file
-.\VeriHash.ps1 "backup.tar.gz" -Algorithm All
-
-# Verify without extra hashing
-.\VeriHash.ps1 "firmware.bin" -Hash "E3B0C44..." -OnlyVerify
-
-# Fast hashing for small files (skip signature check)
-.\VeriHash.ps1 "config.json" -SkipSignatureCheck
-
-# Batch processing with Force and SkipSignatureCheck for maximum speed
-.\VeriHash.ps1 "data.csv" -Force -SkipSignatureCheck
-```
+**Design principles:**
+- **Modules own logic** — no business logic in the CLI script
+- **CLI owns UX** — pause-at-end, help banner, manifest output rendering
+- **Lazy loading** — Integrations.ps1 only loaded when `-InstallSendTo` or `-InstallKDE` is used
+- **Testable** — modules loaded via `Import-Module`, conditional import in CLI enables mocking
 
 ---
 
 ## ⚡ Speed Benchmarks
 
-Hash computation speed varies by hardware and file size.
+VeriHash uses .NET's optimized hash streams and parallel ThreadJob execution:
 
-### Tested Performance (SHA256)
+| File Size | SHA256 Time | Throughput | Signature |
+|-----------|-------------|------------|-----------|
+| 10 MB | ~50 ms | ~200 MB/s | Parallel |
+| 1 GB | ~5 s | ~200 MB/s | Parallel |
+| 4 GB | ~20 s | ~200 MB/s | Parallel |
 
-| Storage Type | Speed | 1 GB | 8 GB | 10 GB |
-| ----------- | ----- | ---- | ---- | ----- |
-| **SSD** | ~190 MB/s | 5s | 40s | 53s |
-| **HDD** | ~93 MB/s | 11s | 88s | 110s |
+*Throughput depends on disk speed. SSD recommended. Signature check runs concurrently — does not add to wall-clock time for PE files.*
 
-**Notes:**
-
-- Small files (< 500 MB) hash almost instantly ⚡
-- Large files (> 10 GB): Time for a coffee break ☕
-- Actual speeds depend on CPU, storage, and system load
+Non-PE files skip signature checking entirely (`Signature: skipped (not a PE file)`).
 
 ---
 
-## 🔗 PowerShell Profile Integration
+## ❓ Why PowerShell 7?
 
-Add VeriHash to your PowerShell profile for quick access from anywhere.
+PowerShell 7 (pwsh) is a modern, cross-platform shell built on .NET. It is **not** the same as Windows PowerShell 5.1 that comes with Windows.
 
-### Windows Setup
+- ✅ Cross-platform (Windows, Linux, macOS)
+- ✅ `Start-ThreadJob` for parallel execution
+- ✅ Modern .NET hashing APIs
+- ✅ Runs alongside Windows PowerShell — no conflicts
 
-1. **Open your profile**:
+Install: `winget install Microsoft.PowerShell` (Windows) or [see instructions](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell).
 
-   ```powershell
-   if (-not (Test-Path $PROFILE)) {
-       New-Item -ItemType File -Path $PROFILE -Force
-   }
-   notepad $PROFILE
-   ```
+---
 
-2. **Add the function** (update the path):
+## ⚙️ PowerShell Profile Integration
 
-   ```powershell
-   function verihash {
-       & "C:\Users\YourUsername\VeriHash\VeriHash.ps1" @args
-   }
-   ```
-
-3. **Reload profile**:
-
-   ```powershell
-   . $PROFILE
-   ```
-
-4. **Use it anywhere**:
-
-   ```powershell
-   verihash "C:\file.exe"
-   verihash "C:\file.exe" -Hash "ABC123" -OnlyVerify
-   verihash -Help
-   ```
-
-### macOS/Linux Setup
-
-1. **Check profile path**:
-
-   ```powershell
-   $PROFILE
-   # Usually: ~/.config/powershell/Microsoft.PowerShell_profile.ps1
-   ```
-
-2. **Create directory if needed**:
-
-   ```bash
-   mkdir -p $(Split-Path -Parent $PROFILE)
-   ```
-
-3. **Edit profile**:
-
-   ```powershell
-   if (-not (Test-Path $PROFILE)) {
-       New-Item -ItemType File -Path $PROFILE -Force
-   }
-   nano $PROFILE
-   ```
-
-4. **Add function** (update path):
-
-   ```powershell
-   function verihash {
-       & "/home/username/VeriHash/VeriHash.ps1" @args
-   }
-   ```
-
-5. **Reload**:
-
-   ```powershell
-   . $PROFILE
-   ```
-
-### ⚠️ Troubleshooting Profile Integration
-
-#### Problem: `verihash` command not found after adding to profile
-
-**Solution**: PowerShell only loads your profile when it starts. Make sure to reload it:
+Add to your `$PROFILE` for quick access:
 
 ```powershell
-. $PROFILE
-```
-
-Or restart your PowerShell terminal completely.
-
-#### Problem: "Cannot find path" error when trying to open profile with notepad
-
-**Solution**: Use a different editor or let PowerShell create and open it:
-
-```powershell
-# Windows - Use VSCode instead of Notepad (if installed)
-code $PROFILE
-
-# Or use PowerShell ISE
-powershell_ise $PROFILE
-
-# Or use Out-File to edit programmatically
-Add-Content -Path $PROFILE -Value @'
 function verihash {
-    & "C:\Path\To\VeriHash\VeriHash.ps1" @args
+    & "C:\path\to\VeriHash.ps1" @args
 }
-'@
 ```
 
-#### Problem: "Running scripts is disabled on this system"
-
-**Solution**: Your execution policy is too restrictive. Run this ONCE to allow profile scripts:
-
+Then use from anywhere:
 ```powershell
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+verihash file.exe
+verihash *.dll -Manifest
 ```
 
-**Explanation:**
-
-- `RemoteSigned` allows local scripts to run and downloaded scripts to run if they're signed
-- `-Scope CurrentUser` applies only to your user account, not system-wide
-- This is the recommended setting for PowerShell 7
-
-If you get an error about needing admin rights, try:
-
-```powershell
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-```
-
-#### Problem: Profile exists but `verihash` still doesn't work
-
-**Diagnostic steps:**
-
-1. Check if profile exists: `Test-Path $PROFILE`
-2. Verify profile contains the function: `Get-Content $PROFILE`
-3. Manually load profile: `. $PROFILE`
-4. Check if function was loaded: `Get-Command verihash`
-5. Verify the path in the function points to your VeriHash.ps1 location
+See `Microsoft.PowerShell_profile_example.ps1` in the repo for a full example.
 
 ---
 
-## 🪟 Windows SendTo Menu Integration
+## 🔒 Privacy
 
-Add VeriHash directly to Windows Explorer's context menu for quick access.
-
-### Quick Setup (Automated)
-
-```powershell
-# Navigate to VeriHash directory, then run:
-.\VeriHash.ps1 -SendTo
-```
-
-That's it! Right-click any file → **Send To** → **VeriHash**
-
-### What Gets Created
-
-The `-SendTo` flag creates a shortcut at:
-
-```text
-C:\Users\YourUsername\AppData\Roaming\Microsoft\Windows\SendTo\VeriHash.lnk
-```
-
-This shortcut:
-
-- Points to PowerShell 7 (`pwsh.exe`)
-- Launches VeriHash with the selected file
-- Includes the icon from your VeriHash directory (if available)
-- Uses `-ExecutionPolicy Bypass` for reliability
-
-### ⚠️ Important: SendTo vs Profile Differences
-
-| Feature | Profile (`verihash` function) | SendTo Menu |
-| ------- | ----------------------------- | ---------- |
-| **How to use** | Type `verihash filename.exe` in PowerShell | Right-click file → Send To |
-| **Requires profile?** | ✅ Yes, must be loaded | ❌ No |
-| **Profile aliases available?** | ✅ Yes | ❌ No (`-NoProfile` mode) |
-| **Execution policy check** | Uses current policy | Includes `Bypass` flag |
-| **Good for** | Terminal users, scripting | File Explorer users |
-
-**Key Point**: SendTo uses `-NoProfile` intentionally. This means:
-
-- SendTo works even if your profile has errors
-- SendTo works even if execution policy is restrictive
-- BUT you cannot use custom profile functions or aliases through SendTo
-- This is a reliability design choice, not a limitation
-
-### Troubleshooting SendTo
-
-#### Problem: SendTo shortcut not appearing after running `-SendTo`
-
-**Solution:**
-
-1. Close and reopen Windows Explorer
-2. Navigate to any file
-3. Right-click → **Send To** → Look for **VeriHash**
-
-If still not visible:
-
-```powershell
-# Verify the shortcut was created
-Test-Path "$env:AppData\Microsoft\Windows\SendTo\VeriHash.lnk"
-
-# If it exists, try re-creating it
-.\VeriHash.ps1 -SendTo
-```
-
-#### Problem: SendTo works but opens in the wrong directory
-
-**Solution**: VeriHash uses the location of selected file automatically. The shortcut's working directory is set to the VeriHash script directory for reference.
-
-#### Problem: SendTo shortcut is missing the VeriHash icon
-
-**Solution**: This happens if the `Icons` folder is missing or moved. The script shows a warning but creates the shortcut anyway with the default icon.
-
-To fix:
-
-1. Ensure `Icons\VeriHash_256.ico` exists in your VeriHash directory
-2. Recreate the shortcut: `.\VeriHash.ps1 -SendTo`
-
-#### Problem: SendTo shortcut throws an error when clicked
-
-**Common causes:**
-
-1. VeriHash script path changed → Update the shortcut path
-2. PowerShell 7 not installed → Install from Microsoft Store or [GitHub](https://github.com/PowerShell/PowerShell)
-3. File is on network drive → Some network shares have permission issues
-
-**Solution:**
-
-```powershell
-# Recreate the shortcut (it will use current PowerShell 7 path)
-.\VeriHash.ps1 -SendTo
-
-# Verify the shortcut points to correct location
-$shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut("$env:AppData\Microsoft\Windows\SendTo\VeriHash.lnk")
-Write-Host "TargetPath: $($shortcut.TargetPath)"
-Write-Host "Arguments: $($shortcut.Arguments)"
-```
-
-### Recreating the SendTo Shortcut
-
-If you move your VeriHash directory or update PowerShell, recreate the shortcut:
-
-```powershell
-cd path\to\VeriHash
-.\VeriHash.ps1 -SendTo
-```
-
-This will overwrite the old shortcut with updated paths.
+- **No network calls** — hashing is entirely local
+- **No telemetry** — nothing is sent anywhere
+- **No VirusTotal** — removed in v2 (was never shipped in v1 releases)
+- **Optional logging** — only with explicit `-Log` flag or `$env:VERIHASH_LOG=1`
+- **Log privacy** — file paths logged without user-home prefix; hash values never logged in full
 
 ---
 
-## 🐧 Linux Context Menu Integration (KDE/Dolphin)
-
-Add VeriHash directly to your Linux file manager's context menu for quick access.
-
-### Quick Setup (Linux Automated)
-
-```bash
-# User-level installation (recommended)
-pwsh -File VeriHash.ps1 -SendTo
-
-# System-wide installation (requires sudo)
-sudo pwsh -File VeriHash.ps1 -SendTo -SystemWide
-```
-
-That's it! Right-click any file in Dolphin → **Actions** → **Compute Hash (VeriHash)** or **Verify Hash (VeriHash)**
-
-### Supported Desktop Environments
-
-- ✅ **KDE Plasma (Dolphin)** - Fully supported
-- 🚧 **GNOME (Nautilus)** - Planned for future release
-- 🚧 **XFCE (Thunar)** - Planned for future release
-
-### What Gets Created (User-Level)
-
-The `-SendTo` flag creates these files:
-
-```text
-~/.local/share/kio/servicemenus/verihash.desktop
-~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
-```
-
-**System-Wide Installation** (with `-SystemWide` flag):
-
-```text
-/usr/share/kio/servicemenus/verihash.desktop
-/usr/share/icons/hicolor/1024x1024/apps/verihash.png
-```
-
-### Using in Dolphin
-
-1. Right-click any file in Dolphin file manager
-2. Select **Actions** submenu
-3. Choose one of:
-   - **Compute Hash (VeriHash)** - Calculate and save hashes
-   - **Verify Hash (VeriHash)** - Verify against existing sidecar (auto-enables `-OnlyVerify`)
-
-### Uninstalling
-
-**User-Level:**
-
-```bash
-rm ~/.local/share/kio/servicemenus/verihash.desktop
-rm ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
-```
-
-**System-Wide:**
-
-```bash
-sudo rm /usr/share/kio/servicemenus/verihash.desktop
-sudo rm /usr/share/icons/hicolor/1024x1024/apps/verihash.png
-```
-
-### Troubleshooting Linux Context Menu
-
-#### Problem: Context menu integration not installing
-
-**Solution:**
-
-1. Verify PowerShell 7 is installed:
-
-   ```bash
-   pwsh --version
-   ```
-
-2. Install if needed:
-
-   ```bash
-   # Arch/Garuda/Manjaro
-   sudo pacman -S powershell
-
-   # Ubuntu/Debian
-   sudo apt install powershell
-
-   # Fedora
-   sudo dnf install powershell
-   ```
-
-3. Verify desktop environment is KDE:
-
-   ```bash
-   echo $XDG_CURRENT_DESKTOP  # Should show "KDE"
-   ```
-
-#### Problem: Context menu entries don't appear in Dolphin
-
-**Solution:**
-
-1. Restart Dolphin:
-
-   ```bash
-   killall dolphin
-   dolphin &
-   ```
-
-2. Verify the `.desktop` file was created:
-
-   ```bash
-   cat ~/.local/share/kio/servicemenus/verihash.desktop
-   ```
-
-3. Check KDE service menu directory permissions:
-
-   ```bash
-   ls -la ~/.local/share/kio/servicemenus/
-   ```
-
-#### Problem: "Could not detect desktop environment" error
-
-**Cause**: You're running a desktop environment other than KDE, or environment variables aren't set.
-
-**Solution**:
-
-Check your desktop environment:
-
-```bash
-echo "XDG_CURRENT_DESKTOP: $XDG_CURRENT_DESKTOP"
-echo "DESKTOP_SESSION: $DESKTOP_SESSION"
-```
-
-Current supported environments:
-
-- KDE Plasma (detected via `XDG_CURRENT_DESKTOP=KDE` or `plasma`)
-
-For other desktop environments, please open an issue on GitHub with your `$XDG_CURRENT_DESKTOP` value.
-
-#### Problem: Icons not showing in context menu
-
-**Solution:**
-
-1. Verify icon was copied:
-
-   ```bash
-   ls -la ~/.local/share/icons/hicolor/1024x1024/apps/verihash.png
-   ```
-
-2. If missing, reinstall:
-
-   ```bash
-   pwsh -File VeriHash.ps1 -SendTo
-   ```
-
-3. Update icon cache (may help):
-
-   ```bash
-   gtk-update-icon-cache ~/.local/share/icons/hicolor/ -f
-   ```
-
-### Recreating the Context Menu
-
-If you move your VeriHash directory or update PowerShell, recreate the integration:
-
-```bash
-cd /path/to/VeriHash
-pwsh -File VeriHash.ps1 -SendTo
-```
-
-This will overwrite the old `.desktop` file with updated paths.
-
-#### When to Reinstall
-
-- ✅ **After updating PowerShell** (e.g., switching from pacman to manual install)
-- ✅ **After moving VeriHash directory**
-- ✅ **If context menu shows errors** about missing pwsh
-
-The installer automatically detects the current `pwsh` location and updates all paths.
-
----
-
-## 💼 Use Cases
-
-### 🔬 **Software Integrity Verification**
-
-Download software from the internet and verify it matches the vendor's published hash:
-
-```powershell
-verihash ".\downloaded-app.exe" -Hash "VENDOR_PROVIDED_HASH"
-```
-
-### 🔐 **CI/CD Pipeline Integration**
-
-Ensure build artifacts haven't been tampered with:
-
-```powershell
-verihash ".\build\release.zip" -Algorithm All
-# Store hashes in version control
-```
-
-### 💾 **Backup Integrity Checks**
-
-Generate hashes for backups and verify periodically:
-
-```powershell
-# Initial backup
-verihash "backup-2025-01.tar.gz"
-
-# Verify later (checks against sidecar file)
-verihash "backup-2025-01.tar.gz.sha256"
-```
-
-### 📦 **File Distribution**
-
-Distribute files with multiple hash algorithms for maximum compatibility:
-
-```powershell
-verihash "software-v1.2.0.zip" -Algorithm All
-# Creates .md5, .sha256, and .sha512 files
-```
-
----
-
-## ⚡ QuickHash - Lightweight String & File Hasher
-
-VeriHash also includes **QuickHash.ps1**, a simplified interactive tool for quick hash calculations.
-
-### 🎯 Purpose
-
-QuickHash is designed for fast, interactive hash computation of **both text strings and files** without the complexity of full verification features.
-
-### ✨ Key Features
-
-- **String Hashing**: Hash passwords, API keys, or any text directly
-- **File Hashing**: Compute file hashes with minimal setup
-- **Interactive Prompts**: User-friendly prompt-based interface
-- **Dual Algorithm Support**: MD5 and SHA256
-- **Lightweight**: No dependencies, minimal code
-- **PowerShell 7 Compatible**: Fully updated for modern PowerShell
-- **Tested & Validated**: 22 comprehensive Pester tests ensure reliability
-
-### 💼 QuickHash Use Cases
-
-#### 1. Password/API Key Hashing
-
-```powershell
-.\QuickHash.ps1
-# Enter: "MySecretPassword123"
-# Choose: SHA256
-# Result: Instant hash of your string
-```
-
-#### 2. Quick File Verification
-
-```powershell
-.\QuickHash.ps1
-# Enter: "C:\Downloads\file.zip"
-# Choose: MD5
-# Result: File hash without creating sidecar files
-```
-
-#### 3. Development & Testing
-
-```powershell
-.\QuickHash.ps1
-# Test hash values for unit tests
-# Verify string transformations
-# Quick file integrity checks
-```
-
-### 📝 Example Usage
-
-```powershell
-# Run QuickHash
-.\QuickHash.ps1
-
-# Prompt 1: "Please enter a string or a file path"
-> Hello World
-
-# Prompt 2: "Please choose an algorithm (MD5 or SHA256)"
-> SHA256
-
-# Output:
-# Starting hash calculation for input: Hello World using algorithm: SHA256
-# Input is a string. Computing hash of the string...
-# Hash of the string ('Hello World'): B94D27B9934D3E08A52E52D7DA7DABFAC484EFE37A5380EE9088F7ACE2EFCDE9
-# Process completed.
-```
-
-### 🔄 When to Use Each Tool
-
-**Use QuickHash when:**
-
-- You need a quick hash of a text string
-- You want a simple, no-frills file hash
-- You prefer interactive prompts over command-line arguments
-- You don't need sidecar files or verification features
-
-**Use VeriHash when:**
-
-- You need comprehensive file verification
-- You want to create and verify sidecar files
-- You need SHA512 support
-- You want clipboard detection and automation
-- You need digital signature checking
-- You require multiple hash algorithms at once
+## ⚠️ Upgrading from v1
+
+v2.0 is a clean break. Key changes:
+
+| v1 | v2 |
+|----|-----|
+| `.\VeriHash.ps1 file.exe -Hash "abc..."` | Copy hash to clipboard, then `.\VeriHash.ps1 file.exe` |
+| `-Algorithm MD5,SHA512` | SHA256 always; MD5/SHA512 via module API |
+| `-OnlyVerify` | Removed — verification is automatic |
+| `-SkipSignatureCheck` | Removed — non-PE files auto-skip |
+| `-Force` | Removed — sidecar conflicts resolved interactively |
+| `-SendTo` | `-InstallSendTo` |
+| PSFramework optional | Not used — plain-text logging built in |
+| `QuickHash.ps1` | Removed — v2 hot-path replaces its purpose |
+
+See [CHANGELOG.md](CHANGELOG.md) for the complete list.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how you can help:
+1. Fork and clone
+2. Create a branch
+3. Make changes
+4. Run tests: `.\Test-All.ps1`
+5. Submit a pull request
 
-1. **Report Bugs**: [Open an issue](https://github.com/arcticpinecone/pwsh7-VeriHash/issues)
-2. **Suggest Features**: [Start a discussion](https://github.com/arcticpinecone/pwsh7-VeriHash/discussions)
-3. **Submit PRs**: Fork the repo and submit pull requests
-
-**Development Setup**:
-
-```bash
-git clone https://github.com/arcticpinecone/pwsh7-VeriHash
-cd VeriHash
-# Make changes and test
-.\VeriHash.ps1 -Help
-```
-
-### 🧪 Running Tests
-
-VeriHash includes comprehensive Pester tests to ensure code quality and reliability.
-
-**Prerequisites**:
-
-```powershell
-# Install or update Pester to latest version
-Install-Module Pester -Force -SkipPublisherCheck
-
-# Import and verify version
-Import-Module Pester -PassThru
-# Should show version 5.x or higher
-```
-
-**Run all tests**:
-
-**Quick method** (recommended):
-
-```powershell
-# Run all tests and code quality checks in one command
-.\Test-All.ps1
-```
-
-**Individual test methods**:
-
-```powershell
-# Import the latest Pester version
-Import-Module Pester -Force
-
-# Run VeriHash core functionality tests
-Invoke-Pester -Path "Tests\VeriHash.Tests.ps1"
-
-# Run QuickHash tests
-Invoke-Pester -Path "Tests\QuickHash.Tests.ps1"
-
-# Run Profile & SendTo integration tests (Windows only)
-Invoke-Pester -Path "Tests\ProfileAndSendTo.Tests.ps1"
-
-# Run all tests in the Tests directory
-Invoke-Pester -Path "Tests\"
-
-# Run with detailed output (shows test names and verbose logging)
-Invoke-Pester -Path "Tests\" -Output Detailed
-```
-
-**Run PSScriptAnalyzer**:
-
-```powershell
-# Install or update PSScriptAnalyzer to latest version
-Install-Module -Name PSScriptAnalyzer -Force
-
-# Analyze VeriHash.ps1
-Invoke-ScriptAnalyzer -Path ".\VeriHash.ps1" -Settings PSGallery
-
-# Analyze QuickHash.ps1
-Invoke-ScriptAnalyzer -Path ".\QuickHash.ps1" -Settings PSGallery
-```
-
-**Test Coverage**:
-
-- **VeriHash.ps1**: 52 tests covering core functionality including:
-  - Hash verification and clipboard detection
-  - Sidecar file creation and verification
-  - Multi-file checksum verification
-  - Sidecar update and match detection (8 tests)
-  - Clipboard + Sidecar interaction (2 tests)
-  - Force parameter behavior (2 tests)
-  - SkipSignatureCheck parameter behavior (5 tests)
-  - Smart signature detection (10 tests)
-  - Regression tests for cached comparison data (2 tests)
-  - Help system validation
-- **QuickHash.ps1**: 22 tests covering file hashing, string hashing, algorithm validation, and error handling
-- **Profile-VeriHashTiming.ps1**: 17 tests covering performance profiling, measurement accuracy, and timing analysis
-- **ProfileAndSendTo.Tests.ps1**: 22 tests covering PowerShell Profile and Windows SendTo functionality
-- **Total: 91 comprehensive tests** ensuring reliability and performance
-
-**Note on Pester Version**: VeriHash uses Pester 5.x syntax. If you see errors about `BeforeAll` location, update Pester with `Install-Module Pester -Force`.
+Please follow existing code conventions: `[CmdletBinding()]`, `[OutputType()]`, 4-space indentation, `Verb-Noun` function names.
 
 ---
 
-## 🔒 Privacy & Data Minimization
-
-VeriHash is designed with privacy in mind. We believe in transparency about what data is collected and why.
-
-### Logging Philosophy
-
-VeriHash includes optional logging (via [PSFramework](https://psframework.org/)) for debugging and troubleshooting. However, we follow strict data minimization principles:
-
-**What we sanitize/control:**
-
-- ✅ **File paths are sanitized** (e.g., `C:\Users\name\...` becomes `%USERPROFILE%\...`)
-- ✅ **Messages don't contain full paths** (sanitized before logging)
-- ⚠️ PSFramework adds some metadata (ComputerName, Username) that we cannot disable
-- ⚠️ If sharing logs externally, consider filtering these fields
-
-**What we DO log (when logging is enabled):**
-
-- ✅ Timestamps
-- ✅ Log levels (Debug, Verbose, Warning)
-- ✅ Operation messages (e.g., "Hash computed")
-- ✅ Sanitized paths (e.g., `%USERPROFILE%\Downloads\file.exe`)
-- ✅ Hash algorithms used
-- ✅ Performance metrics (file size, throughput)
-
-### Principles Applied
-
-| Principle | Reference | Implementation |
-| --------- | --------- | -------------- |
-| **Data Minimization** | GDPR Article 5(1)(c) | Collect only data necessary for debugging |
-| **Sensitive Data in Logs** | CWE-532 | No usernames or system identifiers in logs |
-| **Logging Best Practices** | OWASP Logging Cheat Sheet | Sanitize paths, exclude PII |
-| **Privacy by Design** | GDPR Article 25 | Sanitization built-in, not opt-in |
-
-### Path Sanitization
-
-All file paths in logs are automatically sanitized:
-
-- **Windows**: `C:\Users\username\...` becomes `%USERPROFILE%\...`
-- **Linux/macOS**: `/home/username/...` becomes `~/...`
-
-This means logs can be safely shared for debugging without exposing usernames or directory structures.
-
-### Log Utilities
-
-VeriHash includes `VeriHash.LogUtils.ps1` for working with log files:
+## 🧪 Running Tests
 
 ```powershell
-# View recent log entries
-ConvertFrom-VeriHashLog -Days 7
+# Full suite (tests + linter + profiler)
+.\Test-All.ps1
 
-# Get a summary of log activity
-Get-VeriHashLogSummary -Days 30
+# Tests only
+.\Test-All.ps1 -SkipAnalyzer -SkipProfiler
 
-# Expand sanitized paths back to full paths (local debugging only)
-ConvertFrom-SanitizedPath -Path '%USERPROFILE%\Downloads\file.exe'
+# Single test file
+Invoke-Pester -Path Tests/VeriHash.Core.Module.Tests.ps1 -Output Detailed
+Invoke-Pester -Path Tests/VeriHash.Cli.Tests.ps1 -Output Detailed
+
+# CI mode (exit code on failure)
+.\Test-All.ps1 -CI
 ```
 
-### Enabling Logging
-
-Logging is **disabled by default**. To enable:
-
-```powershell
-# Enable verbose logging
-.\VeriHash.ps1 -LogLevel Verbose "file.exe"
-
-# Enable debug logging (most detailed)
-.\VeriHash.ps1 -LogLevel Debug "file.exe"
-
-# Or set via environment variable
-$env:VERIHASH_LOG_LEVEL = 'Verbose'
-```
-
-**Note**: Logging requires the [PSFramework](https://psframework.org/) module. If not installed, VeriHash works normally without logging capabilities.
+Required: `Install-Module Pester -Scope CurrentUser` and `Install-Module PSScriptAnalyzer -Scope CurrentUser`.
 
 ---
 
 ## 📄 License
 
-### GNU Affero General Public License v3.0 (AGPL-3.0)
-
-VeriHash is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-**Key Permissions:**
-
-- ✅ Commercial use
-- ✅ Modification
-- ✅ Distribution
-- ✅ Patent use
-- ✅ Private use
-
-**Conditions:**
-
-- 📝 License and copyright notice
-- 📝 State changes
-- 📝 Disclose source
-- 📝 Network use is distribution (AGPL-specific)
-- 📝 Same license
-
-**Limitations:**
-
-- ⚠️ Liability
-- ⚠️ Warranty
-
-**Important:** If you run a modified version of VeriHash on a network server, you must make the source code available to users of that server.
-
-[Full License Text](LICENSE.md) | [GNU AGPL-3.0 Official](https://www.gnu.org/licenses/agpl-3.0.html)
-
-Author is utilizing the Official unmodified Markdown Version
-[GNU AGPL-3.0 Official Markdown](https://www.gnu.org/licenses/agpl-3.0.md)
-Retrieved: 2025-11-16
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [PowerShell 7](https://github.com/PowerShell/PowerShell)
-- Inspired by the need for cross-platform hash verification tools
-- Community feedback and contributions
-
----
-
-**Made with ❤️ by [arcticpinecone](https://github.com/arcticpinecone)**
-
-[⭐ Star this repo](https://github.com/arcticpinecone/pwsh7-VeriHash) • [🐛 Report Bug](https://github.com/arcticpinecone/pwsh7-VeriHash/issues) • [💡 Request Feature](https://github.com/arcticpinecone/pwsh7-VeriHash/issues)
+[AGPL-3.0-or-later](LICENSE.md) — © 2024-2026 arcticpinecone
