@@ -93,7 +93,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Thin CLI rewrite + dead code deletion + archive concepting docs
 - [ ] 05-02-PLAN.md — CLI end-to-end tests (VeriHash.Cli.Tests.ps1)
-- [ ] 05-03-PLAN.md — README rewrite + CHANGELOG v2.0 entry
+- [x] 05-03-PLAN.md — README rewrite + CHANGELOG v2.0 entry
 
 ## Progress Table
 
@@ -103,7 +103,7 @@ Plans:
 | 2. Hot-Path Performance + Multi-File Loop | 3/3 | ✅ Complete + UAT-verified | 2026-04-18 |
 | 3. Manifest Module | 4/4 | ✅ Complete | 2026-04-19 |
 | 4. Integrations + Config Trim | 2/2 | ✅ Complete | 2026-04-19 |
-| 5. Thin CLI + Cleanup & Docs | 1/3 | ⏳ Executing | - |
+| 5. Thin CLI + Cleanup & Docs | 2/3 | ⏳ Executing | - |
 
 ## Coverage Verification
 

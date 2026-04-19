@@ -9,8 +9,8 @@ progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 15
-  completed_plans: 8
-  percent: 53
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-18 for v2.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.0 Modular Rebuild — Phase 5 executing. Plan 05-01 complete (thin CLI + cleanup).
+**Current focus:** v2.0 Modular Rebuild — Phase 5 executing. Plans 05-01 + 05-03 complete (thin CLI + cleanup + docs).
 
 ## Current Position
 
 **Milestone:** v2.0 Modular Rebuild
-**Phase:** 5 — Thin CLI + Cleanup & Docs (executing — plan 05-01 complete)
+**Phase:** 5 — Thin CLI + Cleanup & Docs (executing — plans 05-01 + 05-03 complete)
 **Status:** Executing
 **Last activity:** 2026-04-19
 
-Progress: [█████████░] 90% (4/5 phases complete, plan 1/3 in P5 done)
+Progress: [█████████░] 93% (4/5 phases complete, plans 2/3 in P5 done)
 
 ### Phase Pipeline
 
@@ -39,7 +39,7 @@ Progress: [█████████░] 90% (4/5 phases complete, plan 1/3 in
 | 2 | Hot-Path Performance + Multi-File Loop | ✅ COMPLETE (commits 1b9af56..756767e) | 8 | Phase 1 |
 | 3 | Manifest Module | ✅ COMPLETE (commits 2cb6661..b07b95f) | 8 | Phase 1 |
 | 4 | Integrations + Config Trim | ✅ COMPLETE (commits 08dd19d..84d571a) | 6 | Phases 1, 3 |
-| 5 | Thin CLI + Cleanup & Docs | ⏳ Executing (1/3 plans) | 8 | Phases 1–4 |
+| 5 | Thin CLI + Cleanup & Docs | ⏳ Executing (2/3 plans) | 8 | Phases 1–4 |
 
 ## Performance Metrics
 
@@ -72,4 +72,4 @@ None.
 
 ## Session Continuity
 
-**Next action:** Execute Plan 05-03 (README/CHANGELOG rewrite), then Plan 05-02 (CLI end-to-end tests).
+**Next action:** Execute Plan 05-02 (CLI end-to-end tests) — last plan in Phase 5.
