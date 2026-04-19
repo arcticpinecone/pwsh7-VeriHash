@@ -28,11 +28,13 @@ function Get-VeriHashResult {
     $hash = (Get-FileHash -LiteralPath $resolved -Algorithm $Algorithm).Hash.ToLowerInvariant()
     $sw.Stop()
     return [pscustomobject]@{
-        PSTypeName = 'VeriHash.Result'
-        FilePath   = $resolved
-        Size       = [long]$info.Length
-        Algorithm  = $Algorithm
-        Hash       = $hash
-        ElapsedMs  = [int]$sw.ElapsedMilliseconds
+        PSTypeName    = 'VeriHash.Result'
+        FilePath      = $resolved
+        Size          = [long]$info.Length
+        CreationTime  = $info.CreationTime
+        LastWriteTime = $info.LastWriteTime
+        Algorithm     = $Algorithm
+        Hash          = $hash
+        ElapsedMs     = [int]$sw.ElapsedMilliseconds
     }
 }

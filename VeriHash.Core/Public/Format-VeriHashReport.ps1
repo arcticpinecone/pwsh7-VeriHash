@@ -38,8 +38,8 @@ function Format-VeriHashReport {
         $formattedBytes = $Result.Size.ToString("N0").Replace(",", " ")
         $sizeMb = "{0:N2}" -f ($Result.Size / 1MB)
         Write-Host ("File Size:    " + $sizeMb + " MB  (" + $formattedBytes + " bytes)") -ForegroundColor Yellow
-        Write-Host "Created:      <CREATED>" -ForegroundColor Cyan
-        Write-Host "Modified:     <MODIFIED>" -ForegroundColor Cyan
+        Write-Host ("Created:      " + $Result.CreationTime.ToString("yyyy-MM-dd HH:mm:ss UTC")) -ForegroundColor Cyan
+        Write-Host ("Modified:     " + $Result.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss UTC")) -ForegroundColor Cyan
         Write-Host "---" -ForegroundColor Cyan
         Write-Host "[Hash]" -ForegroundColor White
         Write-Host ("Algorithm:    " + $Result.Algorithm) -ForegroundColor Cyan
