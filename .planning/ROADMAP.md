@@ -12,8 +12,8 @@
 
 - [x] **Phase 1: Core Module Foundation** — Real `VeriHash.Core` module replaces monolith helpers; golden tests pin v1-compatible behavior.
 - [x] **Phase 2: Hot-Path Performance + Multi-File Loop** — PE-only signature, parallel hash/sig via `Start-ThreadJob`, streaming output, multi-file SendTo. (UAT 10/10 pass — commit 0ed3609; 1 cosmetic gap → backlog 999.2.)
-- [ ] **Phase 3: Manifest Module** — `VeriHash.Manifest` with GNU `sha256sum`-compatible create/verify, atomic writes, traversal guard, machine-readable exit codes.
-- [ ] **Phase 4: Integrations + Config Trim** — Lazy-loaded SendTo/KDE installers (incl. manifest entry); VirusTotal and PSFramework excised from source + tests.
+- [x] **Phase 3: Manifest Module** — `VeriHash.Manifest` with GNU `sha256sum`-compatible create/verify, atomic writes, traversal guard, machine-readable exit codes.
+- [x] **Phase 4: Integrations + Config Trim** — Lazy-loaded SendTo/KDE installers (incl. manifest entry); VirusTotal and PSFramework excised from source + tests.
 - [ ] **Phase 5: Thin CLI + Cleanup & Docs** — ≤200-line dispatcher, end-to-end CLI tests, retired files deleted, README/CHANGELOG/concepting docs reorganized for ship.
 
 ## Phase Details
@@ -76,8 +76,8 @@ Plans:
   4. `Select-String -i 'PSFramework|Write-PSFMessage|PSFrameworkAvailable'` over the entire source + tests tree returns zero matches; the ~33 `if ($script:PSFrameworkAvailable)` guard sites are gone and the test suite passes without PSFramework installed.
 **Plans**: 2 plans
 Plans:
-- [ ] 04-01-PLAN.md — VirusTotal config trim + PSFramework removal from all source/tests (CFG-01, CFG-02, CFG-03) [Wave 1]
-- [ ] 04-02-PLAN.md — Integration extraction to VeriHash.Integrations.ps1 + manifest shortcuts + tests (INTEG-01, INTEG-02, INTEG-03) [Wave 2]
+- [x] 04-01-PLAN.md — VirusTotal config trim + PSFramework removal from all source/tests (CFG-01, CFG-02, CFG-03) [Wave 1]
+- [x] 04-02-PLAN.md — Integration extraction to VeriHash.Integrations.ps1 + manifest shortcuts + tests (INTEG-01, INTEG-02, INTEG-03) [Wave 2]
 
 ### Phase 5: Thin CLI + Cleanup & Docs
 **Goal**: A ≤200-line `VeriHash.ps1` dispatcher replaces the 1,527-line monolith, end-to-end Pester tests pin the locked v2 contract, retired files are deleted, and README/CHANGELOG/concepting docs are reorganized for ship.

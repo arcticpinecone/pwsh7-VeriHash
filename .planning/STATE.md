@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: completed
-last_updated: "2026-04-19T10:16:44.000Z"
+last_updated: "2026-04-19T12:00:00.000Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 10
-  percent: 60
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -20,17 +20,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-18 for v2.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.0 Modular Rebuild — Phase 4 (Integrations + Config Trim) planned. 2 plans, 2 waves. Ready for execution.
+**Current focus:** v2.0 Modular Rebuild — Phase 4 complete. Phase 5 (Thin CLI + Cleanup & Docs) is next.
 
 ## Current Position
 
 **Milestone:** v2.0 Modular Rebuild
-**Phase:** 4 — Integrations + Config Trim (planned, ready for execution)
-**Plan:** —
-**Status:** Phase 4 planned: 2 plans in 2 waves. Ready for execution.
+**Phase:** 4 — Integrations + Config Trim (✅ COMPLETE)
+**Status:** Phase 4 executed. All 2 plans across 2 waves complete. VT + PSFramework removed, integration functions extracted to lazy-loaded VeriHash.Integrations.ps1 with manifest shortcuts/actions.
 **Last activity:** 2026-04-19
 
-Progress: [██████░░░░] 60% (3/5 phases complete)
+Progress: [████████░░] 80% (4/5 phases complete)
 
 ### Phase Pipeline
 
@@ -39,8 +38,8 @@ Progress: [██████░░░░] 60% (3/5 phases complete)
 | 1 | Core Module Foundation | ✅ COMPLETE (commits 9b5e54a..ccd2fff) | 8 | — |
 | 2 | Hot-Path Performance + Multi-File Loop | ✅ COMPLETE (commits 1b9af56..756767e) | 8 | Phase 1 |
 | 3 | Manifest Module | ✅ COMPLETE (commits 2cb6661..b07b95f) | 8 | Phase 1 |
-| 4 | Integrations + Config Trim | Context gathered | 6 | Phases 1, 3 |
-| 5 | Thin CLI + Cleanup & Docs | Blocked on P2–P4 | 8 | Phases 1–4 |
+| 4 | Integrations + Config Trim | ✅ COMPLETE (commits 08dd19d..84d571a) | 6 | Phases 1, 3 |
+| 5 | Thin CLI + Cleanup & Docs | Blocked on P4 → unblocked | 8 | Phases 1–4 |
 
 ## Performance Metrics
 
@@ -73,4 +72,4 @@ None.
 
 ## Session Continuity
 
-**Next action:** `/gsd-execute-phase 4` — Phase 4 planned, ready for execution.
+**Next action:** `/gsd-discuss-phase 5` or `/gsd-plan-phase 5` — Phase 5 (Thin CLI + Cleanup & Docs) is unblocked.
