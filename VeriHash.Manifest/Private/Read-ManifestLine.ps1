@@ -18,6 +18,7 @@ function Read-ManifestLine {
     [OutputType([hashtable])]
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$Line
     )
     $trimmed = $Line.TrimEnd("`r")

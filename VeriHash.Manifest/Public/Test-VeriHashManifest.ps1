@@ -8,6 +8,12 @@ function Test-VeriHashManifest {
         path traversal (D-13), and returns a VeriHash.ManifestVerifyResult
         with machine-readable exit code (MANIFEST-06).
         Structured output only (D-17).
+
+        Exit code precedence (MANIFEST-06 + D-11):
+        3 = parse error or path traversal (highest priority)
+        1 = at least one hash mismatch
+        2 = at least one missing file (only when no mismatches)
+        0 = all pass
     .PARAMETER Path
         Path to the manifest file to verify.
     .OUTPUTS
@@ -21,5 +27,125 @@ function Test-VeriHashManifest {
         [Parameter(Mandatory)]
         [string]$Path
     )
-    throw 'Not implemented — Plan 03-03 will implement this function.'
+
+    $resolvedManifest = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
+    $manifestDir = Split-Path -Parent $resolvedManifest
+
+    $rawLines = [System.IO.File]::ReadAllLines($resolvedManifest)
+
+    $entries = [System.Collections.Generic.List[object]]::new()
+    $hasParseError = $false
+    $hasMismatch   = $false
+    $hasMissing    = $false
+
+    foreach ($rawLine in $rawLines) {
+        $parsed = Read-ManifestLine -Line $rawLine
+        if ($null -eq $parsed) { continue }
+
+        # Malformed line
+        if ($parsed.ContainsKey('Malformed') -and $parsed.Malformed) {
+            $hasParseError = $true
+            $entries.Add([pscustomobject]@{
+                PSTypeName   = 'VeriHash.ManifestEntry'
+                Path         = $parsed.RawLine
+                ExpectedHash = $null
+                ActualHash   = $null
+                Status       = 'parse-error'
+            })
+            continue
+        }
+
+        $entryFilename = $parsed.Filename
+
+        # ── Path traversal guard (D-13, MANIFEST-05) ────────────────
+        $normalizedEntry = $entryFilename -replace '/', '\'
+        $isSafe = Test-PathTraversal -EntryPath $normalizedEntry -BaseDirectory $manifestDir
+        if (-not $isSafe) {
+            $hasParseError = $true
+            $entries.Add([pscustomobject]@{
+                PSTypeName   = 'VeriHash.ManifestEntry'
+                Path         = $entryFilename
+                ExpectedHash = $parsed.Hash
+                ActualHash   = $null
+                Status       = 'traversal-rejected'
+            })
+            continue
+        }
+
+        # ── Resolve file path relative to manifest directory ─────────
+        $resolvedPath = [System.IO.Path]::GetFullPath(
+            [System.IO.Path]::Combine($manifestDir, $normalizedEntry)
+        )
+
+        # ── Hash and compare ─────────────────────────────────────────
+        if (-not (Test-Path -LiteralPath $resolvedPath)) {
+            $hasMissing = $true
+            $entries.Add([pscustomobject]@{
+                PSTypeName   = 'VeriHash.ManifestEntry'
+                Path         = $entryFilename
+                ExpectedHash = $parsed.Hash
+                ActualHash   = $null
+                Status       = 'missing'
+            })
+            continue
+        }
+
+        try {
+            $result = Get-VeriHashResult -Path $resolvedPath -Algorithm SHA256
+            $actualHash = $result.Hash
+        } catch {
+            $hasMissing = $true
+            $entries.Add([pscustomobject]@{
+                PSTypeName   = 'VeriHash.ManifestEntry'
+                Path         = $entryFilename
+                ExpectedHash = $parsed.Hash
+                ActualHash   = $null
+                Status       = 'missing'
+            })
+            continue
+        }
+
+        if ($actualHash -eq $parsed.Hash) {
+            $entries.Add([pscustomobject]@{
+                PSTypeName   = 'VeriHash.ManifestEntry'
+                Path         = $entryFilename
+                ExpectedHash = $parsed.Hash
+                ActualHash   = $actualHash
+                Status       = 'pass'
+            })
+        } else {
+            $hasMismatch = $true
+            $entries.Add([pscustomobject]@{
+                PSTypeName   = 'VeriHash.ManifestEntry'
+                Path         = $entryFilename
+                ExpectedHash = $parsed.Hash
+                ActualHash   = $actualHash
+                Status       = 'mismatch'
+            })
+        }
+    }
+
+    # ── Compute exit code with correct precedence (MANIFEST-06) ──────
+    $exitCode = if ($hasParseError) { 3 }
+                elseif ($hasMismatch) { 1 }
+                elseif ($hasMissing) { 2 }
+                else { 0 }
+
+    # ── Build summary counts ─────────────────────────────────────────
+    $passedCount  = ($entries | Where-Object { $_.Status -eq 'pass' }).Count
+    $failedCount  = ($entries | Where-Object { $_.Status -eq 'mismatch' }).Count
+    $missingCount = ($entries | Where-Object { $_.Status -eq 'missing' }).Count
+
+    return [pscustomobject]@{
+        PSTypeName   = 'VeriHash.ManifestVerifyResult'
+        ManifestPath = $resolvedManifest
+        Entries      = $entries.ToArray()
+        ExitCode     = $exitCode
+        Summary      = [pscustomobject]@{
+            Total   = $entries.Count
+            Passed  = $passedCount
+            Failed  = $failedCount
+            Missing = $missingCount
+        }
+    }
 }
