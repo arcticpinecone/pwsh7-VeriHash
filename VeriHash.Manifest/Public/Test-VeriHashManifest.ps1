@@ -58,8 +58,7 @@ function Test-VeriHashManifest {
         $entryFilename = $parsed.Filename
 
         # ── Path traversal guard (D-13, MANIFEST-05) ────────────────
-        $normalizedEntry = $entryFilename -replace '/', '\'
-        $isSafe = Test-PathTraversal -EntryPath $normalizedEntry -BaseDirectory $manifestDir
+        $isSafe = Test-PathTraversal -EntryPath $entryFilename -BaseDirectory $manifestDir
         if (-not $isSafe) {
             $hasParseError = $true
             $entries.Add([pscustomobject]@{
@@ -74,7 +73,7 @@ function Test-VeriHashManifest {
 
         # ── Resolve file path relative to manifest directory ─────────
         $resolvedPath = [System.IO.Path]::GetFullPath(
-            [System.IO.Path]::Combine($manifestDir, $normalizedEntry)
+            [System.IO.Path]::Combine($manifestDir, $entryFilename)
         )
 
         # ── Hash and compare ─────────────────────────────────────────
