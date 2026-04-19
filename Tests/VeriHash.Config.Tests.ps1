@@ -17,8 +17,6 @@ AfterAll {
     $env:VERIHASH_LOG_LEVEL = $null
     $env:VERIHASH_LOG_FILE = $null
     $env:VERIHASH_LOG_CONSOLE = $null
-    $env:VERIHASH_VT_APIKEY = $null
-    $env:VERIHASH_VT_ENABLED = $null
 }
 
 Describe 'Get-VeriHashConfigPath' {
@@ -73,14 +71,6 @@ Describe 'Get-VeriHashDefaultConfig' {
             $result.logging | Should -Not -BeNullOrEmpty
         }
 
-        It 'Returns a hashtable with virustotal section' {
-            # Act
-            $result = Get-VeriHashDefaultConfig
-
-            # Assert
-            $result.virustotal | Should -Not -BeNullOrEmpty
-        }
-
         It 'Has correct default logging values' {
             # Act
             $result = Get-VeriHashDefaultConfig
@@ -91,16 +81,6 @@ Describe 'Get-VeriHashDefaultConfig' {
             $result.logging.console | Should -Be $true
         }
 
-        It 'Has correct default virustotal values' {
-            # Act
-            $result = Get-VeriHashDefaultConfig
-
-            # Assert
-            $result.virustotal.apiKey | Should -Be ''
-            $result.virustotal.enabled | Should -Be $false
-            $result.virustotal.preferApi | Should -Be $true
-            $result.virustotal.autoOpen | Should -Be $false
-        }
     }
 }
 
@@ -110,8 +90,6 @@ Describe 'Get-VeriHashConfig' {
         $env:VERIHASH_LOG_LEVEL = $null
         $env:VERIHASH_LOG_FILE = $null
         $env:VERIHASH_LOG_CONSOLE = $null
-        $env:VERIHASH_VT_APIKEY = $null
-        $env:VERIHASH_VT_ENABLED = $null
     }
 
     Context 'When no config file exists' {
@@ -124,7 +102,6 @@ Describe 'Get-VeriHashConfig' {
 
             # Assert
             $result.logging.level | Should -Be 'INFO'
-            $result.virustotal.enabled | Should -Be $false
         }
     }
 
@@ -140,12 +117,6 @@ Describe 'Get-VeriHashConfig' {
                     file = $false
                     console = $true
                 }
-                virustotal = @{
-                    apiKey = 'test-api-key'
-                    enabled = $false
-                    preferApi = $false
-                    autoOpen = $true
-                }
             } | ConvertTo-Json -Depth 3 | Set-Content $configFile
 
             # Act
@@ -154,8 +125,6 @@ Describe 'Get-VeriHashConfig' {
             # Assert
             $result.logging.level | Should -Be 'DEBUG'
             $result.logging.file | Should -Be $false
-            $result.virustotal.apiKey | Should -Be 'test-api-key'
-            $result.virustotal.enabled | Should -Be $false
         }
 
         It 'Merges partial config with defaults' {
@@ -177,7 +146,6 @@ Describe 'Get-VeriHashConfig' {
             $result.logging.level | Should -Be 'WARNING'
             $result.logging.file | Should -Be $true  # Default
             $result.logging.console | Should -Be $true  # Default
-            $result.virustotal.enabled | Should -Be $false  # Default
         }
     }
 
@@ -199,36 +167,17 @@ Describe 'Get-VeriHashConfig' {
             $result.logging.level | Should -Be 'DEBUG'
         }
 
-        It 'Environment variable overrides config file for VirusTotal API key' {
-            # Arrange
-            $testDir = Join-Path $script:TestConfigDir "envtest2"
-            New-Item -ItemType Directory -Path $testDir -Force | Out-Null
-            $configFile = Join-Path $testDir "config.json"
-            @{
-                virustotal = @{ apiKey = 'file-key' }
-            } | ConvertTo-Json -Depth 3 | Set-Content $configFile
-            $env:VERIHASH_VT_APIKEY = 'env-key'
-
-            # Act
-            $result = Get-VeriHashConfig -ConfigDirectory $testDir
-
-            # Assert
-            $result.virustotal.apiKey | Should -Be 'env-key'
-        }
-
         It 'Environment variable overrides for boolean values' {
             # Arrange
             $testDir = Join-Path $script:TestConfigDir "envtest3"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $env:VERIHASH_LOG_FILE = 'false'
-            $env:VERIHASH_VT_ENABLED = 'false'
 
             # Act
             $result = Get-VeriHashConfig -ConfigDirectory $testDir
 
             # Assert
             $result.logging.file | Should -Be $false
-            $result.virustotal.enabled | Should -Be $false
         }
     }
 
@@ -241,7 +190,6 @@ Describe 'Get-VeriHashConfig' {
             @{
                 logging = @{ level = 'WARNING' }
             } | ConvertTo-Json -Depth 3 | Set-Content $configFile
-            $env:VERIHASH_VT_APIKEY = 'env-key'
 
             # Act
             $result = Get-VeriHashConfig -ConfigDirectory $testDir -IncludeSource
@@ -249,7 +197,6 @@ Describe 'Get-VeriHashConfig' {
             # Assert
             $result._source | Should -Not -BeNullOrEmpty
             $result._source.'logging.level' | Should -Be 'file'
-            $result._source.'virustotal.apiKey' | Should -Be 'env'
             $result._source.'logging.file' | Should -Be 'default'
         }
     }
@@ -261,8 +208,6 @@ Describe 'Set-VeriHashConfig' {
         $env:VERIHASH_LOG_LEVEL = $null
         $env:VERIHASH_LOG_FILE = $null
         $env:VERIHASH_LOG_CONSOLE = $null
-        $env:VERIHASH_VT_APIKEY = $null
-        $env:VERIHASH_VT_ENABLED = $null
     }
 
     Context 'Writing configuration' {
@@ -275,12 +220,6 @@ Describe 'Set-VeriHashConfig' {
                     level = 'DEBUG'
                     file = $true
                     console = $false
-                }
-                virustotal = @{
-                    apiKey = 'my-key'
-                    enabled = $true
-                    preferApi = $true
-                    autoOpen = $false
                 }
             }
 
@@ -298,7 +237,6 @@ Describe 'Set-VeriHashConfig' {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $config = @{
                 logging = @{ level = 'VERBOSE' }
-                virustotal = @{ apiKey = 'test' }
             }
 
             # Act
@@ -335,12 +273,6 @@ Describe 'Set-VeriHashConfig' {
                     file = $false
                     console = $true
                 }
-                virustotal = @{
-                    apiKey = 'roundtrip-key'
-                    enabled = $false
-                    preferApi = $false
-                    autoOpen = $true
-                }
             }
 
             # Act
@@ -350,8 +282,6 @@ Describe 'Set-VeriHashConfig' {
             # Assert
             $loaded.logging.level | Should -Be 'DEBUG'
             $loaded.logging.file | Should -Be $false
-            $loaded.virustotal.apiKey | Should -Be 'roundtrip-key'
-            $loaded.virustotal.autoOpen | Should -Be $true
         }
     }
 }

@@ -82,12 +82,6 @@ function Get-VeriHashDefaultConfig {
             file    = $true
             console = $true
         }
-        virustotal = @{
-            apiKey    = ''
-            enabled   = $false   # VirusTotal integration not yet shipped; enable when implemented
-            preferApi = $true
-            autoOpen  = $false
-        }
     }
 }
 
@@ -106,8 +100,6 @@ function Get-VeriHashConfig {
         - VERIHASH_LOG_LEVEL: Logging level (DEBUG, VERBOSE, INFO, WARNING, ERROR, NONE)
         - VERIHASH_LOG_FILE: Enable file logging (true/false)
         - VERIHASH_LOG_CONSOLE: Enable console logging (true/false)
-        - VERIHASH_VT_APIKEY: VirusTotal API key
-        - VERIHASH_VT_ENABLED: Enable VirusTotal integration (true/false)
 
     .PARAMETER ConfigDirectory
         Optional. Override the config directory path. Defaults to platform-specific path.
@@ -148,10 +140,6 @@ function Get-VeriHashConfig {
     $source.'logging.level' = 'default'
     $source.'logging.file' = 'default'
     $source.'logging.console' = 'default'
-    $source.'virustotal.apiKey' = 'default'
-    $source.'virustotal.enabled' = 'default'
-    $source.'virustotal.preferApi' = 'default'
-    $source.'virustotal.autoOpen' = 'default'
 
     # Log config loading start
     if ($script:PSFrameworkAvailable) {
@@ -185,32 +173,6 @@ function Get-VeriHashConfig {
                 if ($null -ne $fileContent.logging.console) {
                     $config.logging.console = [bool]$fileContent.logging.console
                     $source.'logging.console' = 'file'
-                }
-            }
-
-            # Merge virustotal settings from file
-            if ($fileContent.virustotal) {
-                if ($null -ne $fileContent.virustotal.apiKey) {
-                    $config.virustotal.apiKey = $fileContent.virustotal.apiKey
-                    $source.'virustotal.apiKey' = 'file'
-                }
-                if ($null -ne $fileContent.virustotal.enabled) {
-                    $config.virustotal.enabled = [bool]$fileContent.virustotal.enabled
-                    $source.'virustotal.enabled' = 'file'
-                }
-                if ($null -ne $fileContent.virustotal.preferApi) {
-                    $config.virustotal.preferApi = [bool]$fileContent.virustotal.preferApi
-                    $source.'virustotal.preferApi' = 'file'
-                }
-                if ($null -ne $fileContent.virustotal.autoOpen) {
-                    $config.virustotal.autoOpen = [bool]$fileContent.virustotal.autoOpen
-                    $source.'virustotal.autoOpen' = 'file'
-                }
-            }
-
-            if ($script:PSFrameworkAvailable) {
-                Write-PSFMessage -Level Debug -Message "Loaded configuration from file" -Tag 'Config', 'File' -Data @{
-                    ConfigFile = $configFile | ConvertTo-SanitizedPath
                 }
             }
         }
@@ -249,16 +211,6 @@ function Get-VeriHashConfig {
     if ($env:VERIHASH_LOG_CONSOLE) {
         $config.logging.console = $env:VERIHASH_LOG_CONSOLE -eq 'true'
         $source.'logging.console' = 'env'
-    }
-
-    if ($env:VERIHASH_VT_APIKEY) {
-        $config.virustotal.apiKey = $env:VERIHASH_VT_APIKEY
-        $source.'virustotal.apiKey' = 'env'
-    }
-
-    if ($env:VERIHASH_VT_ENABLED) {
-        $config.virustotal.enabled = $env:VERIHASH_VT_ENABLED -eq 'true'
-        $source.'virustotal.enabled' = 'env'
     }
 
     # Log final configuration
@@ -334,7 +286,6 @@ function Set-VeriHashConfig {
     # Remove _source if present (don't save internal tracking data)
     $configToSave = @{
         logging = $Config.logging
-        virustotal = $Config.virustotal
     }
 
     # Write config file
