@@ -141,14 +141,6 @@ function Get-VeriHashConfig {
     $source.'logging.file' = 'default'
     $source.'logging.console' = 'default'
 
-    # Log config loading start
-    if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Debug -Message "Loading VeriHash configuration" -Tag 'Config', 'Entry' -Data @{
-            ConfigDirectory = $configDir | ConvertTo-SanitizedPath
-            ConfigFile = $configFile | ConvertTo-SanitizedPath
-        }
-    }
-
     # Load from config file if it exists
     if (Test-Path $configFile) {
         try {
@@ -160,10 +152,6 @@ function Get-VeriHashConfig {
                     if ($fileContent.logging.level -in $script:ValidLogLevels) {
                         $config.logging.level = $fileContent.logging.level
                         $source.'logging.level' = 'file'
-                    } else {
-                        if ($script:PSFrameworkAvailable) {
-                            Write-PSFMessage -Level Warning -Message "Invalid log level in config file: $($fileContent.logging.level)" -Tag 'Config', 'Validation'
-                        }
                     }
                 }
                 if ($null -ne $fileContent.logging.file) {
@@ -178,15 +166,6 @@ function Get-VeriHashConfig {
         }
         catch {
             # Config file exists but is malformed - use defaults
-            if ($script:PSFrameworkAvailable) {
-                Write-PSFMessage -Level Warning -Message "Failed to parse config file, using defaults" -Tag 'Config', 'Error' -ErrorRecord $_
-            }
-        }
-    } else {
-        if ($script:PSFrameworkAvailable) {
-            Write-PSFMessage -Level Debug -Message "No config file found, using defaults" -Tag 'Config' -Data @{
-                ConfigFile = $configFile | ConvertTo-SanitizedPath
-            }
         }
     }
 
@@ -196,10 +175,6 @@ function Get-VeriHashConfig {
         if ($envLevel -in $script:ValidLogLevels) {
             $config.logging.level = $envLevel
             $source.'logging.level' = 'env'
-        } else {
-            if ($script:PSFrameworkAvailable) {
-                Write-PSFMessage -Level Warning -Message "Invalid VERIHASH_LOG_LEVEL: $envLevel" -Tag 'Config', 'Validation'
-            }
         }
     }
 
@@ -211,18 +186,6 @@ function Get-VeriHashConfig {
     if ($env:VERIHASH_LOG_CONSOLE) {
         $config.logging.console = $env:VERIHASH_LOG_CONSOLE -eq 'true'
         $source.'logging.console' = 'env'
-    }
-
-    # Log final configuration
-    if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Debug -Message "Configuration loaded" -Tag 'Config', 'Success' -Data @{
-            LogLevel = $config.logging.level
-            LogLevelSource = $source.'logging.level'
-            LogFile = $config.logging.file
-            LogConsole = $config.logging.console
-            VTEnabled = $config.virustotal.enabled
-            VTHasApiKey = ($config.virustotal.apiKey -ne '')
-        }
     }
 
     # Include source tracking if requested
@@ -266,21 +229,9 @@ function Set-VeriHashConfig {
     $configDir = if ($ConfigDirectory) { $ConfigDirectory } else { Get-VeriHashConfigPath }
     $configFile = Join-Path $configDir "config.json"
 
-    if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Debug -Message "Saving VeriHash configuration" -Tag 'Config', 'Entry' -Data @{
-            ConfigDirectory = $configDir | ConvertTo-SanitizedPath
-            ConfigFile = $configFile | ConvertTo-SanitizedPath
-        }
-    }
-
     # Create directory if needed
     if (-not (Test-Path $configDir)) {
         New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-        if ($script:PSFrameworkAvailable) {
-            Write-PSFMessage -Level Debug -Message "Created config directory" -Tag 'Config' -Data @{
-                ConfigDirectory = $configDir | ConvertTo-SanitizedPath
-            }
-        }
     }
 
     # Remove _source if present (don't save internal tracking data)
@@ -291,12 +242,6 @@ function Set-VeriHashConfig {
     # Write config file
     if ($PSCmdlet.ShouldProcess($configFile, 'Save VeriHash configuration')) {
         $configToSave | ConvertTo-Json -Depth 3 | Set-Content $configFile -Encoding UTF8
-
-        if ($script:PSFrameworkAvailable) {
-            Write-PSFMessage -Level Debug -Message "Configuration saved" -Tag 'Config', 'Success' -Data @{
-                ConfigFile = $configFile | ConvertTo-SanitizedPath
-            }
-        }
     }
 }
 
@@ -338,40 +283,19 @@ function Initialize-VeriHashConfig {
     $configDir = if ($ConfigDirectory) { $ConfigDirectory } else { Get-VeriHashConfigPath }
     $configFile = Join-Path $configDir "config.json"
 
-    if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Debug -Message "Initializing VeriHash configuration" -Tag 'Config', 'Init' -Data @{
-            ConfigDirectory = $configDir | ConvertTo-SanitizedPath
-            Force = $Force.IsPresent
-        }
-    }
-
     # Create directory if needed
     if (-not (Test-Path $configDir)) {
         New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-        if ($script:PSFrameworkAvailable) {
-            Write-PSFMessage -Level Debug -Message "Created config directory" -Tag 'Config', 'Init' -Data @{
-                ConfigDirectory = $configDir | ConvertTo-SanitizedPath
-            }
-        }
     }
 
     # Check if config already exists
     if ((Test-Path $configFile) -and -not $Force) {
-        if ($script:PSFrameworkAvailable) {
-            Write-PSFMessage -Level Debug -Message "Config file already exists, loading existing" -Tag 'Config', 'Init'
-        }
         return Get-VeriHashConfig -ConfigDirectory $configDir
     }
 
     # Create default config
     $defaultConfig = Get-VeriHashDefaultConfig
     Set-VeriHashConfig -Config $defaultConfig -ConfigDirectory $configDir
-
-    if ($script:PSFrameworkAvailable) {
-        Write-PSFMessage -Level Verbose -Message "Created default configuration" -Tag 'Config', 'Init' -Data @{
-            ConfigFile = $configFile | ConvertTo-SanitizedPath
-        }
-    }
 
     $defaultConfig
 }

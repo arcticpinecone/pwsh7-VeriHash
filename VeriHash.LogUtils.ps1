@@ -11,7 +11,7 @@
     DATA MINIMIZATION NOTICE:
     VeriHash logs are designed with privacy in mind (GDPR Article 5(1)(c)).
     - Paths are sanitized: %USERPROFILE% (Windows) or ~ (Linux/macOS)
-    - PSFramework adds ComputerName/Username metadata (cannot be disabled)
+    - Legacy structured logging added ComputerName/Username metadata (retired in v2)
     - Use ConvertFrom-SanitizedPath to expand paths for local debugging
 #>
 
@@ -215,9 +215,9 @@ function ConvertFrom-VeriHashLog {
         $lines = $rawContent -split "`r?`n"
         foreach ($line in $lines) {
             if ([string]::IsNullOrWhiteSpace($line)) { continue }
-            # Skip lines that are just commas (PSFramework JSON array format artifact)
+            # Skip lines that are just commas (legacy JSON array format artifact)
             if ($line.Trim() -eq ',') { continue }
-            # Strip trailing comma from JSON lines (PSFramework appends commas for array format)
+            # Strip trailing comma from JSON lines (legacy logger appends commas for array format)
             $jsonLine = $line.TrimEnd(',')
 
             try {

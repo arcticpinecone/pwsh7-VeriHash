@@ -36,13 +36,7 @@ Describe 'VeriHash.HotPath module manifest + exports (Plan 01 surface)' {
         $m.CompatiblePSEditions | Should -Contain 'Core'
     }
 
-    It 'No PSFramework references in VeriHash.HotPath/' {
-        $hits = Get-ChildItem "$PSScriptRoot/../VeriHash.HotPath" -Recurse -File |
-            Select-String -Pattern 'PSFramework|Write-PSFMessage' -ErrorAction SilentlyContinue
-        $hits | Should -BeNullOrEmpty
-    }
-
-    It 'No forbidden WTD_DISABLE_MD2_MD4 flag in VeriHash.HotPath/' {
+    It 'No forbidden WTD_DISABLE_MD2_MD4 flag in VeriHash.HotPath/'{
         $hits = Get-ChildItem "$PSScriptRoot/../VeriHash.HotPath" -Recurse -File |
             Select-String -Pattern 'WTD_DISABLE_MD2_MD4' -ErrorAction SilentlyContinue
         $hits | Should -BeNullOrEmpty

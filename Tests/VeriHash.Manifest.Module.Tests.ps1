@@ -34,13 +34,7 @@ Describe 'VeriHash.Manifest module manifest + exports' {
         $m.RequiredModules.Name | Should -Contain 'VeriHash.Core'
     }
 
-    It 'No PSFramework references in VeriHash.Manifest/' {
-        $hits = Get-ChildItem "$PSScriptRoot/../VeriHash.Manifest" -Recurse -File |
-            Select-String -Pattern 'PSFramework|Write-PSFMessage' -ErrorAction SilentlyContinue
-        $hits | Should -BeNullOrEmpty
-    }
-
-    It 'No Write-Host calls in VeriHash.Manifest/ (D-17)' {
+    It 'No Write-Host calls in VeriHash.Manifest/ (D-17)'{
         $hits = Get-ChildItem "$PSScriptRoot/../VeriHash.Manifest" -Recurse -File |
             Select-String -Pattern 'Write-Host' -ErrorAction SilentlyContinue
         $hits | Should -BeNullOrEmpty

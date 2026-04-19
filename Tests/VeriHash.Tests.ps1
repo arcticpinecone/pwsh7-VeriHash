@@ -11,7 +11,7 @@ AfterAll {
 # Phase 1 note:
 #   The legacy Pester suite (Test-InputHash, Get-ClipboardHash, Get-And-SaveHash,
 #   Test-HashSidecar, Sidecar Update / Force / Match, Clipboard+Sidecar Interaction,
-#   Help System, SkipSignatureCheck, Smart Signature Detection, PSFramework Logging)
+#   Help System, SkipSignatureCheck, Smart Signature Detection, Logging)
 #   exercised the v1 monolith VeriHash.ps1 via the dot-source-with-dummy-path hack.
 #   All Phase-1-relevant behaviors are now covered by Tests/VeriHash.Core.*.Tests.ps1:
 #     - Test-InputHash         -> Get-VeriHashResult.Tests.ps1
@@ -19,7 +19,7 @@ AfterAll {
 #     - Test-HashSidecar       -> Test-VeriHashSidecar.Tests.ps1
 #     - Get-And-SaveHash       -> deferred to Phase 2 (write-side Save-VeriHashSidecar)
 #     - Help / Force / -SendTo -> deferred to Phase 6 (CLI rewrite around Core)
-#     - PSFramework Logging    -> retired in Phase 1; replaced by Write-VeriHashLog
+#     - Logging                -> Write-VeriHashLog (Core, Phase 1)
 #   This file is retained as a thin smoke-test so Phase 5 has a clear migration target
 #   when it deletes the v1 monolith VeriHash.ps1.
 
