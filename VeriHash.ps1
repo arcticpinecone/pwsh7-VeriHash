@@ -152,15 +152,30 @@ if (-not $FilePath -or $FilePath.Count -eq 0) {
 # Main dispatch
 $exitCode = 0
 
-try {
-    if ($Manifest) {
-        # Manifest mode: extension auto-detect
-        $manifestExts = @('.sha256', '.sha512', '.md5')
-        $isVerify = $FilePath.Count -eq 1 -and
-            [System.IO.Path]::GetExtension($FilePath[0]).ToLowerInvariant() -in $manifestExts
+# Sidecar auto-detect: intercept hash-extension files before manifest/hash branching (SIDE-06)
+$manifestExts = @('.sha256', '.sha512', '.md5')
+$isSidecarCandidate = $FilePath.Count -eq 1 -and
+    [System.IO.Path]::GetExtension($FilePath[0]).ToLowerInvariant() -in $manifestExts
 
-        if ($isVerify) {
-            $result = Test-VeriHashManifest -Path $FilePath[0]
+try {
+    if ($isSidecarCandidate) {
+        # Unified auto-detect: same path regardless of -Manifest flag (SIDE-06)
+        $result = Invoke-VeriHashSidecarDetect -Path $FilePath[0]
+
+        if ($result.PSObject.TypeNames[0] -eq 'VeriHash.SidecarVerifyResult') {
+            # Focused sidecar verify output (D-01: no hot-path, no clipboard, no signatures)
+            $statusColor = if ($result.Status -eq 'pass') { 'Green' } else { 'Red' }
+            Write-Host "Sidecar verify: $($result.CompanionPath)" -ForegroundColor Cyan
+            Write-Host "  Algorithm: $($result.Algorithm)" -ForegroundColor Cyan
+            Write-Host "  Expected:  $($result.ExpectedHash)" -ForegroundColor Cyan
+            Write-Host "  Actual:    $($result.ActualHash)" -ForegroundColor Cyan
+            if ($result.Warning) {
+                Write-Host "  Warning:   $($result.Warning)" -ForegroundColor Yellow
+            }
+            Write-Host "  Status:    $($result.Status.ToUpperInvariant())" -ForegroundColor $statusColor
+            if ($result.Status -ne 'pass') { $exitCode = 1 }
+        } elseif ($result.PSObject.TypeNames[0] -eq 'VeriHash.ManifestVerifyResult') {
+            # Multi-line sidecar routed to manifest verify — reuse existing render
             Write-Host "Manifest verify: $($result.ManifestPath)" -ForegroundColor Cyan
             foreach ($entry in $result.Entries) {
                 $color = switch ($entry.Status) {
@@ -175,13 +190,14 @@ try {
             $tallyColor = if ($result.ExitCode -eq 0) { 'Green' } else { 'Red' }
             Write-Host "$($s.Passed)/$($s.Total) passed, $($s.Failed) mismatch, $($s.Missing) missing" -ForegroundColor $tallyColor
             $exitCode = $result.ExitCode
-        } else {
-            $result = New-VeriHashManifest -Path $FilePath
-            Write-Host "Manifest created: $($result.ManifestPath)" -ForegroundColor Green
-            Write-Host "$($result.FileCount) files, $($result.Algorithm), $($result.ElapsedMs) ms" -ForegroundColor Cyan
         }
+    } elseif ($Manifest) {
+        # Manifest create for non-sidecar files
+        $result = New-VeriHashManifest -Path $FilePath
+        Write-Host "Manifest created: $($result.ManifestPath)" -ForegroundColor Green
+        Write-Host "$($result.FileCount) files, $($result.Algorithm), $($result.ElapsedMs) ms" -ForegroundColor Cyan
     } else {
-        # Hash mode
+        # Normal hash mode
         if ($FilePath.Count -eq 1) {
             Invoke-VeriHashHotPath -Path $FilePath[0] -Log:$Log
         } else {
@@ -189,8 +205,8 @@ try {
         }
     }
 } catch {
-    Write-Error "$_"
+    Write-Error "$_" -ErrorAction Continue
     $exitCode = 1
 }
 if (-not $NoPause -and (Test-VeriHashInteractive)) { Read-Host -Prompt 'Press Enter to continue...' }
-if ($exitCode -ne 0) { exit $exitCode }
+exit $exitCode

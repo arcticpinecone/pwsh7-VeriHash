@@ -72,8 +72,8 @@ Describe 'CLI dispatch routing (CLI-01)' {
         $script:cliContent | Should -Match 'Invoke-VeriHashBatch\s+-FilePath'
     }
 
-    It 'Routes -Manifest verify to Test-VeriHashManifest' {
-        $script:cliContent | Should -Match 'Test-VeriHashManifest\s+-Path'
+    It 'Routes sidecar candidates to Invoke-VeriHashSidecarDetect' {
+        $script:cliContent | Should -Match 'Invoke-VeriHashSidecarDetect\s+-Path'
     }
 
     It 'Routes -Manifest create to New-VeriHashManifest' {
@@ -219,13 +219,13 @@ Describe 'End-to-end: manifest verify (CLI-03)' {
         Set-Content $script:goodFile 'good content'
     }
 
-    It 'Manifest verify pass — all entries match' {
+    It 'Sidecar verify pass — single-line match shows Sidecar verify' {
         $manifestPath = Join-Path $script:mDir 'pass.sha256'
         $hash = (Get-VeriHashResult -Path $script:goodFile -Algorithm SHA256).Hash
         Set-Content $manifestPath "$hash *good.txt"
         $output = & $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
-        $output | Should -Match 'Manifest verify:'
-        $output | Should -Match '1/1 passed'
+        $output | Should -Match 'Sidecar verify:'
+        $output | Should -Match 'PASS'
     }
 
     It 'Manifest verify fail — hash mismatch detected' {
@@ -236,12 +236,12 @@ Describe 'End-to-end: manifest verify (CLI-03)' {
         $output | Should -Match 'mismatch'
     }
 
-    It 'Manifest verify missing — file referenced in manifest does not exist' {
+    It 'Sidecar verify missing — companion file not found returns exit code 1' {
         $manifestPath = Join-Path $script:mDir 'missing.sha256'
         Set-Content $manifestPath "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa *nonexistent.txt"
         $output = & $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
-        $LASTEXITCODE | Should -Be 2
-        $output | Should -Match 'missing'
+        $LASTEXITCODE | Should -Be 1
+        $output | Should -Match 'Companion file not found'
     }
 }
 
