@@ -70,7 +70,8 @@ PowerShellVersion = '7.0'
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = 'Get-VeriHashResult', 'Read-ClipboardHash', 'Test-VeriHashSidecar', 
-               'Format-VeriHashReport', 'Write-VeriHashLog', 'Get-VeriHashPlatform'
+               'Format-VeriHashReport', 'Write-VeriHashLog', 'Get-VeriHashPlatform',
+               'Invoke-VeriHashSidecarDetect'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()

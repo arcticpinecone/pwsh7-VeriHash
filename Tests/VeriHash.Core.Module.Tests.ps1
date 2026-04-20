@@ -10,11 +10,12 @@ Describe 'VeriHash.Core module sanity' {
         { Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force } | Should -Not -Throw
     }
 
-    It 'Exports exactly the six locked public function names' {
+    It 'Exports exactly the seven locked public function names' {
         $expected = @(
             'Format-VeriHashReport',
             'Get-VeriHashPlatform',
             'Get-VeriHashResult',
+            'Invoke-VeriHashSidecarDetect',
             'Read-ClipboardHash',
             'Test-VeriHashSidecar',
             'Write-VeriHashLog'
