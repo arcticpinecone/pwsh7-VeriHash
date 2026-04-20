@@ -11,7 +11,7 @@
 
 ### Phases
 
-- [ ] **Phase 6: Sidecar Auto-Detect** — Right-clicking `.sha256`/`.sha512`/`.md5` verifies the companion file instead of hashing the sidecar
+- [x] **Phase 6: Sidecar Auto-Detect** — Right-clicking `.sha256`/`.sha512`/`.md5` verifies the companion file instead of hashing the sidecar
 - [ ] **Phase 7: Output Formatting** — Rich sectioned single-file report + compact batch table with 6-colour palette
 - [ ] **Phase 8: Manifest Spot-Check** — Single-file verify against existing manifest in same directory
 
@@ -30,8 +30,8 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Core Invoke-VeriHashSidecarDetect function + unit tests (TDD)
-- [ ] 06-02-PLAN.md — CLI dispatch integration + E2E tests (SIDE-06)
+- [x] 06-01-PLAN.md — Core Invoke-VeriHashSidecarDetect function + unit tests (TDD)
+- [x] 06-02-PLAN.md — CLI dispatch integration + E2E tests (SIDE-06)
 
 See: `.planning/notes/sidecar-autodetect-exploration.md`
 
@@ -64,7 +64,7 @@ See: `.planning/notes/manifest-exploration.md`
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. Sidecar Auto-Detect | 0/2 | Planned | - |
+| 6. Sidecar Auto-Detect | 2/2 | ✅ Complete | 2026-04-20 |
 | 7. Output Formatting | 0/TBD | Not started | - |
 | 8. Manifest Spot-Check | 0/TBD | Not started | - |
 
