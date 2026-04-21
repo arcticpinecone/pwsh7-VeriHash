@@ -1,5 +1,5 @@
 BeforeAll {
-    # Pre-load modules so VeriHash.ps1's conditional import skips re-import
+    # Pre-load modules for in-process use (e.g. Get-VeriHashResult in test setup)
     Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force
     Import-Module "$PSScriptRoot/../VeriHash.HotPath/VeriHash.HotPath.psd1" -Force
     Import-Module "$PSScriptRoot/../VeriHash.Manifest/VeriHash.Manifest.psd1" -Force
@@ -111,19 +111,19 @@ Describe 'Centralized pause (CLI-02)' {
 
 Describe 'Help banner (D-03)' {
     It 'Shows help banner with -Help' {
-        $output = & $script:cliScript -Help *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -Help *>&1 | Out-String
         $output | Should -Match 'VeriHash v2\.0'
         $output | Should -Match '-Manifest'
         $output | Should -Match '-InstallSendTo'
     }
 
     It 'Shows help for --help passed as FilePath' {
-        $output = & $script:cliScript '--help' -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript '--help' -NoPause *>&1 | Out-String
         $output | Should -Match 'VeriHash v2\.0'
     }
 
     It 'Shows short banner when invoked with no args' {
-        $output = & $script:cliScript -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -NoPause *>&1 | Out-String
         $output | Should -Match 'VeriHash v2\.0'
         $output | Should -Match '-Help'
     }
@@ -133,7 +133,7 @@ Describe 'End-to-end: single-file hash (CLI-03)' {
     It 'Computes SHA256 hash for a single file' {
         $testFile = Join-Path $TestDrive 'hashme.txt'
         Set-Content $testFile 'single file hash test'
-        $output = & $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
         $output | Should -Match 'SHA256'
         $output | Should -Match '[0-9a-f]{64}'
     }
@@ -149,7 +149,7 @@ Describe 'End-to-end: clipboard match (CLI-03)' -Skip:(-not $IsWindows) {
         Set-Content $testFile 'clipboard plain hex test'
         $hash = (Get-VeriHashResult -Path $testFile -Algorithm SHA256).Hash
         Set-Clipboard -Value $hash
-        $output = & $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
         $output | Should -Match 'Compare:.*MATCH'
     }
 
@@ -158,7 +158,7 @@ Describe 'End-to-end: clipboard match (CLI-03)' -Skip:(-not $IsWindows) {
         Set-Content $testFile 'clipboard prefix test'
         $hash = (Get-VeriHashResult -Path $testFile -Algorithm SHA256).Hash
         Set-Clipboard -Value "sha256:$hash"
-        $output = & $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
         $output | Should -Match 'Compare:.*MATCH'
     }
 }
@@ -170,7 +170,7 @@ Describe 'End-to-end: sidecar match and mismatch (CLI-03)' {
         $hash = (Get-VeriHashResult -Path $testFile -Algorithm SHA256).Hash
         $sidecarPath = "$testFile.sha256"
         Set-Content $sidecarPath "$hash *sidecar-ok.txt"
-        $output = & $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
         $output | Should -Match 'Sidecar:.*match'
     }
 
@@ -179,7 +179,7 @@ Describe 'End-to-end: sidecar match and mismatch (CLI-03)' {
         Set-Content $testFile 'sidecar mismatch test'
         $sidecarPath = "$testFile.sha256"
         Set-Content $sidecarPath "0000000000000000000000000000000000000000000000000000000000000000 *sidecar-bad.txt"
-        $output = & $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
         $output | Should -Match 'Sidecar:.*mismatch'
     }
 }
@@ -190,7 +190,7 @@ Describe 'End-to-end: multi-file loop (CLI-03)' {
         $f2 = Join-Path $TestDrive 'multi2.txt'
         Set-Content $f1 'file one'
         Set-Content $f2 'file two'
-        $output = & $script:cliScript -FilePath $f1, $f2 -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $f1 $f2 -NoPause *>&1 | Out-String
         $output | Should -Match '\d+/2 matched, \d+ mismatch, \d+ missing'
     }
 }
@@ -203,7 +203,7 @@ Describe 'End-to-end: manifest create (CLI-03)' {
         $f2 = Join-Path $dir 'b.txt'
         Set-Content $f1 'alpha'
         Set-Content $f2 'bravo'
-        $output = & $script:cliScript -FilePath $f1, $f2 -Manifest -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $f1 $f2 -Manifest -NoPause *>&1 | Out-String
         $output | Should -Match 'Manifest created:'
         $output | Should -Match '2 files'
         (Get-ChildItem $dir -Filter '*.sha256').Count | Should -BeGreaterOrEqual 1
@@ -223,7 +223,7 @@ Describe 'End-to-end: manifest verify (CLI-03)' {
         $manifestPath = Join-Path $script:mDir 'pass.sha256'
         $hash = (Get-VeriHashResult -Path $script:goodFile -Algorithm SHA256).Hash
         Set-Content $manifestPath "$hash *good.txt"
-        $output = & $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
         $output | Should -Match 'Sidecar verify:'
         $output | Should -Match 'PASS'
     }
@@ -231,7 +231,7 @@ Describe 'End-to-end: manifest verify (CLI-03)' {
     It 'Manifest verify fail — hash mismatch detected' {
         $manifestPath = Join-Path $script:mDir 'fail.sha256'
         Set-Content $manifestPath "0000000000000000000000000000000000000000000000000000000000000000 *good.txt"
-        $output = & $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
         $LASTEXITCODE | Should -Be 1
         $output | Should -Match 'mismatch'
     }
@@ -239,7 +239,7 @@ Describe 'End-to-end: manifest verify (CLI-03)' {
     It 'Sidecar verify missing — companion file not found returns exit code 1' {
         $manifestPath = Join-Path $script:mDir 'missing.sha256'
         Set-Content $manifestPath "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa *nonexistent.txt"
-        $output = & $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $manifestPath -Manifest -NoPause *>&1 | Out-String
         $LASTEXITCODE | Should -Be 1
         $output | Should -Match 'Companion file not found'
     }

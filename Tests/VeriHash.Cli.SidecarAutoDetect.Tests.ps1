@@ -28,7 +28,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $sidecar = Join-Path $testDir 'testfile.bin.sha256'
             [System.IO.File]::WriteAllText($sidecar, "$hash *testfile.bin`n", $utf8)
 
-            $output = & $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
             $output | Should -Match 'Sidecar verify:'
             $output | Should -Match 'testfile\.bin'
         }
@@ -45,7 +45,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $sidecar = Join-Path $testDir 'testfile.bin.sha256'
             [System.IO.File]::WriteAllText($sidecar, "$hash *testfile.bin`n", $utf8)
 
-            $output = & $script:cliScript -FilePath $sidecar -Manifest -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -Manifest -NoPause *>&1 | Out-String
             $output | Should -Match 'Sidecar verify:'
             $output | Should -Match 'testfile\.bin'
         }
@@ -62,8 +62,8 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $sidecar = Join-Path $testDir 'testfile.bin.sha256'
             [System.IO.File]::WriteAllText($sidecar, "$hash *testfile.bin`n", $utf8)
 
-            $outputPlain = & $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
-            $outputManifest = & $script:cliScript -FilePath $sidecar -Manifest -NoPause *>&1 | Out-String
+            $outputPlain = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
+            $outputManifest = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -Manifest -NoPause *>&1 | Out-String
             $outputPlain | Should -Be $outputManifest
         }
     }
@@ -84,7 +84,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $manifest = Join-Path $testDir 'checksums.sha256'
             [System.IO.File]::WriteAllText($manifest, "$h1 *file1.txt`n$h2 *file2.txt`n", $utf8)
 
-            $output = & $script:cliScript -FilePath $manifest -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $manifest -NoPause *>&1 | Out-String
             $output | Should -Match 'Manifest verify:'
             $output | Should -Match 'passed'
         }
@@ -104,7 +104,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $manifest = Join-Path $testDir 'checksums.sha256'
             [System.IO.File]::WriteAllText($manifest, "$h1 *file1.txt`n$h2 *file2.txt`n", $utf8)
 
-            $output = & $script:cliScript -FilePath $manifest -Manifest -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $manifest -Manifest -NoPause *>&1 | Out-String
             $output | Should -Match 'Manifest verify:'
         }
     }
@@ -118,7 +118,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $testFile = Join-Path $testDir 'test.txt'
             [System.IO.File]::WriteAllText($testFile, 'normal file content', $utf8)
 
-            $output = & $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
             $output | Should -Match 'SHA256'
         }
 
@@ -130,7 +130,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $testFile = Join-Path $testDir 'test.txt'
             [System.IO.File]::WriteAllText($testFile, 'normal file content', $utf8)
 
-            $output = & $script:cliScript -FilePath $testFile -Manifest -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -Manifest -NoPause *>&1 | Out-String
             $output | Should -Match 'Manifest created:'
         }
     }
@@ -144,7 +144,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $sidecar = Join-Path $testDir 'empty.sha256'
             [System.IO.File]::WriteAllText($sidecar, "`n   `n", $utf8)
 
-            $output = & $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
             $LASTEXITCODE | Should -Be 1
         }
 
@@ -157,7 +157,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $sidecar = Join-Path $testDir 'missing.bin.sha256'
             [System.IO.File]::WriteAllText($sidecar, "$fakeHash *missing.bin`n", $utf8)
 
-            $output = & $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
             $LASTEXITCODE | Should -Be 1
         }
 
@@ -173,7 +173,7 @@ Describe 'CLI sidecar auto-detect (SIDE-06)' {
             $sidecar = Join-Path $testDir 'testfile.bin.sha256'
             [System.IO.File]::WriteAllText($sidecar, "$hash *testfile.bin`n", $utf8)
 
-            $output = & $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
+            $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $sidecar -NoPause *>&1 | Out-String
             $LASTEXITCODE | Should -Be 0
         }
     }

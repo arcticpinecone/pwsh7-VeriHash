@@ -84,6 +84,27 @@ function Invoke-VeriHashHotPath {
     if ($null -ne $sidecar) { $reportSplat['SidecarInfo'] = $sidecar }
     Format-VeriHashReport @reportSplat
 
+    # Sidecar creation/update: write .sha256 (or matching ext) next to file
+    $algoExtMap = @{ 'SHA256' = '.sha256'; 'SHA512' = '.sha512'; 'MD5' = '.md5' }
+    $sidecarPath = "$resolved$($algoExtMap[$Algorithm])"
+    $sidecarLeafName = Split-Path -Leaf $resolved
+    $sidecarContent = "$($hashResult.Hash) *$sidecarLeafName"
+    $shouldWriteSidecar = $true
+    $sidecarVerb = 'created'
+    if (Test-Path -LiteralPath $sidecarPath) {
+        $existingLine = (Get-Content -LiteralPath $sidecarPath -TotalCount 1)
+        if ($existingLine -match '^([A-Fa-f0-9]+)\s' -and $matches[1].ToLowerInvariant() -eq $hashResult.Hash) {
+            $shouldWriteSidecar = $false
+        } else {
+            $sidecarVerb = 'updated'
+        }
+    }
+    if ($shouldWriteSidecar) {
+        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText($sidecarPath, "$sidecarContent`n", $utf8NoBom)
+        Write-Host "Sidecar:      $sidecarVerb ($([System.IO.Path]::GetFileName($sidecarPath)))" -ForegroundColor Green
+    }
+
     # Now wait for the sig job to complete (Wait-Job -Any again so the orchestrator
     # never blocks on sig if the hash job overshoots due to disk pressure).
     do {
