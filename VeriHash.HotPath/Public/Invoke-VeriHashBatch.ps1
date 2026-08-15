@@ -36,7 +36,7 @@ function Invoke-VeriHashBatch {
 
     foreach ($p in $FilePath) {
         try {
-            $r = Invoke-VeriHashHotPath -Path $p -Algorithm $Algorithm -Log:$Log
+            $r = Invoke-VeriHashHotPath -Path $p -Algorithm $Algorithm -Log:$Log -Compact
             $results.Add($r)
             switch ($r.MatchResult) {
                 'matched'  { $matched++ }
@@ -62,8 +62,13 @@ function Invoke-VeriHashBatch {
     }
 
     # Byte-locked tally line -- DO NOT REFORMAT (CONTEXT.md <specifics>; MULTI-02 success-criterion test pins this string).
+    # This is the machine-readable contract on VeriHash.BatchResult, NOT the display:
+    # anything parsing VeriHash's output reads this string, so it survives the
+    # console redesign untouched. The human-facing summary is a separate concern,
+    # rendered by Format-VeriHashBatchTally.
     $tallyLine = '{0}/{1} matched, {2} mismatch, {3} missing' -f $matched, $FilePath.Count, $mismatch, $missing
-    Write-Host $tallyLine -ForegroundColor Yellow
+
+    Format-VeriHashBatchTally -Results $results.ToArray()
 
     return [pscustomobject]@{
         PSTypeName = 'VeriHash.BatchResult'

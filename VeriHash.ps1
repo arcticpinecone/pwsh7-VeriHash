@@ -48,6 +48,17 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+# The report layout uses check-mark, bullet, and rule glyphs; without a UTF-8
+# output code page the Windows console renders them as mojibake. Guarded because
+# a redirected or absent console has no encoding to set. Get-VeriHashPalette
+# reads this same property to decide Unicode vs ASCII glyphs, so setting it here
+# is what earns the console the pretty output rather than the fallback.
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+} catch {
+    Write-Verbose "Console output encoding left as-is: $($_.Exception.Message)"
+}
+
 # Conditional import: skip if already loaded (testability — tests pre-load with mocks)
 foreach ($mod in @('VeriHash.Core', 'VeriHash.HotPath', 'VeriHash.Manifest')) {
     if (-not (Get-Module -Name $mod)) {

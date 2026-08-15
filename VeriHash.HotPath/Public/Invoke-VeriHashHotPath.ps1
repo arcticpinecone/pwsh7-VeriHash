@@ -24,6 +24,10 @@ function Invoke-VeriHashHotPath {
         MD5 | SHA256 (default) | SHA512.
     .PARAMETER Log
         When set (or $env:VERIHASH_LOG=1), writes one plain-text line per file.
+    .PARAMETER Compact
+        Render the condensed per-file report used by batch mode: header, banner,
+        and checklist only. The hash comparison block survives a MISMATCH, because
+        a file that failed is exactly the one whose divergence the user must see.
     .OUTPUTS
         VeriHash.HotPathResult
     #>
@@ -36,7 +40,10 @@ function Invoke-VeriHashHotPath {
         [ValidateSet('MD5', 'SHA256', 'SHA512')]
         [string]$Algorithm = 'SHA256',
 
-        [switch]$Log
+        [switch]$Log,
+
+        # Batch mode: render the condensed per-file view (header, banner, checklist).
+        [switch]$Compact
     )
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -176,6 +183,7 @@ function Invoke-VeriHashHotPath {
     $reportSplat = @{ Result = $hashResult; Signature = $sigResult; TotalMs = $wallMs }
     if ($null -ne $clip)          { $reportSplat['CompareTo']   = $clip }
     if ($null -ne $sidecarRecord) { $reportSplat['SidecarInfo'] = $sidecarRecord }
+    if ($Compact)                 { $reportSplat['Compact']     = $true }
     Format-VeriHashReport @reportSplat
 
     # Reuses the verdict computed above rather than re-deriving it. The previous

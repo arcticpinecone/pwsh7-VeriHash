@@ -102,6 +102,43 @@ Describe 'Invoke-VeriHashBatch preserves single-file features (MULTI-03)' {
     }
 }
 
+Describe 'Invoke-VeriHashBatch display vs contract (FMT-06)' {
+    BeforeAll {
+        # The tally's middot and glyphs are chosen from [Console]::OutputEncoding,
+        # so the assertions below only hold on a UTF-8 code page. Guarded: a
+        # redirected or absent console has no encoding to set.
+        $script:PrevEncoding = [Console]::OutputEncoding
+        try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch { }
+
+        # Deliberately NOT named $script:F1/$script:F2 -- those are set by the
+        # file-level BeforeAll and read by the Describes above; reusing the names
+        # here would reassign them out from under any block that runs later.
+        $script:BatchA = Join-Path $TestDrive 'batch-a.bin'
+        $script:BatchB = Join-Path $TestDrive 'batch-b.bin'
+        [System.IO.File]::WriteAllBytes($script:BatchA, [byte[]](1..32))
+        [System.IO.File]::WriteAllBytes($script:BatchB, [byte[]](33..64))
+    }
+    AfterAll {
+        try { [Console]::OutputEncoding = $script:PrevEncoding } catch { }
+    }
+
+    It 'Displays the new middot tally on the console' {
+        $out = (Invoke-VeriHashBatch -FilePath @($script:BatchA, $script:BatchB) *>&1 | Out-String)
+        $out | Should -Match ([regex]::Escape('batch of 2 · 2 matched · 0 mismatch · 0 missing'))
+    }
+
+    It 'Keeps .TallyLine byte-locked in the legacy machine-readable format' {
+        $r = Invoke-VeriHashBatch -FilePath @($script:BatchA, $script:BatchB) 6>$null
+        $r.TallyLine | Should -BeExactly '2/2 matched, 0 mismatch, 0 missing'
+    }
+
+    It 'Renders each file compactly, without a per-file footer' {
+        $out = (Invoke-VeriHashBatch -FilePath @($script:BatchA, $script:BatchB) *>&1 | Out-String)
+        ([regex]::Matches($out, '(?m)^clipboard   ')).Count | Should -Be 2
+        $out | Should -Not -Match 'modified .* UTC'
+    }
+}
+
 Describe 'Profile-VeriHashTiming.ps1 -Strict gate (D-A7-1)' {
     It 'Without -Strict: existing callers (Test-All.ps1 step 3/3) keep working' {
         $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'

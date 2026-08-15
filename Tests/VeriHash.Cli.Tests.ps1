@@ -12,10 +12,22 @@ BeforeAll {
     # the child pwsh may already have emitted plain text under NO_COLOR.
     . "$PSScriptRoot/TestHelpers.ps1"
 
-    # Glyphs degrade to ASCII when the console code page is not UTF-8
-    # (Get-VeriHashPalette). A child process's OutputEncoding is not something
-    # these tests can pin, so every glyph assertion must accept both tables:
-    # Unicode em-dash/check/cross, or ASCII '--'/'+'/'x'.
+    # VeriHash.ps1 sets its own OutputEncoding to UTF-8, so the child emits UTF-8
+    # bytes. PowerShell decodes a native command's stdout using the PARENT's
+    # [Console]::OutputEncoding, which on Windows is inherited as CP437 -- under
+    # which the em-dash's E2 80 94 arrives as 'Γ Ç ö' and every glyph assertion
+    # fails against text that was in fact correct. Pin the decoder to match what
+    # the child writes. Restored in AfterAll so the setting does not leak.
+    $script:PrevOutputEncoding = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+    } catch {
+        Write-Verbose "Console output encoding left as-is: $($_.Exception.Message)"
+    }
+
+    # Glyphs still degrade to ASCII when the child cannot set a UTF-8 code page
+    # (Get-VeriHashPalette falls back), so glyph assertions accept both tables:
+    # Unicode em-dash, or ASCII '--'.
     $script:Dash = '(?:--|—)'
 }
 
@@ -24,6 +36,11 @@ AfterAll {
     Remove-Module VeriHash.HotPath -ErrorAction SilentlyContinue
     Remove-Module VeriHash.Core -ErrorAction SilentlyContinue
     Remove-Item Env:VERIHASH_LOG_PATH -ErrorAction SilentlyContinue
+    try {
+        [Console]::OutputEncoding = $script:PrevOutputEncoding
+    } catch {
+        Write-Verbose "Console output encoding not restored: $($_.Exception.Message)"
+    }
 }
 
 Describe 'CLI param surface (CLI-01)' {
