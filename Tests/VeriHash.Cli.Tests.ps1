@@ -6,6 +6,17 @@ BeforeAll {
     $env:VERIHASH_LOG_PATH = (Join-Path $TestDrive 'verihash.log')
 
     $script:cliScript = "$PSScriptRoot/../VeriHash.ps1"
+
+    # The report is rendered with ANSI SGR colour, so end-to-end assertions run
+    # against Remove-Ansi'd text. Stripping is idempotent, which matters here:
+    # the child pwsh may already have emitted plain text under NO_COLOR.
+    . "$PSScriptRoot/TestHelpers.ps1"
+
+    # Glyphs degrade to ASCII when the console code page is not UTF-8
+    # (Get-VeriHashPalette). A child process's OutputEncoding is not something
+    # these tests can pin, so every glyph assertion must accept both tables:
+    # Unicode em-dash/check/cross, or ASCII '--'/'+'/'x'.
+    $script:Dash = '(?:--|—)'
 }
 
 AfterAll {
@@ -133,9 +144,14 @@ Describe 'End-to-end: single-file hash (CLI-03)' {
     It 'Computes SHA256 hash for a single file' {
         $testFile = Join-Path $TestDrive 'hashme.txt'
         Set-Content $testFile 'single file hash test'
+        $expected = (Get-VeriHashResult -Path $testFile -Algorithm SHA256).Hash
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
-        $output | Should -Match 'SHA256'
-        $output | Should -Match '[0-9a-f]{64}'
+        $plain = $output | Remove-Ansi
+        $plain | Should -Match 'SHA256'
+        # The digest renders in 8-character groups, so no 64-run exists in the
+        # raw text. Collapsing whitespace asserts the WHOLE digest reached the
+        # user -- and pins the actual value, which '[0-9a-f]{64}' never did.
+        ($plain -replace '\s', '') | Should -BeLike "*$expected*"
     }
 }
 
@@ -150,7 +166,11 @@ Describe 'End-to-end: clipboard match (CLI-03)' -Skip:(-not $IsWindows) {
         $hash = (Get-VeriHashResult -Path $testFile -Algorithm SHA256).Hash
         Set-Clipboard -Value $hash
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
-        $output | Should -Match 'Compare:.*MATCH'
+        $plain = $output | Remove-Ansi
+        $plain | Should -Match "MATCH\s+$script:Dash\s+SHA256 matches hash on clipboard"
+        # The detected clipboard FORMAT is the only thing separating this test
+        # from the algo:hex one below; assert it or the two are duplicates.
+        $plain | Should -Match 'clipboard[^\r\n]*match \(plain hex, SHA256\)'
     }
 
     It 'Matches clipboard hash in algo:hex prefix form' {
@@ -159,7 +179,9 @@ Describe 'End-to-end: clipboard match (CLI-03)' -Skip:(-not $IsWindows) {
         $hash = (Get-VeriHashResult -Path $testFile -Algorithm SHA256).Hash
         Set-Clipboard -Value "sha256:$hash"
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
-        $output | Should -Match 'Compare:.*MATCH'
+        $plain = $output | Remove-Ansi
+        $plain | Should -Match "MATCH\s+$script:Dash\s+SHA256 matches hash on clipboard"
+        $plain | Should -Match 'clipboard[^\r\n]*match \(prefixed, sha256:\)'
     }
 }
 
@@ -171,7 +193,9 @@ Describe 'End-to-end: sidecar match and mismatch (CLI-03)' {
         $sidecarPath = "$testFile.sha256"
         Set-Content $sidecarPath "$hash *sidecar-ok.txt"
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
-        $output | Should -Match 'Sidecar:.*match'
+        $plain = $output | Remove-Ansi
+        $plain | Should -Match "MATCH\s+$script:Dash\s+SHA256 matches sidecar file"
+        $plain | Should -Match "sidecar[^\r\n]*match\s+$script:Dash\s+sidecar-ok\.txt\.sha256"
     }
 
     It 'Detects sidecar mismatch' {
@@ -180,7 +204,11 @@ Describe 'End-to-end: sidecar match and mismatch (CLI-03)' {
         $sidecarPath = "$testFile.sha256"
         Set-Content $sidecarPath "0000000000000000000000000000000000000000000000000000000000000000 *sidecar-bad.txt"
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $testFile -NoPause *>&1 | Out-String
-        $output | Should -Match 'Sidecar:.*mismatch'
+        $plain = $output | Remove-Ansi
+        $plain | Should -Match "MISMATCH\s+$script:Dash\s+file does NOT match sidecar file"
+        $plain | Should -Match "sidecar[^\r\n]*sidecar mismatch\s+$script:Dash\s+sidecar-bad\.txt\.sha256"
+        # The actionable instruction is the whole point of a mismatch render.
+        $plain | Should -Match 'Do not run this file'
     }
 }
 
