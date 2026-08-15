@@ -9,7 +9,9 @@ function Read-ClipboardHash {
         Returns $null on non-Windows platforms (cross-platform clipboard is
         deferred to the v2.x backlog) or when no usable hash is present.
     .OUTPUTS
-        [pscustomobject]@{ Algorithm; Hash } -- Hash is lowercase hex.
+        [pscustomobject]@{ Algorithm; Hash; Format } -- Hash is lowercase hex.
+        Format is the ready-made display parenthetical describing which form
+        was recognised: 'plain hex, SHA256' or 'prefixed, sha256:'.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -29,14 +31,17 @@ function Read-ClipboardHash {
     $algo = ConvertTo-VeriHashAlgorithm -Hash $text
     if (-not $algo) { return $null }
 
-    if ($text -match '^(?:md5|sha256|sha512):(?<hex>[A-Fa-f0-9]+)$') {
-        $hex = $matches.hex
+    if ($text -match '^(?<prefix>md5|sha256|sha512):(?<hex>[A-Fa-f0-9]+)$') {
+        $hex    = $matches.hex
+        $format = "prefixed, $($matches.prefix.ToLowerInvariant()):"
     } else {
-        $hex = $text
+        $hex    = $text
+        $format = "plain hex, $algo"
     }
 
     return [pscustomobject]@{
         Algorithm = $algo
         Hash      = $hex.ToLowerInvariant()
+        Format    = $format
     }
 }

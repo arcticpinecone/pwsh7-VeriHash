@@ -77,4 +77,33 @@ Describe 'Read-ClipboardHash (CORE-03 + CORE-04)' {
             Read-ClipboardHash | Should -BeNullOrEmpty
         }
     }
+
+    Context 'Detected format (FMT)' {
+        It 'Reports bare hex as plain hex with the inferred algorithm' {
+            $hex = '3eb53e022fc03d61dffe2aff3244103daef28166b9c538cabbf04462fa59c775'
+            Mock -ModuleName VeriHash.Core Get-Clipboard { $hex }
+            Mock -ModuleName VeriHash.Core Get-VeriHashPlatform { 'Windows' }
+            (Read-ClipboardHash).Format | Should -BeExactly 'plain hex, SHA256'
+        }
+
+        It 'Reports an algo-prefixed hash as prefixed with the literal prefix' {
+            $hex = '3eb53e022fc03d61dffe2aff3244103daef28166b9c538cabbf04462fa59c775'
+            Mock -ModuleName VeriHash.Core Get-Clipboard { "sha256:$hex" }
+            Mock -ModuleName VeriHash.Core Get-VeriHashPlatform { 'Windows' }
+            (Read-ClipboardHash).Format | Should -BeExactly 'prefixed, sha256:'
+        }
+
+        It 'Reports MD5 by length' {
+            Mock -ModuleName VeriHash.Core Get-Clipboard { '441b45a2052b1f74aa946ba587a8f4f7' }
+            Mock -ModuleName VeriHash.Core Get-VeriHashPlatform { 'Windows' }
+            (Read-ClipboardHash).Format | Should -BeExactly 'plain hex, MD5'
+        }
+
+        It 'Normalises an uppercase prefix to lowercase for display' {
+            $hex = 'a' * 128
+            Mock -ModuleName VeriHash.Core Get-Clipboard { "SHA512:$hex" }
+            Mock -ModuleName VeriHash.Core Get-VeriHashPlatform { 'Windows' }
+            (Read-ClipboardHash).Format | Should -BeExactly 'prefixed, sha512:'
+        }
+    }
 }

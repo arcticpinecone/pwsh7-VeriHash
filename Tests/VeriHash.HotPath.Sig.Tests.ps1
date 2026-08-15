@@ -123,3 +123,25 @@ Describe 'Get-VeriHashSignature HRESULT to Status (PERF-02)' -Skip:(-not $IsWind
         }
     }
 }
+
+Describe 'Get-VeriHashSignature signer name (FMT)' {
+    It 'Always carries a Signer property, even when skipped' {
+        $p = Join-Path $PSScriptRoot 'Fixtures/tiny-not-pe.bin'
+        $r = InModuleScope VeriHash.HotPath -Parameters @{ p = $p } {
+            param($p) Get-VeriHashSignature -Path $p
+        }
+        $r.PSObject.Properties.Name | Should -Contain 'Signer'
+        $r.Signer | Should -BeNullOrEmpty
+    }
+
+    It 'Reads the signer CN from a genuinely signed Windows binary' -Skip:(-not $IsWindows) {
+        $p = Join-Path $env:SystemRoot 'System32/kernel32.dll'
+        if (-not (Test-Path -LiteralPath $p)) { Set-ItResult -Skipped -Because 'kernel32.dll not present'; return }
+        $r = InModuleScope VeriHash.HotPath -Parameters @{ p = $p } {
+            param($p) Get-VeriHashSignature -Path $p -IsPE
+        }
+        if ($r.Status -ne 'valid') { Set-ItResult -Skipped -Because "signature status was '$($r.Status)'"; return }
+        $r.Signer | Should -Not -BeNullOrEmpty
+        $r.Signer | Should -Match 'Microsoft'
+    }
+}

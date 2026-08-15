@@ -13,7 +13,8 @@ function Get-VeriHashSignature {
         without P/Invoking. The caller (Invoke-VeriHashHotPath) runs Test-IsPEFile once on the main
         thread and passes the result here so the sig ThreadJob doesn't re-open the file.
     .OUTPUTS
-        [pscustomobject] @{ Status; Reason } -- Status in valid|invalid|unsigned|skipped|error
+        [pscustomobject] @{ Status; Reason; Signer } -- Status in valid|invalid|unsigned|skipped|error.
+        Signer is the signing certificate's CN, or $null when unavailable.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -22,11 +23,32 @@ function Get-VeriHashSignature {
         [switch] $IsPE
     )
     if (-not $IsPE) {
-        return [pscustomobject]@{ Status = 'skipped'; Reason = 'not a PE file' }
+        return [pscustomobject]@{ Status = 'skipped'; Reason = 'not a PE file'; Signer = $null }
     }
     if ((Get-VeriHashPlatform) -ne 'Windows') {
-        return [pscustomobject]@{ Status = 'skipped'; Reason = 'not supported on this platform' }
+        return [pscustomobject]@{ Status = 'skipped'; Reason = 'not supported on this platform'; Signer = $null }
     }
     $hresult = Invoke-WinVerifyTrust -Path $Path
-    return ConvertFrom-WinTrustHResult -HResult $hresult
+    $verdict = ConvertFrom-WinTrustHResult -HResult $hresult
+
+    # The trust VERDICT comes from WinVerifyTrust above; this only reads the
+    # embedded certificate's subject for a display name. CreateFromSignedFile
+    # does no chain walk and no network I/O, so it costs ~1-5 ms -- and it runs
+    # inside the sig ThreadJob, off the wall clock entirely.
+    $signer = $null
+    if ($verdict.Status -eq 'valid') {
+        try {
+            $cert    = [System.Security.Cryptography.X509Certificates.X509Certificate]::CreateFromSignedFile($Path)
+            $subject = $cert.Subject
+            # Subject looks like: CN="Contoso, Ltd.", O=Contoso, L=Redmond, C=US
+            if ($subject -match 'CN=(?:"(?<q>[^"]+)"|(?<b>[^,]+))') {
+                $signer = if ($matches['q']) { $matches['q'] } else { $matches['b'] }
+                $signer = $signer.Trim()
+            }
+        } catch {
+            $signer = $null   # display nicety only -- never fail the verdict over it
+        }
+    }
+
+    return [pscustomobject]@{ Status = $verdict.Status; Reason = $verdict.Reason; Signer = $signer }
 }

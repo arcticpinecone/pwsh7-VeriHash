@@ -11,6 +11,11 @@ function Test-VeriHashSidecar {
     .OUTPUTS
         VeriHash.Result with an additional 'Sidecar' field describing which
         sidecar was used, or $null when no sidecar exists.
+
+        SidecarStatus (matched|mismatch|error), SidecarName, and ExpectedHash
+        carry the same facts as data for the renderer; the Sidecar string is
+        retained for backward compatibility. ExpectedHash is the hash read OUT
+        of the sidecar -- without it a mismatch cannot be shown, only asserted.
     #>
     [CmdletBinding()]
     [OutputType('VeriHash.Result')]
@@ -30,25 +35,31 @@ function Test-VeriHashSidecar {
 
     if (-not $parsed) {
         return [pscustomobject]@{
-            PSTypeName = 'VeriHash.Result'
-            FilePath   = $actual.FilePath
-            Size       = $actual.Size
-            Algorithm  = $actual.Algorithm
-            Hash       = $actual.Hash
-            ElapsedMs  = $actual.ElapsedMs
-            Sidecar    = "error ($sidecarLeaf)"
+            PSTypeName    = 'VeriHash.Result'
+            FilePath      = $actual.FilePath
+            Size          = $actual.Size
+            Algorithm     = $actual.Algorithm
+            Hash          = $actual.Hash
+            ElapsedMs     = $actual.ElapsedMs
+            Sidecar       = "error ($sidecarLeaf)"
+            SidecarStatus = 'error'
+            SidecarName   = $sidecarLeaf
+            ExpectedHash  = $null
         }
     }
 
     $status = if ($actual.Hash -eq $parsed.Hash) { 'matched' } else { 'mismatch' }
 
     return [pscustomobject]@{
-        PSTypeName = 'VeriHash.Result'
-        FilePath   = $actual.FilePath
-        Size       = $actual.Size
-        Algorithm  = $actual.Algorithm
-        Hash       = $actual.Hash
-        ElapsedMs  = $actual.ElapsedMs
-        Sidecar    = "$status ($sidecarLeaf)"
+        PSTypeName    = 'VeriHash.Result'
+        FilePath      = $actual.FilePath
+        Size          = $actual.Size
+        Algorithm     = $actual.Algorithm
+        Hash          = $actual.Hash
+        ElapsedMs     = $actual.ElapsedMs
+        Sidecar       = "$status ($sidecarLeaf)"
+        SidecarStatus = $status
+        SidecarName   = $sidecarLeaf
+        ExpectedHash  = $parsed.Hash
     }
 }

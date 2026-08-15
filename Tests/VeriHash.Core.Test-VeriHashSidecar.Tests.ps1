@@ -46,3 +46,38 @@ Describe 'Test-VeriHashSidecar (CORE-05)' {
         Test-VeriHashSidecar -Path $bare | Should -BeNullOrEmpty
     }
 }
+
+Describe 'Test-VeriHashSidecar structured fields (FMT)' {
+    BeforeEach {
+        $script:IconCopy = Join-Path $TestDrive 'VeriHash_1024.ico'
+        Copy-Item -LiteralPath $script:Fixture -Destination $script:IconCopy -Force
+    }
+
+    It 'Exposes SidecarStatus and SidecarName alongside the legacy Sidecar string' {
+        Copy-Item -LiteralPath $script:TwoSpaceSrc `
+                  -Destination (Join-Path $TestDrive 'VeriHash_1024.ico.sha256') -Force
+        $r = Test-VeriHashSidecar -Path $script:IconCopy
+        $r.SidecarStatus | Should -BeExactly 'matched'
+        $r.SidecarName   | Should -BeExactly 'VeriHash_1024.ico.sha256'
+        $r.Sidecar       | Should -Match 'matched'   # legacy contract intact
+        $r.ExpectedHash  | Should -BeExactly $r.Hash
+    }
+
+    It 'Reports mismatch as structured status and surfaces the expected hash' {
+        $enc = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText((Join-Path $TestDrive 'VeriHash_1024.ico.sha256'),
+            ('0' * 64) + "  VeriHash_1024.ico`n", $enc)
+        $r = Test-VeriHashSidecar -Path $script:IconCopy
+        $r.SidecarStatus | Should -BeExactly 'mismatch'
+        # Without this the report can say MISMATCH but cannot show what was expected.
+        $r.ExpectedHash  | Should -BeExactly ('0' * 64)
+    }
+
+    It 'Reports an unparseable sidecar as error with no expected hash' {
+        $enc = [System.Text.UTF8Encoding]::new($false)
+        [System.IO.File]::WriteAllText((Join-Path $TestDrive 'VeriHash_1024.ico.sha256'), "not a hash line`n", $enc)
+        $r = Test-VeriHashSidecar -Path $script:IconCopy
+        $r.SidecarStatus | Should -BeExactly 'error'
+        $r.ExpectedHash  | Should -BeNullOrEmpty
+    }
+}
