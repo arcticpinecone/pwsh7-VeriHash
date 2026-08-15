@@ -190,7 +190,10 @@ Describe 'End-to-end: multi-file loop (CLI-03)' {
         $f2 = Join-Path $TestDrive 'multi2.txt'
         Set-Content $f1 'file one'
         Set-Content $f2 'file two'
-        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $f1 $f2 -NoPause *>&1 | Out-String
+        # Files are passed positionally, exactly as SendTo/drag-drop invokes the
+        # CLI. Naming -FilePath explicitly stops ValueFromRemainingArguments from
+        # collecting $f2, which is a binding error rather than a product bug.
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript $f1 $f2 -NoPause *>&1 | Out-String
         $output | Should -Match '\d+/2 matched, \d+ mismatch, \d+ missing'
     }
 }
@@ -203,7 +206,7 @@ Describe 'End-to-end: manifest create (CLI-03)' {
         $f2 = Join-Path $dir 'b.txt'
         Set-Content $f1 'alpha'
         Set-Content $f2 'bravo'
-        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -FilePath $f1 $f2 -Manifest -NoPause *>&1 | Out-String
+        $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript $f1 $f2 -Manifest -NoPause *>&1 | Out-String
         $output | Should -Match 'Manifest created:'
         $output | Should -Match '2 files'
         (Get-ChildItem $dir -Filter '*.sha256').Count | Should -BeGreaterOrEqual 1
