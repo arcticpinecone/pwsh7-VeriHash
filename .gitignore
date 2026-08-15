@@ -11,6 +11,7 @@ Thumbs.db
 *.code-workspace
 .claude/settings.local.json
 .claude/*
+.vs/
 
 # Serena MCP tool (local AI session data)
 .serena/
