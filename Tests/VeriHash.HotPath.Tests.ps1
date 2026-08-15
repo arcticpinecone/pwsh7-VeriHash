@@ -171,3 +171,55 @@ Describe 'Invoke-VeriHashHotPath unified render (FMT-09)' {
         }
     }
 }
+
+Describe 'Invoke-VeriHashHotPath: MatchResult reflects the sidecar verdict' {
+    BeforeAll {
+        # Expected hashes come from Get-FileHash, NOT Get-VeriHashResult: an
+        # oracle independent of the system under test cannot agree with it by
+        # sharing a bug.
+        function script:TrueHash {
+            param([string]$Path, [string]$Algorithm = 'SHA256')
+            return (Get-FileHash -LiteralPath $Path -Algorithm $Algorithm).Hash.ToLowerInvariant()
+        }
+    }
+    BeforeEach {
+        # The clipboard outranks the sidecar in the comparator rule, so a real
+        # hash left on the developer's clipboard would decide these tests.
+        # Mocking Get-Clipboard pins it without destroying their clipboard.
+        Mock -ModuleName VeriHash.Core Get-Clipboard { $null }
+
+        $script:WorkDir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $null = New-Item -ItemType Directory -Path $script:WorkDir
+        $script:Target = Join-Path $script:WorkDir 'verdict-target.bin'
+        [System.IO.File]::WriteAllBytes($script:Target, [byte[]](1..64))
+    }
+
+    It 'Reports mismatch when the sidecar disagrees with the file' {
+        Set-Content "$($script:Target).sha256" (('0' * 64) + ' *verdict-target.bin')
+        $r = Invoke-VeriHashHotPath -Path $script:Target -Algorithm SHA256 6>$null
+        $r.MatchResult | Should -Be 'mismatch'
+    }
+
+    It 'Reports matched when the sidecar agrees with the file' {
+        Set-Content "$($script:Target).sha256" ((script:TrueHash $script:Target) + ' *verdict-target.bin')
+        $r = Invoke-VeriHashHotPath -Path $script:Target -Algorithm SHA256 6>$null
+        $r.MatchResult | Should -Be 'matched'
+    }
+
+    It 'Ignores a sidecar written for a different algorithm' {
+        # A .sha512 sidecar is not evidence about a SHA256 run. It outranks
+        # .sha256 in Get-PreferredSidecar, so without the algorithm guard its
+        # hash would be compared against a SHA256 digest and always disagree.
+        Set-Content "$($script:Target).sha512" ((script:TrueHash $script:Target 'SHA512') + ' *verdict-target.bin')
+        $r = Invoke-VeriHashHotPath -Path $script:Target -Algorithm SHA256 6>$null
+        $r.MatchResult | Should -Be 'matched'
+    }
+
+    It 'Counts a sidecar mismatch in the batch tally' {
+        # The user-visible symptom: a corrupted file tallied as green.
+        Set-Content "$($script:Target).sha256" (('0' * 64) + ' *verdict-target.bin')
+        $b = Invoke-VeriHashBatch -FilePath @($script:Target) -Algorithm SHA256 6>$null
+        $b.Tally.Mismatch | Should -Be 1
+        $b.Tally.Matched  | Should -Be 0
+    }
+}

@@ -165,16 +165,16 @@ function Invoke-VeriHashHotPath {
     $sw.Stop()
     $wallMs = [int]$sw.ElapsedMilliseconds
 
-    $matchResult = 'matched'
-    $hasComparator = $false
-    if ($null -ne $clip -and $clip.Hash) {
-        $hasComparator = $true
-        if ($hashResult.Hash -ne $clip.Hash) { $matchResult = 'mismatch' }
-    }
-    if ($null -ne $sidecar -and $sidecar.Hash) {
-        $hasComparator = $true
-        if ($hashResult.Hash -ne $sidecar.Hash) { $matchResult = 'mismatch' }
-    }
+    # Reuses the verdict computed above rather than re-deriving it. The previous
+    # rule compared against $sidecar.Hash, which Test-VeriHashSidecar sets to the
+    # COMPUTED digest of this same file -- a value compared against itself. It
+    # could never report a same-algorithm mismatch (a corrupted file tallied
+    # green), and it always reported one when the sidecar's algorithm differed
+    # from this run (a false alarm on a good file). The expected value lives in
+    # $sidecar.ExpectedHash, which $expectedHash already reads with the
+    # algorithm guard the banner uses.
+    $hasComparator = ($null -ne $expectedHash)
+    $matchResult   = if ($isMismatch) { 'mismatch' } else { 'matched' }
 
     $sigSkippedNonPE = (-not $isPE) -and ($sigResult.Status -eq 'skipped')
     $effectiveSigMs = if ($sigSkippedNonPE) { 0 } else { $sigDoneMs }
