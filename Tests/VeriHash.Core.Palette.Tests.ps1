@@ -1,16 +1,21 @@
 BeforeAll {
     Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force
     . "$PSScriptRoot/TestHelpers.ps1"
+    # This file deliberately toggles colour env vars; save the developer's real
+    # values up front and restore them once, so nothing leaks into later files.
+    $script:SavedColorEnv = Save-VeriHashColorEnv
 }
 AfterAll {
+    Restore-VeriHashColorEnv -Saved $script:SavedColorEnv
     Remove-Module VeriHash.Core -ErrorAction SilentlyContinue
-    Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
-    Remove-Item Env:\VERIHASH_NO_TRUECOLOR -ErrorAction SilentlyContinue
 }
 
 Describe 'Get-VeriHashPalette (FMT)' {
+    BeforeEach {
+        Set-VeriHashColorEnv -Mode Truecolor
+    }
+
     It 'Returns SGR escape strings when colour is enabled' {
-        Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
         $p = InModuleScope VeriHash.Core { Get-VeriHashPalette }
         $p.UseColor          | Should -BeTrue
         $p.Color.Reset       | Should -Be "$([char]27)[0m"
@@ -30,29 +35,21 @@ Describe 'Get-VeriHashPalette (FMT)' {
     }
 
     It 'Blanks every colour when NO_COLOR is set' {
-        $env:NO_COLOR = '1'
-        try {
-            $p = InModuleScope VeriHash.Core { Get-VeriHashPalette }
-            $p.UseColor | Should -BeFalse
-            foreach ($k in $p.Color.Keys) { $p.Color[$k] | Should -BeExactly '' }
-        } finally {
-            Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
-        }
+        Set-VeriHashColorEnv -Mode None
+        $p = InModuleScope VeriHash.Core { Get-VeriHashPalette }
+        $p.UseColor | Should -BeFalse
+        foreach ($k in $p.Color.Keys) { $p.Color[$k] | Should -BeExactly '' }
     }
 
     It 'Falls back to 16-colour SGR when truecolor is unavailable' {
-        $env:VERIHASH_NO_TRUECOLOR = '1'
-        try {
-            $p = InModuleScope VeriHash.Core { Get-VeriHashPalette }
-            $p.UseColor     | Should -BeTrue
-            $p.UseTruecolor | Should -BeFalse
-            # Still colour, but no 24-bit sequences anywhere.
-            foreach ($k in $p.Color.Keys) { $p.Color[$k] | Should -Not -BeLike '*38;2;*' }
-            $p.Color.Green       | Should -Be "$([char]27)[92m"
-            $p.Color.BannerMatch | Should -Be "$([char]27)[42m$([char]27)[30m"
-        } finally {
-            Remove-Item Env:\VERIHASH_NO_TRUECOLOR -ErrorAction SilentlyContinue
-        }
+        Set-VeriHashColorEnv -Mode Sixteen
+        $p = InModuleScope VeriHash.Core { Get-VeriHashPalette }
+        $p.UseColor     | Should -BeTrue
+        $p.UseTruecolor | Should -BeFalse
+        # Still colour, but no 24-bit sequences anywhere.
+        foreach ($k in $p.Color.Keys) { $p.Color[$k] | Should -Not -BeLike '*38;2;*' }
+        $p.Color.Green       | Should -Be "$([char]27)[92m"
+        $p.Color.BannerMatch | Should -Be "$([char]27)[42m$([char]27)[30m"
     }
 
     It 'Never throws and yields a sane width with no console attached' {
