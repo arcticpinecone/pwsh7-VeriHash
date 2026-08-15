@@ -1,18 +1,27 @@
 function Format-VeriHashReport {
     <#
     .SYNOPSIS
-        Renders a VeriHash.Result to the host in the v1-compatible layout.
+        Renders a VeriHash.Result to the host in the v2.1 console layout.
     .DESCRIPTION
-        Pure renderer -- no I/O, no Get-Item, no Get-FileHash. All data must
-        already be on the supplied result object. Hash is rendered lowercase
-        per the v2 contract. Optional CompareTo and SidecarInfo extend the
-        rendered report.
+        Pure renderer -- no I/O, no Get-Item, no Get-FileHash. Every fact must
+        already be on the objects passed in. Composes the private block
+        renderers in a fixed order: header, verdict banner, hash comparison,
+        checklist grid, footer.
+
+        The comparator is the clipboard when one is present, otherwise the
+        sidecar, otherwise nothing (the HASHED state).
     .PARAMETER Result
         A VeriHash.Result object (pipeline-bound).
     .PARAMETER CompareTo
-        Optional comparison hash record (e.g. clipboard) to render alongside.
+        Clipboard hash record: @{ Algorithm; Hash; Format }.
     .PARAMETER SidecarInfo
-        Optional sidecar-verification record to render alongside.
+        Sidecar record: @{ SidecarStatus; SidecarName; Algorithm; ExpectedHash }.
+    .PARAMETER Signature
+        Signature record: @{ Status; Reason; Signer }.
+    .PARAMETER Compact
+        Batch mode. Emits header, banner, and checklist only -- the hash
+        comparison block is kept only for mismatches, and the footer and
+        advisory are suppressed (the batch tally carries the summary instead).
     .OUTPUTS
         None -- writes to the host stream.
     #>
@@ -23,38 +32,109 @@ function Format-VeriHashReport {
         [pscustomobject]$Result,
 
         [pscustomobject]$CompareTo,
-
-        [pscustomobject]$SidecarInfo
+        [pscustomobject]$SidecarInfo,
+        [pscustomobject]$Signature,
+        [switch]$Compact
     )
     process {
-        $fileName = Split-Path -Leaf $Result.FilePath
-        Write-Host ("File selected:    " + $fileName) -ForegroundColor Green
-        Write-Host "---" -ForegroundColor DarkGray
-        $currentUTC = (Get-Date).ToUniversalTime()
-        Write-Host ("Start UTC:    " + $currentUTC.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")) -ForegroundColor Gray
-        Write-Host "---" -ForegroundColor DarkGray
-        Write-Host "[Metadata]" -ForegroundColor White
-        Write-Host ("File Path:    " + $Result.FilePath) -ForegroundColor Cyan
-        $formattedBytes = $Result.Size.ToString("N0").Replace(",", " ")
-        $sizeMb = "{0:N2}" -f ($Result.Size / 1MB)
-        Write-Host ("File Size:    " + $sizeMb + " MB  (" + $formattedBytes + " bytes)") -ForegroundColor Yellow
-        $createdStr  = if ($Result.CreationTime)  { $Result.CreationTime.ToString("yyyy-MM-dd HH:mm:ss UTC") } else { '<CREATED>' }
-        $modifiedStr = if ($Result.LastWriteTime) { $Result.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss UTC") } else { '<MODIFIED>' }
-        Write-Host ("Created:      " + $createdStr) -ForegroundColor Gray
-        Write-Host ("Modified:     " + $modifiedStr) -ForegroundColor Gray
-        Write-Host "---" -ForegroundColor DarkGray
-        Write-Host "[Hash]" -ForegroundColor White
-        Write-Host ("Algorithm:    " + $Result.Algorithm) -ForegroundColor Cyan
-        Write-Host ("Hash:         " + $Result.Hash) -ForegroundColor Green
-        Write-Host ("Elapsed:      " + $Result.ElapsedMs + " ms") -ForegroundColor Yellow
+        $p = Get-VeriHashPalette
+        $c = $p.Color
+        $g = $p.Glyph
 
-        if ($CompareTo) {
-            $match = ($Result.Hash -eq $CompareTo.Hash.ToLowerInvariant())
-            $verdict = if ($match) { 'MATCH' } else { 'MISMATCH' }
-            Write-Host ("Compare:      " + $verdict + " (" + $CompareTo.Algorithm + ")") -ForegroundColor Cyan
+        # --- resolve the comparator -------------------------------------------
+        # The clipboard wins when present -- it is what the user just deliberately
+        # copied. A sidecar is the fallback comparator, not a competitor.
+        $expectedHash   = $null
+        $comparatorName = 'none'
+        if ($CompareTo -and $CompareTo.Hash) {
+            $expectedHash   = ([string]$CompareTo.Hash).ToLowerInvariant()
+            $comparatorName = 'clipboard'
+        } elseif ($SidecarInfo -and $SidecarInfo.ExpectedHash -and
+                  $SidecarInfo.Algorithm -eq $Result.Algorithm) {
+            # Algorithm guard: Test-VeriHashSidecar prefers .sha512 > .sha256 > .md5
+            # and hashes with WHICHEVER it found, while the hot path hashes with the
+            # requested algorithm. Comparing a SHA512 sidecar against a SHA256
+            # compute would report a false MISMATCH on a perfectly good file.
+            $expectedHash   = ([string]$SidecarInfo.ExpectedHash).ToLowerInvariant()
+            $comparatorName = 'sidecar'
         }
-        if ($SidecarInfo) {
-            Write-Host ("Sidecar:      " + $SidecarInfo.Sidecar) -ForegroundColor Cyan
+
+        $clipboardMatch = $null
+        if ($comparatorName -eq 'clipboard') { $clipboardMatch = ($Result.Hash -eq $expectedHash) }
+
+        $state = if ($comparatorName -eq 'none') { 'Hashed' }
+                 elseif ($Result.Hash -eq $expectedHash) { 'Match' }
+                 else { 'Mismatch' }
+
+        # --- 1. header ---------------------------------------------------------
+        $fileName = Split-Path -Leaf $Result.FilePath
+        $size     = Format-VeriHashByteSize -Bytes ([long]$Result.Size)
+        Write-Host ("{0}VeriHash 2.0 {1} {2} {1} {3}{4}{0} ({5}){3}" -f `
+            $c.Dim, $g.Sep, $Result.Algorithm, $c.Reset, $fileName, $size)
+
+        # --- 2. verdict banner (blank line above and below) --------------------
+        Write-Host ''
+        Write-Host (Format-VeriHashBanner -State $state -Algorithm $Result.Algorithm -Source $comparatorName -Palette $p)
+        Write-Host ''
+
+        # --- 3. hash comparison block ------------------------------------------
+        $showHashBlock = (-not $Compact) -or ($state -eq 'Mismatch')
+        if ($showHashBlock) {
+            if ($expectedHash) {
+                $diffIndex     = Get-VeriHashDiffIndex -Expected $expectedHash -Actual $Result.Hash
+                $diffFromGroup = if ($diffIndex -lt 0) { -1 } else { [int][Math]::Floor($diffIndex / 8) }
+
+                Write-Host ("{0}expected  {1}{2}" -f $c.Dim, $comparatorName, $c.Reset)
+                foreach ($l in (Format-VeriHashHexGroups -Hash $expectedHash -Palette $p -DiffFromGroup $diffFromGroup)) {
+                    Write-Host $l
+                }
+                Write-Host ("{0}computed  {1} ms{2}" -f $c.Dim, $Result.ElapsedMs, $c.Reset)
+                foreach ($l in (Format-VeriHashHexGroups -Hash $Result.Hash -Palette $p -DiffFromGroup $diffFromGroup)) {
+                    Write-Host $l
+                }
+                if ($diffIndex -ge 0) {
+                    Write-Host ("{0}first {1} of {2} characters agree {3} divergence starts at character {4}{5}" -f `
+                        $c.Dim, $diffIndex, $Result.Hash.Length, $g.Dash, ($diffIndex + 1), $c.Reset)
+                }
+            } else {
+                Write-Host ("{0}{1}{2}" -f $c.Dim, $Result.Algorithm.ToLowerInvariant(), $c.Reset)
+                foreach ($l in (Format-VeriHashHexGroups -Hash $Result.Hash -Palette $p)) {
+                    Write-Host $l
+                }
+            }
+            Write-Host ''
         }
+
+        # --- 4. checklist grid --------------------------------------------------
+        $checklistSplat = @{
+            Palette   = $p
+            Bytes     = [long]$Result.Size
+            ElapsedMs = [int]$Result.ElapsedMs
+        }
+        if ($CompareTo)                { $checklistSplat['CompareTo']      = $CompareTo }
+        if ($SidecarInfo)              { $checklistSplat['SidecarInfo']    = $SidecarInfo }
+        if ($Signature)                { $checklistSplat['Signature']      = $Signature }
+        if ($null -ne $clipboardMatch) { $checklistSplat['ClipboardMatch'] = $clipboardMatch }
+        foreach ($row in (Format-VeriHashChecklist @checklistSplat)) { Write-Host $row }
+
+        if ($Compact) { return }
+
+        Write-Host ''
+
+        # --- mismatch advisory (before the footer) ------------------------------
+        if ($state -eq 'Mismatch') {
+            $rule = $g.Rule * $p.Width
+            Write-Host ("{0}{1}{2}" -f $c.Red, $rule, $c.Reset)
+            Write-Host ("{0}Do not run this file. Re-download it, then verify again.{1}" -f $c.Red, $c.Reset)
+            Write-Host ("{0}{1}{2}" -f $c.Red, $rule, $c.Reset)
+            Write-Host ''
+        }
+
+        # --- 5. footer ----------------------------------------------------------
+        $modified = if ($Result.LastWriteTime) {
+            ([datetime]$Result.LastWriteTime).ToUniversalTime().ToString('yyyy-MM-dd HH:mm', [cultureinfo]::InvariantCulture)
+        } else { '<unknown>' }
+        Write-Host ("{0}{1} {2} modified {3} UTC{4}" -f $c.Dim, $Result.FilePath, $g.Sep, $modified, $c.Reset)
+        Write-Host ''
     }
 }
