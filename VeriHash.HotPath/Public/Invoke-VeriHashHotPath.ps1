@@ -6,10 +6,14 @@ function Invoke-VeriHashHotPath {
         Runs Get-VeriHashResult and Get-VeriHashSignature in two parallel ThreadJobs (D-A3-1).
         Hash ThreadJob imports VeriHash.Core via -InitializationScript; Sig ThreadJob imports
         VeriHash.HotPath via -InitializationScript (D-A3-2). Polls jobs with Wait-Job -Any
-        (D-A3-3) and renders the hash stanza via Format-VeriHashReport once the hash job
-        completes, then renders the signature stanza via Write-Host once the sig job
-        completes. Wraps the entire orchestration in a Stopwatch for WallClockMs (PERF-05).
+        (D-A3-3), then hands every collected fact -- hash, clipboard, sidecar, signature --
+        to a SINGLE Format-VeriHashReport call. The signature is a checklist row, not a
+        trailing line, so nothing is rendered until both jobs are in. Wraps the entire
+        orchestration in a Stopwatch for WallClockMs (PERF-05).
         Returns VeriHash.HotPathResult.
+
+        Sidecar writes are suppressed when the verdict is MISMATCH: a file that failed
+        verification must never have its hash recorded as if it were authoritative.
     .PARAMETER Path
         File to hash + verify. Resolved with Resolve-Path -LiteralPath.
     .PARAMETER Algorithm
@@ -79,34 +83,10 @@ function Invoke-VeriHashHotPath {
     try { $clip    = Read-ClipboardHash -ErrorAction SilentlyContinue }    catch { $clip = $null }
     try { $sidecar = Test-VeriHashSidecar -Path $resolved -ErrorAction SilentlyContinue } catch { $sidecar = $null }
 
-    $reportSplat = @{ Result = $hashResult }
-    if ($null -ne $clip)    { $reportSplat['CompareTo']   = $clip }
-    if ($null -ne $sidecar) { $reportSplat['SidecarInfo'] = $sidecar }
-    Format-VeriHashReport @reportSplat
-
-    # Sidecar creation/update: write .sha256 (or matching ext) next to file
-    $algoExtMap = @{ 'SHA256' = '.sha256'; 'SHA512' = '.sha512'; 'MD5' = '.md5' }
-    $sidecarPath = "$resolved$($algoExtMap[$Algorithm])"
-    $sidecarLeafName = Split-Path -Leaf $resolved
-    $sidecarContent = "$($hashResult.Hash) *$sidecarLeafName"
-    $shouldWriteSidecar = $true
-    $sidecarVerb = 'created'
-    if (Test-Path -LiteralPath $sidecarPath) {
-        $existingLine = (Get-Content -LiteralPath $sidecarPath -TotalCount 1)
-        if ($existingLine -match '^([A-Fa-f0-9]+)\s' -and $matches[1].ToLowerInvariant() -eq $hashResult.Hash) {
-            $shouldWriteSidecar = $false
-        } else {
-            $sidecarVerb = 'updated'
-        }
-    }
-    if ($shouldWriteSidecar) {
-        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-        [System.IO.File]::WriteAllText($sidecarPath, "$sidecarContent`n", $utf8NoBom)
-        Write-Host "Sidecar:      $sidecarVerb ($([System.IO.Path]::GetFileName($sidecarPath)))" -ForegroundColor Green
-    }
-
     # Now wait for the sig job to complete (Wait-Job -Any again so the orchestrator
-    # never blocks on sig if the hash job overshoots due to disk pressure).
+    # never blocks on sig if the hash job overshoots due to disk pressure). The
+    # report is a single block covering hash AND signature, so it cannot be
+    # rendered until both facts are in hand.
     do {
         $null = Wait-Job -Job @($sigJob) -Any -Timeout 1
     } until ($sigJob.State -in 'Completed', 'Failed', 'Stopped')
@@ -114,18 +94,73 @@ function Invoke-VeriHashHotPath {
     $sigResult = Receive-Job -Job $sigJob -Wait -AutoRemoveJob
     $sigDoneMs = [int]$sigSw.ElapsedMilliseconds
     if ($null -eq $sigResult) {
-        $sigResult = [pscustomobject]@{ Status = 'error'; Reason = 'sig job returned no payload' }
+        $sigResult = [pscustomobject]@{ Status = 'error'; Reason = 'sig job returned no payload'; Signer = $null }
     }
 
-    $sigLine = "Signature:    $($sigResult.Status)" + $(if ($sigResult.Reason) { " ($($sigResult.Reason))" } else { '' })
-    $sigColor = switch ($sigResult.Status) {
-        'valid'    { 'Green' }
-        'invalid'  { 'Red' }
-        'unsigned' { 'Yellow' }
-        'skipped'  { 'DarkGray' }
-        default    { 'Magenta' }
+    # --- verdict -------------------------------------------------------------
+    # Mirrors Format-VeriHashReport's comparator rule exactly (clipboard wins;
+    # sidecar is a same-algorithm fallback). The banner and the sidecar-write
+    # decision MUST agree -- a checklist that says 'created' under a MISMATCH
+    # banner would be reporting a write that never should have happened.
+    $expectedHash = $null
+    if ($clip -and $clip.Hash) {
+        $expectedHash = ([string]$clip.Hash).ToLowerInvariant()
+    } elseif ($sidecar -and $sidecar.ExpectedHash -and $sidecar.Algorithm -eq $Algorithm) {
+        $expectedHash = ([string]$sidecar.ExpectedHash).ToLowerInvariant()
     }
-    Write-Host $sigLine -ForegroundColor $sigColor
+    $isMismatch = ($null -ne $expectedHash) -and ($hashResult.Hash -ne $expectedHash)
+
+    # --- sidecar creation/update ---------------------------------------------
+    # Never write over a sidecar for a file that failed verification (spec:
+    # 'do NOT write/update a sidecar when the clipboard verdict is MISMATCH').
+    $algoExtMap      = @{ 'SHA256' = '.sha256'; 'SHA512' = '.sha512'; 'MD5' = '.md5' }
+    $sidecarPath     = "$resolved$($algoExtMap[$Algorithm])"
+    $sidecarLeaf     = [System.IO.Path]::GetFileName($sidecarPath)
+    $sidecarLeafName = Split-Path -Leaf $resolved
+    $sidecarRecord   = $sidecar
+
+    if ($isMismatch) {
+        # An existing sidecar record already describes itself accurately
+        # (matched / mismatch / error); only synthesize when there is nothing.
+        if ($null -eq $sidecarRecord) {
+            $sidecarRecord = [pscustomobject]@{
+                SidecarStatus = 'none'
+                SidecarName   = $sidecarLeaf
+                Algorithm     = $Algorithm
+                ExpectedHash  = $null
+            }
+        }
+    } else {
+        $sidecarVerb = 'created'
+        $shouldWrite = $true
+        if (Test-Path -LiteralPath $sidecarPath) {
+            $existingLine = (Get-Content -LiteralPath $sidecarPath -TotalCount 1)
+            if ($existingLine -match '^([A-Fa-f0-9]+)\s' -and $matches[1].ToLowerInvariant() -eq $hashResult.Hash) {
+                $shouldWrite = $false
+            } else {
+                $sidecarVerb = 'updated'
+            }
+        }
+        if ($shouldWrite) {
+            $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+            [System.IO.File]::WriteAllText($sidecarPath, "$($hashResult.Hash) *$sidecarLeafName`n", $utf8NoBom)
+            # ExpectedHash stays $null on purpose: a sidecar VeriHash just wrote
+            # from this very hash is not evidence of anything, and handing it to
+            # the renderer as a comparator would claim a match against ourselves.
+            $sidecarRecord = [pscustomobject]@{
+                SidecarStatus = $sidecarVerb
+                SidecarName   = $sidecarLeaf
+                Algorithm     = $Algorithm
+                ExpectedHash  = $null
+            }
+        }
+    }
+
+    # --- single unified render ------------------------------------------------
+    $reportSplat = @{ Result = $hashResult; Signature = $sigResult }
+    if ($null -ne $clip)          { $reportSplat['CompareTo']   = $clip }
+    if ($null -ne $sidecarRecord) { $reportSplat['SidecarInfo'] = $sidecarRecord }
+    Format-VeriHashReport @reportSplat
 
     $sw.Stop()
     $wallMs = [int]$sw.ElapsedMilliseconds
