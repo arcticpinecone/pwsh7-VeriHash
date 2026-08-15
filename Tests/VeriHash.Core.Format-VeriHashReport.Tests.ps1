@@ -41,6 +41,18 @@ Describe 'Format-VeriHashReport header (FMT-01)' {
     }
 }
 
+Describe 'Format-VeriHashReport elapsed scope (FMT)' {
+    It 'Reports total work alongside hashing time when TotalMs is supplied' {
+        $out = script:Render @{ Result = (script:NewResult); TotalMs = 118 }
+        $out | Should -Match ([regex]::Escape('elapsed     118 ms total · 52 ms hashing'))
+    }
+
+    It 'Keeps the hash-only elapsed row when the caller has no total to report' {
+        $out = script:Render @{ Result = (script:NewResult) }
+        $out | Should -Match ([regex]::Escape('elapsed     52 ms · 45.32 MB'))
+    }
+}
+
 Describe 'Format-VeriHashReport banner (FMT-02)' {
     It 'Shows HASHED when there is nothing to compare against' {
         $out = script:Render @{ Result = (script:NewResult) }

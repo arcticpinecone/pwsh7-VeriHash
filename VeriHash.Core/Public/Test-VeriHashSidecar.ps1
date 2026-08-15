@@ -8,6 +8,15 @@ function Test-VeriHashSidecar {
         ('HASH  filename' two-space and 'HASH *filename' asterisk).
     .PARAMETER Path
         Path to the TARGET file (NOT the sidecar). Resolved with -LiteralPath.
+    .PARAMETER ComputedResult
+        An optional VeriHash.Result the caller has ALREADY computed for this file.
+        When its Algorithm equals the chosen sidecar's, it is reused verbatim and
+        no second pass over the file is made -- a full re-hash of a large file is
+        the single most expensive thing this function can do, and in the common
+        case (a .sha256 sidecar under a SHA256 run) it recomputes a digest the
+        caller is already holding. When the algorithms differ the parameter is
+        ignored and the file is hashed with the sidecar's algorithm as before,
+        because a SHA256 digest cannot answer a .sha512 sidecar.
     .OUTPUTS
         VeriHash.Result with an additional 'Sidecar' field describing which
         sidecar was used, or $null when no sidecar exists.
@@ -21,7 +30,9 @@ function Test-VeriHashSidecar {
     [OutputType('VeriHash.Result')]
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [string]$Path,
+
+        [pscustomobject]$ComputedResult
     )
 
     $sidecar = Get-PreferredSidecar -TargetPath $Path
@@ -31,7 +42,12 @@ function Test-VeriHashSidecar {
     $line = Get-Content -LiteralPath $sidecar.Path -TotalCount 1
     $parsed = Read-SidecarLine -Line $line
 
-    $actual = Get-VeriHashResult -Path $Path -Algorithm $sidecar.Algorithm
+    $actual = if ($ComputedResult -and $ComputedResult.Hash -and
+                  $ComputedResult.Algorithm -eq $sidecar.Algorithm) {
+        $ComputedResult
+    } else {
+        Get-VeriHashResult -Path $Path -Algorithm $sidecar.Algorithm
+    }
 
     if (-not $parsed) {
         return [pscustomobject]@{

@@ -18,6 +18,10 @@ function Format-VeriHashReport {
         Sidecar record: @{ SidecarStatus; SidecarName; Algorithm; ExpectedHash }.
     .PARAMETER Signature
         Signature record: @{ Status; Reason; Signer }.
+    .PARAMETER TotalMs
+        Total wall time for the operation, when the caller can supply it. Forwarded
+        to the checklist so the elapsed row names both scopes instead of showing a
+        hash time that reads as the whole run's cost.
     .PARAMETER Compact
         Batch mode. Emits header, banner, and checklist only -- the hash
         comparison block is kept only for mismatches, and the footer and
@@ -34,6 +38,7 @@ function Format-VeriHashReport {
         [pscustomobject]$CompareTo,
         [pscustomobject]$SidecarInfo,
         [pscustomobject]$Signature,
+        [nullable[int]]$TotalMs,
         [switch]$Compact
     )
     process {
@@ -111,6 +116,7 @@ function Format-VeriHashReport {
             Bytes     = [long]$Result.Size
             ElapsedMs = [int]$Result.ElapsedMs
         }
+        if ($null -ne $TotalMs)        { $checklistSplat['TotalMs']        = $TotalMs }
         if ($CompareTo)                { $checklistSplat['CompareTo']      = $CompareTo }
         if ($SidecarInfo)              { $checklistSplat['SidecarInfo']    = $SidecarInfo }
         if ($Signature)                { $checklistSplat['Signature']      = $Signature }

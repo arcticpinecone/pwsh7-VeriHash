@@ -111,4 +111,17 @@ Describe 'Format-VeriHashChecklist (FMT)' {
         $rows = script:Rows @{ Bytes = 1709869; ElapsedMs = 42 }
         $rows[3] | Should -BeExactly 'elapsed     42 ms · 1.63 MB · ~39 MB/s'
     }
+
+    It 'Separates total work from hashing time when TotalMs is supplied' {
+        # Hash time alone reads as the cost of the whole run. Naming both scopes is
+        # what stops a 42 ms hash inside a 55 ms operation from looking like a lie.
+        $rows = script:Rows @{ Bytes = 1709869; ElapsedMs = 42; TotalMs = 55 }
+        $rows[3] | Should -BeExactly 'elapsed     55 ms total · 42 ms hashing · 1.63 MB · ~39 MB/s'
+    }
+
+    It 'Keeps the throughput figure tied to hashing time, not total time' {
+        # ~39 MB/s is a hash-rate claim; dividing by total would understate the hasher.
+        $rows = script:Rows @{ Bytes = 1709869; ElapsedMs = 42; TotalMs = 4200 }
+        $rows[3] | Should -BeLike '*~39 MB/s'
+    }
 }

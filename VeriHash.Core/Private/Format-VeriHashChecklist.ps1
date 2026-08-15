@@ -7,6 +7,13 @@ function Format-VeriHashChecklist {
         with a 2-space gutter, so every value starts at column 12. Returns
         exactly four strings, always in the same order -- a stable shape is
         what makes the block scannable.
+    .PARAMETER ElapsedMs
+        Time spent hashing -- the Get-FileHash call alone.
+    .PARAMETER TotalMs
+        Total wall time for the whole operation, when the caller knows it. Supplying
+        it splits the elapsed row into 'N ms total' and 'N ms hashing', because
+        hashing is only part of the job and a lone hash figure reads as the cost of
+        the entire run. Omit it and the row keeps its hash-only shape.
     .PARAMETER ClipboardMatch
         $true / $false when a clipboard hash was present and compared,
         $null when there was nothing to compare against.
@@ -19,6 +26,7 @@ function Format-VeriHashChecklist {
         [Parameter(Mandatory)] [hashtable]$Palette,
         [Parameter(Mandatory)] [long]$Bytes,
         [Parameter(Mandatory)] [int]$ElapsedMs,
+        [nullable[int]]$TotalMs,
         [pscustomobject]$CompareTo,
         [pscustomobject]$SidecarInfo,
         [pscustomobject]$Signature,
@@ -71,9 +79,16 @@ function Format-VeriHashChecklist {
     }
 
     # --- elapsed ---
+    # The rate stays divided by hashing time in both shapes: it is a hash-rate claim
+    # sitting next to the hashing figure, not effective end-to-end throughput.
     $size = Format-VeriHashByteSize -Bytes $Bytes
     $rate = Format-VeriHashThroughput -Bytes $Bytes -ElapsedMs $ElapsedMs
-    $elapsedRow = "$($c.Dim)$ElapsedMs ms $($g.Sep) $size $($g.Sep) $rate$($c.Reset)"
+    $timing = if ($null -ne $TotalMs) {
+        "$TotalMs ms total $($g.Sep) $ElapsedMs ms hashing"
+    } else {
+        "$ElapsedMs ms"
+    }
+    $elapsedRow = "$($c.Dim)$timing $($g.Sep) $size $($g.Sep) $rate$($c.Reset)"
 
     return @(
         (Row 'clipboard' $clipRow)

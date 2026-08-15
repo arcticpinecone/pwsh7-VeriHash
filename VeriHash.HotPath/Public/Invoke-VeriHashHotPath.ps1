@@ -9,7 +9,11 @@ function Invoke-VeriHashHotPath {
         (D-A3-3), then hands every collected fact -- hash, clipboard, sidecar, signature --
         to a SINGLE Format-VeriHashReport call. The signature is a checklist row, not a
         trailing line, so nothing is rendered until both jobs are in. Wraps the entire
-        orchestration in a Stopwatch for WallClockMs (PERF-05).
+        orchestration in a Stopwatch for WallClockMs (PERF-05), stopping it just before
+        the render so the reported total and WallClockMs are one number.
+
+        The file is hashed exactly ONCE: the hash job's digest is handed to the sidecar
+        check via -ComputedResult rather than recomputed there.
         Returns VeriHash.HotPathResult.
 
         Sidecar writes are suppressed when the verdict is MISMATCH: a file that failed
@@ -81,7 +85,12 @@ function Invoke-VeriHashHotPath {
     $clip    = $null
     $sidecar = $null
     try { $clip    = Read-ClipboardHash -ErrorAction SilentlyContinue }    catch { $clip = $null }
-    try { $sidecar = Test-VeriHashSidecar -Path $resolved -ErrorAction SilentlyContinue } catch { $sidecar = $null }
+    # -ComputedResult hands the sidecar check the digest the hash job just produced.
+    # Without it, Test-VeriHashSidecar makes a SECOND full pass over the file to
+    # recompute a hash we are already holding -- on a 600 MB installer that doubled
+    # the wall clock. It still re-hashes on its own when the strongest sidecar uses
+    # a different algorithm, which is the only case where our digest cannot answer.
+    try { $sidecar = Test-VeriHashSidecar -Path $resolved -ComputedResult $hashResult -ErrorAction SilentlyContinue } catch { $sidecar = $null }
 
     # Now wait for the sig job to complete (Wait-Job -Any again so the orchestrator
     # never blocks on sig if the hash job overshoots due to disk pressure). The
@@ -157,13 +166,17 @@ function Invoke-VeriHashHotPath {
     }
 
     # --- single unified render ------------------------------------------------
-    $reportSplat = @{ Result = $hashResult; Signature = $sigResult }
+    # Stop the clock BEFORE rendering so the total the report prints and the
+    # WallClockMs the caller receives are the same number. Two timings that differ
+    # by the cost of drawing the report is exactly the contradiction this block is
+    # meant to resolve; rendering is output, not verification work.
+    $sw.Stop()
+    $wallMs = [int]$sw.ElapsedMilliseconds
+
+    $reportSplat = @{ Result = $hashResult; Signature = $sigResult; TotalMs = $wallMs }
     if ($null -ne $clip)          { $reportSplat['CompareTo']   = $clip }
     if ($null -ne $sidecarRecord) { $reportSplat['SidecarInfo'] = $sidecarRecord }
     Format-VeriHashReport @reportSplat
-
-    $sw.Stop()
-    $wallMs = [int]$sw.ElapsedMilliseconds
 
     # Reuses the verdict computed above rather than re-deriving it. The previous
     # rule compared against $sidecar.Hash, which Test-VeriHashSidecar sets to the
