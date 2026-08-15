@@ -12,7 +12,7 @@
 ### Phases
 
 - [x] **Phase 6: Sidecar Auto-Detect** — Right-clicking `.sha256`/`.sha512`/`.md5` verifies the companion file instead of hashing the sidecar
-- [ ] **Phase 7: Output Formatting** — Rich sectioned single-file report + compact batch table with 6-colour palette
+- [x] **Phase 7: Output Formatting** — Verdict banner, stacked hash comparison, and checklist grid in truecolor, with a compact batch view
 - [ ] **Phase 8: Manifest Spot-Check** — Single-file verify against existing manifest in same directory
 
 ### Phase Details
@@ -30,23 +30,29 @@
 **Plans:** 2 plans
 
 Plans:
+
 - [x] 06-01-PLAN.md — Core Invoke-VeriHashSidecarDetect function + unit tests (TDD)
 - [x] 06-02-PLAN.md — CLI dispatch integration + E2E tests (SIDE-06)
 
 See: `.planning/notes/sidecar-autodetect-exploration.md`
 
 #### Phase 7: Output Formatting
-**Goal**: VeriHash output is scannable, sectioned, and colour-coded — rich report for single files, compact table for batches
+**Goal**: The verdict is legible at a glance — a reversed-video banner carries it, and everything else (hash comparison, checklist, footer) supports it
 **Depends on**: Phase 6 (routing must be solid before reformatting output)
 **Requirements**: FMT-01, FMT-02, FMT-03, FMT-04, FMT-05, FMT-06, FMT-07
 **Success Criteria** (what must be TRUE):
-  1. Single-file mode displays a sectioned report with `[Metadata]`, `[Hash]`, `[Signature]`, `[Verification]` headers showing path, size, friendly dates, hash speed, and timestamps
-  2. Batch mode displays a compact table with File, Size, Hash preview (12 chars), Time, Speed, and Status columns plus a coloured tally line
-  3. All output uses a consistent 6-colour palette (Green=pass, Red=fail, Yellow=warning, Cyan=info, Gray=timestamps, White=emphasis) with zero emoji characters
-  4. Report includes UTC start timestamp at top and completed timestamp with total elapsed time at bottom
-**Plans**: TBD
+  1. Single-file mode renders header, verdict banner, stacked hash comparison, checklist grid, and footer — in that order
+  2. A MISMATCH highlights the diverging 8-char hash groups on both lines, names the divergence character, and shows the "Do not run this file" advisory
+  3. A MISMATCH never writes or updates a sidecar file
+  4. Batch mode renders each file compactly and closes with the middot tally, while `BatchResult.TallyLine` stays byte-locked
+  5. Output is legible with `NO_COLOR` set and on a non-UTF-8 code page
+**Plans**: 1 plan
 
-See: `.planning/notes/output-formatting-exploration.md`
+Plans:
+
+- [x] 07-01-PLAN.md — Console output redesign: palette, banner, hash comparison, checklist, batch tally
+
+See: `HANDOFF-console-spec.md` (supersedes `.planning/notes/output-formatting-exploration.md`)
 
 #### Phase 8: Manifest Spot-Check
 **Goal**: Right-clicking a single file when a manifest exists in the same directory verifies just that file's entry — no full re-hash

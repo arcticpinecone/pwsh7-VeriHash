@@ -4,6 +4,11 @@ date: 2026-04-19
 context: Post-v2.0 ideation — comparing v1 presentation style with v2 structured output
 ---
 
+> **SUPERSEDED (2026-08-15).** This note's sectioned-report design was replaced
+> before implementation by `HANDOFF-console-spec.md`, which specifies a
+> banner + hash-comparison + checklist layout with a truecolor palette.
+> Kept for design history only.
+
 # Output Formatting Exploration
 
 ## Problem

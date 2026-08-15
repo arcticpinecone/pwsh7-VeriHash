@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: UX Polish & Smart Routing
 status: ready_to_plan
-last_updated: "2026-04-20T00:00:00.000Z"
-last_activity: 2026-04-20
+last_updated: "2026-08-15T00:00:00.000Z"
+last_activity: 2026-08-15
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 33
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 67
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-19 for v2.1)
 ## Current Position
 
 **Milestone:** v2.1 — UX Polish & Smart Routing
-**Phase:** 7 of 8 (Output Formatting) — next phase to plan
+**Phase:** 8 of 8 (Manifest Spot-Check) — next phase to plan
 **Plan:** 0 of TBD — ready to plan
-**Status:** Phase 6 complete (2/2 plans executed, 198 tests pass) — Phase 7 next
-**Last activity:** 2026-04-20 — Phase 6 executed (sidecar auto-detect + CLI dispatch)
+**Status:** Phase 7 complete (1/1 plan executed, 296 tests pass) — Phase 8 next
+**Last activity:** 2026-08-15 — Phase 7 executed (console output redesign)
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ### Shipped Milestones
 
@@ -49,6 +49,10 @@ See `.planning/MILESTONES.md` for full archive.
 - Phase 7 depends on Phase 6 (routing must be solid before reformatting output)
 - Phase 8 depends on Phase 6 (manifest routing must be solid)
 - SIDE-06: Sidecar auto-detect intercepts BEFORE manifest/hash branching — identical with/without -Manifest
+- FMT: renderer waits for both hot-path ThreadJobs so the checklist is one block; parallelism is unaffected
+- FMT: sidecar writes are suppressed on clipboard MISMATCH
+- FMT: `BatchResult.TallyLine` stays byte-locked; console display is a separate concern
+- FMT: the CLI pins `[Console]::OutputEncoding` to UTF-8; anything capturing its output must decode UTF-8 too
 
 ### Pending Todos
 
@@ -60,6 +64,6 @@ None yet.
 
 ## Session Continuity
 
-**Stopped at:** Phase 6 complete — all plans executed, verified
+**Stopped at:** Phase 7 complete — all plans executed, verified
 **Resume file:** `.planning/ROADMAP.md`
-**Next action:** `/gsd-plan-phase 7` to plan the Output Formatting phase.
+**Next action:** `/gsd-plan-phase 8` to plan the Manifest Spot-Check phase.

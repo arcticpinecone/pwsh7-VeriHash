@@ -18,13 +18,13 @@ Requirements for v2.1 UX Polish & Smart Routing. Each maps to roadmap phases.
 
 ### Output Formatting
 
-- [ ] **FMT-01**: Single-file mode shows rich sectioned report with `[Metadata]`, `[Hash]`, `[Signature]`, `[Verification]` section headers
-- [ ] **FMT-02**: Report includes file metadata: path, human-readable size, friendly dates (Created/Modified in `MMMM d, yyyy | HH:mm:ss`)
-- [ ] **FMT-03**: Report includes hash speed (MB/s) and hash time (seconds + milliseconds)
-- [ ] **FMT-04**: Report includes UTC start timestamp at top and completed timestamp + total time at bottom
-- [ ] **FMT-05**: Batch mode shows compact table with File, Size, Hash preview (12 chars), Time, Speed, Status columns
-- [ ] **FMT-06**: 6-colour palette applied consistently: Green (pass), Red (fail), Yellow (warning), Cyan (info/labels), Gray (timestamps), White (emphasis)
-- [ ] **FMT-07**: No emoji characters in any output (terminal-safe)
+- [ ] **FMT-01**: Single-file mode opens with a one-line header: `VeriHash 2.0 · {ALGO} · {filename} ({size})`
+- [ ] **FMT-02**: A full-width reversed-video verdict banner states MATCH / MISMATCH / HASHED, with blank lines above and below
+- [ ] **FMT-03**: Expected and computed hashes render stacked, in 8-character groups, with mismatching groups highlighted and the divergence character reported
+- [ ] **FMT-04**: A four-row checklist grid reports clipboard, sidecar, signature, and elapsed (ms · size · throughput)
+- [ ] **FMT-05**: A dim footer gives the full path and UTC modified time; MISMATCH additionally shows the "Do not run this file" advisory
+- [ ] **FMT-06**: Batch mode renders each file compactly and closes with `batch of N · x matched · y mismatch · z missing`, while `BatchResult.TallyLine` keeps its byte-locked legacy format
+- [ ] **FMT-07**: Output degrades cleanly: `NO_COLOR` disables all colour, a non-UTF-8 code page falls back to ASCII glyphs, and no emoji are used anywhere
 
 ### Manifest Spot-Check
 

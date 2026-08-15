@@ -7,6 +7,33 @@
 
 ---
 
+### [Unreleased] — v2.1
+
+> UX Polish & Smart Routing
+
+**CHANGED:**
+
+- 🎨 **Console output redesigned**: verdict banner, stacked 8-char-group hash comparison with
+  divergence highlighting, four-row checklist grid, and a compact batch summary.
+  Truecolor ANSI with `NO_COLOR` and ASCII-glyph fallbacks.
+  - The banner is reversed video (coloured background), so MATCH / MISMATCH / HASHED reads at a glance
+  - A mismatch highlights the diverging hash groups on both lines and names the divergence character
+  - `BatchResult.TallyLine` keeps its byte-locked `X/N matched, Y mismatch, Z missing` format for scripts;
+    only the console display changed
+  - The CLI now pins `[Console]::OutputEncoding` to UTF-8 so glyphs render instead of mojibake
+
+**PERFORMANCE:**
+
+- ⚡ **One hash pass per run**: a sidecar check no longer re-hashes a file the hot path
+  has already hashed. The elapsed row now names both scopes — total and hashing.
+
+**BUG FIXES:**
+
+- 🔧 **A sidecar is no longer created when the file fails clipboard verification**:
+  recording a hash for a file the user was just told not to trust would manufacture false assurance.
+
+---
+
 ### [v2.0.0] (Current)
 
 Version: 2.0.0
