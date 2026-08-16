@@ -20,6 +20,14 @@ function Read-ClipboardHash {
         Format is the ready-made display parenthetical describing which form
         was recognised: 'plain hex, SHA256', 'grouped hex, SHA256', or
         'prefixed, sha256:'.
+
+        Or [pscustomobject]@{ Algorithm = $null; Hash = $null; Format = $null;
+        Detail } for hex that is digest-shaped but of a length VeriHash does not
+        implement (CMP-10). Resolve-VeriHashComparator turns this into an
+        'unusable' comparator and the checklist renders Detail in the clipboard
+        row. Algorithm and Hash are null so nothing can compare against it.
+
+        Or $null when the clipboard holds nothing hash-shaped at all.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -43,7 +51,43 @@ function Read-ClipboardHash {
     # ('md5:' carrying 64 characters is not an MD5) lives in exactly one
     # function, and it stays there.
     $algo = ConvertTo-VeriHashAlgorithm -Hash $candidate.Canonical
-    if (-not $algo) { return $null }
+    if (-not $algo) {
+        # Hash-shaped, but not a digest length VeriHash implements. Returning
+        # $null here would render as 'nothing recognizable', telling a user who
+        # deliberately copied a vendor's SHA-384 that their clipboard was empty
+        # -- and leaving them to conclude the file was fine because nothing
+        # contradicted it. Instead this returns an UNUSABLE record: no
+        # Algorithm and no Hash, so no comparison can ever be built from it,
+        # plus a Detail the clipboard row renders verbatim (CMP-10).
+        #
+        # Floored at the shortest digest VeriHash knows. Below that, 'deadbeef'
+        # and every other short hex word would be announced as an unsupported
+        # digest, and a row that cries wolf on ordinary clipboards is worse
+        # than one that stays quiet.
+        $minPlausible = Get-VeriHashHexLength -Algorithm 'MD5'
+        if (-not $candidate.Prefix -and $candidate.Canonical.Length -ge $minPlausible) {
+            $len = $candidate.Canonical.Length
+
+            # Lengths a vendor plausibly published. Naming the algorithm is the
+            # difference between 'this did not work' and 'this is a SHA-384,
+            # go find the SHA-256 on the same page'.
+            $likely = @{ 56 = 'SHA-224'; 96 = 'SHA-384' }[$len]
+
+            $detail = if ($likely) {
+                "clipboard holds $len hex characters (likely $likely); VeriHash does not support it"
+            } else {
+                "clipboard holds $len hex characters; VeriHash does not support that digest length"
+            }
+
+            return [pscustomobject]@{
+                Algorithm = $null
+                Hash      = $null
+                Format    = $null
+                Detail    = $detail
+            }
+        }
+        return $null
+    }
 
     if ($candidate.Prefix) {
         $hex    = ($candidate.Canonical -split ':', 2)[1]

@@ -140,19 +140,19 @@ Describe 'Centralized pause (CLI-02)' {
 Describe 'Help banner (D-03)' {
     It 'Shows help banner with -Help' {
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -Help *>&1 | Out-String
-        $output | Should -Match 'VeriHash v2\.0'
+        $output | Should -Match 'VeriHash v3\.0'
         $output | Should -Match '-Manifest'
         $output | Should -Match '-InstallSendTo'
     }
 
     It 'Shows help for --help passed as FilePath' {
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript '--help' -NoPause *>&1 | Out-String
-        $output | Should -Match 'VeriHash v2\.0'
+        $output | Should -Match 'VeriHash v3\.0'
     }
 
     It 'Shows short banner when invoked with no args' {
         $output = & pwsh -NoProfile -NonInteractive -File $script:cliScript -NoPause *>&1 | Out-String
-        $output | Should -Match 'VeriHash v2\.0'
+        $output | Should -Match 'VeriHash v3\.0'
         $output | Should -Match '-Help'
     }
 }

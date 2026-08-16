@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: UX Polish & Smart Routing
-status: ready_to_plan
+status: ready_to_ship
 last_updated: "2026-08-16T00:00:00.000Z"
 last_activity: 2026-08-16
 progress:
-  total_phases: 4
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 4
-  percent: 67
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -20,17 +20,24 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-19 for v3.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v3.0 — UX Polish & Smart Routing → Phase 9: Comparator Correctness
+**Current focus:** v3.0 — UX Polish & Smart Routing → scope closed, ready to ship
 
 ## Current Position
 
 **Milestone:** v3.0 — UX Polish & Smart Routing
-**Phase:** 9 of 9 (Comparator Correctness) — 09-01 and 09-03 executed, 09-02 to plan
-**Plan:** 2 of 3 complete
-**Status:** 09-01 and 09-03 shipped (353 tests pass). Phase 8 (Manifest Spot-Check) still unplanned.
-**Last activity:** 2026-08-16 — 09-03 executed (clipboard tolerance, clipboard-driven algorithm, SHA256 companion, SHA1 support, CLI `-Algorithm`)
+**Phase:** all three shipped — 6 (Sidecar Auto-Detect), 7 (Output Formatting), 9 (Comparator Correctness)
+**Plan:** 7 of 7 complete
+**Status:** Scope closed 2026-08-16. 371 tests pass, PSScriptAnalyzer clean. Phase 8
+(Manifest Spot-Check) deferred to a later milestone — see REQUIREMENTS.md → Future
+Requirements for the reasoning.
+**Last activity:** 2026-08-16 — 09-02 executed (CMP-10 unsupported-hex reporting), manifest
+summary undercount fixed, and `Test-All.ps1`'s fail-green quality gate repaired
 
-Progress: [███████░░░] 67%
+Progress: [██████████] 100%
+
+**Before shipping:** the milestone still wants an audit pass and a retrospective, the way
+v2.0 got one (see `.planning/milestones/`). Everything in scope is built and green; what is
+missing is the archive, not the work.
 
 ### Shipped Milestones
 
@@ -65,14 +72,17 @@ See `.planning/MILESTONES.md` for full archive.
 
 ### Pending Todos
 
-- [manifest-summary-undercounts](todos/pending/manifest-summary-undercounts.md) — `Test-VeriHashManifest` produces 5 entry statuses and counts 3; `parse-error` and `traversal-rejected` are in `Total` but no bucket, so the summary line does not add up. Fails loud (red, exit 3), but the arithmetic is false. Found by the switch-default audit, 2026-08-16.
+None. Both outstanding todos closed 2026-08-16:
+
+- [manifest-summary-undercounts](todos/done/manifest-summary-undercounts.md) — **fixed.** Counts are now taken by walking entries once and incrementing exactly one bucket each; an uncounted status throws. `Summary` gained `Rejected`, and the tally line renders it.
+- [debug-sendto-manifest-crash](todos/done/debug-sendto-manifest-crash.md) — **already fixed by `403350d`, verified and closed.** Reproduced the SendTo shape (ten paths with spaces appended after `-Manifest`): 10 files, exit 0, all entries present. The todo had simply outlived its fix by four months.
 
 ### Blockers/Concerns
 
-None yet.
+None. One caveat for the release: three PSScriptAnalyzer warnings exist on `main` at v2.0.0, which is correct for that historical release point and not a regression on this branch. `dev` is analyzer-clean.
 
 ## Session Continuity
 
-**Stopped at:** Phase 9 plans 09-01 and 09-03 complete — 353 tests pass
-**Resume file:** `.planning/notes/weak-hash-companion-exploration.md`
-**Next action:** 09-02 (unsupported-hex reporting, narrowed — 40 hex is supported now, so it covers 56/96/other lengths). Phase 8 (Manifest Spot-Check) remains unplanned.
+**Stopped at:** v3.0 scope closed — 371 tests pass, PSScriptAnalyzer clean, both todos closed
+**Resume file:** `.planning/notes/comparator-algorithm-exploration.md`
+**Next action:** milestone audit and retrospective for v3.0 (the archive v2.0 received), then tag v3.0.0 and merge dev into main. Phase 8 (Manifest Spot-Check) is deferred, not dropped — its five SPOT requirements are in REQUIREMENTS.md → Future Requirements.

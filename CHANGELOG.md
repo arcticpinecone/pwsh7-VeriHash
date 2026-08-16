@@ -53,6 +53,14 @@ output for the same invocation, so the major version moves.
   Weak, so it is answered but never recorded.
 - 🎛️ **`-Algorithm` on the CLI**: `MD5 | SHA1 | SHA256 | SHA512`, forwarded only when bound
   so it can outrank the clipboard without a default silently doing the same.
+- 🔬 **An unsupported hash is named, not ignored**: a 56- or 96-character paste is reported as
+  a likely SHA-224 or SHA-384 that VeriHash does not implement, instead of being reported as
+  an empty clipboard. Telling a user who deliberately copied a digest that they copied
+  nothing invites them to read silence as approval. Other lengths report the count. The
+  record carries no algorithm and no hash, so nothing can ever be compared against it.
+- 🧾 **Manifest verify counts rejected entries**: `Summary` gains a `Rejected` bucket and the
+  tally line gains a `N rejected` field, always rendered — including as a zero, so nothing
+  has to parse two shapes of the same line.
 
 **CHANGED:**
 
@@ -84,6 +92,19 @@ output for the same invocation, so the major version moves.
   and `certutil`'s 2-character groups now parse too. Whitespace is never joined across what
   may be two separate digests — two 64-hex hashes would otherwise concatenate into a
   plausible "SHA512" and be compared against the file.
+- 🔧 **The manifest summary adds up**: `Test-VeriHashManifest` produced five entry statuses
+  and counted three. `parse-error` and `traversal-rejected` entries were included in `Total`
+  but in no bucket, so a 10-entry manifest with two rejected paths reported
+  `8/10 passed, 0 mismatch, 0 missing` — and the two unaccounted-for entries were precisely
+  the ones a security guard had rejected. Counts are now taken by walking the entries once
+  and incrementing exactly one bucket each, and a status that maps to no bucket throws
+  instead of vanishing.
+- 🔧 **The test harness can fail**: `Test-All.ps1` built its Pester configuration without
+  `Run.PassThru`, so `Invoke-Pester` returned nothing. The harness read `FailedCount` off
+  `$null`, compared `$null -gt 0`, got `$false`, and reported "All tests PASSED" on every
+  run — exiting 0 even with failing tests. It now requests the result object, and treats a
+  null result as inconclusive rather than as success. Verified by running the suite with a
+  deliberately failing test: exit 1, where the same scenario previously exited 0.
 
 ---
 

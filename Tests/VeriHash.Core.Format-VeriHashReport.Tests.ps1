@@ -36,7 +36,7 @@ AfterAll {
 Describe 'Format-VeriHashReport header (FMT-01)' {
     It 'Names the tool, algorithm, filename, and size on one line' {
         $out = script:Render @{ Result = (script:NewResult) }
-        $out | Should -Match ([regex]::Escape('VeriHash 2.0 · SHA256 · installer.exe (45.32 MB)'))
+        $out | Should -Match ([regex]::Escape('VeriHash 3.0 · SHA256 · installer.exe (45.32 MB)'))
     }
 }
 

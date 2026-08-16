@@ -13,7 +13,13 @@
 
 - [x] **Phase 6: Sidecar Auto-Detect** — Right-clicking `.sha256`/`.sha512`/`.md5` verifies the companion file instead of hashing the sidecar
 - [x] **Phase 7: Output Formatting** — Verdict banner, stacked hash comparison, and checklist grid in truecolor, with a compact batch view
-- [ ] **Phase 8: Manifest Spot-Check** — Single-file verify against existing manifest in same directory
+- [x] **Phase 9: Comparator Correctness** — One owner for comparator selection, the clipboard drives the algorithm, weak hashes get a SHA256 companion, and a verdict never outruns its evidence
+- [ ] ~~**Phase 8: Manifest Spot-Check**~~ — **deferred to a later milestone** (2026-08-16). Single-file verify against an existing manifest in the same directory. Additive convenience: nothing VeriHash reports today is wrong without it.
+
+> Phase 9 was added mid-milestone after the comparator exploration found that
+> the clipboard branch was guarded in one call site and not the other. It ran
+> after Phase 7 despite its number, and was missing from this list until
+> 2026-08-16.
 
 ### Phase Details
 

@@ -94,7 +94,7 @@ function Format-VeriHashReport {
         $algoLabel = [string]$Result.Algorithm
         if ($ClipboardChoseAlgorithm) { $algoLabel += ' (clipboard)' }
         if ($Companion)               { $algoLabel += " + $($Companion.Algorithm)" }
-        Write-Host ("{0}VeriHash 2.0 {1} {2} {1} {3}{4}{0} ({5}){3}" -f `
+        Write-Host ("{0}VeriHash 3.0 {1} {2} {1} {3}{4}{0} ({5}){3}" -f `
             $c.Dim, $g.Sep, $algoLabel, $c.Reset, $fileName, $size)
 
         # --- 2. verdict banner (blank line above and below) --------------------

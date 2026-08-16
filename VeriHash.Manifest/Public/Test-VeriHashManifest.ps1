@@ -131,9 +131,33 @@ function Test-VeriHashManifest {
                 else { 0 }
 
     # ── Build summary counts ─────────────────────────────────────────
-    $passedCount  = ($entries | Where-Object { $_.Status -eq 'pass' }).Count
-    $failedCount  = ($entries | Where-Object { $_.Status -eq 'mismatch' }).Count
-    $missingCount = ($entries | Where-Object { $_.Status -eq 'missing' }).Count
+    # Counted by walking the entries once and incrementing exactly one bucket
+    # each, so Total and the buckets cannot drift apart. Deriving them
+    # independently is what let 'parse-error' and 'traversal-rejected' sit in
+    # Total but in no bucket, making the rendered line fail to add up.
+    #
+    # An unrecognised status throws rather than being absorbed: a status nobody
+    # counts is a bug in this function, and a silent fallback here is exactly
+    # the failure class CMP-14 exists to prevent.
+    $statusCounts = [ordered]@{
+        'pass'               = 0
+        'mismatch'           = 0
+        'missing'            = 0
+        'parse-error'        = 0
+        'traversal-rejected' = 0
+    }
+    foreach ($entry in $entries) {
+        if (-not $statusCounts.Contains($entry.Status)) {
+            throw "Test-VeriHashManifest produced entry status '$($entry.Status)', which maps to no summary bucket. Every status must be counted."
+        }
+        $statusCounts[$entry.Status]++
+    }
+
+    # parse-error and traversal-rejected share one bucket but stay out of
+    # Failed: a rejection is not a hash disagreement. A traversal entry tried to
+    # escape the manifest directory, and folding it into a mismatch count would
+    # disguise a security rejection as a corrupted file.
+    $rejectedCount = $statusCounts['parse-error'] + $statusCounts['traversal-rejected']
 
     return [pscustomobject]@{
         PSTypeName   = 'VeriHash.ManifestVerifyResult'
@@ -141,10 +165,11 @@ function Test-VeriHashManifest {
         Entries      = $entries.ToArray()
         ExitCode     = $exitCode
         Summary      = [pscustomobject]@{
-            Total   = $entries.Count
-            Passed  = $passedCount
-            Failed  = $failedCount
-            Missing = $missingCount
+            Total    = $entries.Count
+            Passed   = $statusCounts['pass']
+            Failed   = $statusCounts['mismatch']
+            Missing  = $statusCounts['missing']
+            Rejected = $rejectedCount
         }
     }
 }

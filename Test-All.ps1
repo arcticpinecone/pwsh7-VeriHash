@@ -85,11 +85,23 @@ if (-not $SkipTests) {
         $pesterConfig.Run.Path = $testsPath
         $pesterConfig.Output.Verbosity = 'Detailed'
         $pesterConfig.Run.Exit = $false
+        # Without PassThru, Invoke-Pester -Configuration returns nothing. This
+        # harness then read FailedCount off $null, compared $null -gt 0, got
+        # $false, and declared success on every run -- including runs with
+        # failing tests. The gate could not fail. Requesting the result object
+        # is what makes every check below mean anything.
+        $pesterConfig.Run.PassThru = $true
 
         $testResults = Invoke-Pester -Configuration $pesterConfig
 
         Write-Host ""
-        if ($testResults.FailedCount -gt 0) {
+        if ($null -eq $testResults) {
+            # PassThru is set, so a null result means Invoke-Pester did not
+            # complete. Unknown is not the same as passing, and treating it as
+            # success is the exact failure this guard exists to prevent.
+            $testsPassed = $false
+            Write-Host "  ❌ Tests INCONCLUSIVE: Pester returned no result object" -ForegroundColor Red
+        } elseif ($testResults.FailedCount -gt 0) {
             $testsPassed = $false
             Write-Host "  ❌ Tests FAILED: $($testResults.FailedCount) failed, $($testResults.PassedCount) passed" -ForegroundColor Red
         } else {

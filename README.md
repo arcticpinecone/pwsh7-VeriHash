@@ -4,12 +4,12 @@
 
 ## Modular file integrity verification for PowerShell 7+
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
-> **v2.0 — Modular Rewrite** · [See what changed](CHANGELOG.md)
+> **v3.0 — UX Polish & Smart Routing** · [See what changed](CHANGELOG.md)
 
 ---
 

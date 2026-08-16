@@ -2,12 +2,12 @@
     VeriHash.ps1 — Cross-platform file integrity verification (thin CLI dispatcher)
     Copyright (C) 2024-2026 arcticpinecone <arcticpinecone@arcticpinecone.eu>
     SPDX-License-Identifier: MIT
-    Version: 2.0.0 | Updated: April 19, 2026
+    Version: 3.0.0 | Updated: August 16, 2026
     See LICENSE.md for full MIT terms.
 #>
 <#
 .SYNOPSIS
-    VeriHash v2.0 — Cross-platform file integrity verification.
+    VeriHash v3.0 — Cross-platform file integrity verification.
 .DESCRIPTION
     Thin CLI dispatcher that imports VeriHash.Core, VeriHash.HotPath, and
     VeriHash.Manifest modules, routes parameters to the correct entry function,
@@ -113,7 +113,7 @@ if ($FilePath.Count -eq 1 -and $FilePath[0] -in $helpFlags) {
 
 # Help banner display
 if ($Help) {
-    Write-Host 'VeriHash v2.0 — Modular file integrity verification' -ForegroundColor Green
+    Write-Host 'VeriHash v3.0 — Modular file integrity verification' -ForegroundColor Green
     Write-Host ''
     Write-Host 'Usage:' -ForegroundColor White
     Write-Host '  .\VeriHash.ps1 <file>                  # SHA256 hash + sidecar + clipboard check' -ForegroundColor Cyan
@@ -162,7 +162,7 @@ if ($InstallSendTo -or $InstallKDE) {
 
 # No-args interactive case
 if (-not $FilePath -or $FilePath.Count -eq 0) {
-    Write-Host 'VeriHash v2.0 — Modular file integrity verification' -ForegroundColor Green
+    Write-Host 'VeriHash v3.0 — Modular file integrity verification' -ForegroundColor Green
     Write-Host 'Run with -Help for usage, or drag files onto VeriHash.' -ForegroundColor Cyan
     if (-not $NoPause -and (Test-VeriHashInteractive)) {
         Read-Host -Prompt 'Press Enter to continue...'
@@ -209,7 +209,11 @@ try {
             }
             $s = $result.Summary
             $tallyColor = if ($result.ExitCode -eq 0) { 'Green' } else { 'Red' }
-            Write-Host "$($s.Passed)/$($s.Total) passed, $($s.Failed) mismatch, $($s.Missing) missing" -ForegroundColor $tallyColor
+            # Rejected is always rendered, including as a zero: a line whose
+            # shape depends on the outcome forces every reader to handle two
+            # formats, and omitting the count is what let rejected entries go
+            # unaccounted for in the first place.
+            Write-Host "$($s.Passed)/$($s.Total) passed, $($s.Failed) mismatch, $($s.Missing) missing, $($s.Rejected) rejected" -ForegroundColor $tallyColor
             $exitCode = $result.ExitCode
         }
     } elseif ($Manifest) {
