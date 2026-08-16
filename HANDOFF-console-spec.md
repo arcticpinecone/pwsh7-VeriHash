@@ -26,10 +26,12 @@ One full-width-of-content line, reversed video (colored BACKGROUND, not colored 
 |---|---|---|---|
 | Match | `  ✓  MATCH — SHA256 matches hash on clipboard` | `38;200;134` (green) | near-black `8;23;13` |
 | Mismatch | `  ✗  MISMATCH — file does NOT match clipboard hash` | `211;69;49` (red) | white |
+| Unverified | `  !  UNVERIFIED — {reason}` | amber `210;153;34` | near-black `28;20;2` |
 | No clipboard hash | `  ●  HASHED — no hash on clipboard to compare against` | gray `48;54;61` | default fg |
 
 - Pad the line to a fixed width (e.g. 76 cols or `[Console]::WindowWidth - 4`, whichever is smaller) so the bar reads as a bar.
 - Sidecar-only verification uses the same MATCH/MISMATCH banners with `— SHA256 matches sidecar file` wording when no clipboard hash exists but a sidecar does.
+- **UNVERIFIED means the user supplied a hash and VeriHash could not compare it** — a wrong algorithm for this run, or a length it does not implement. `{reason}` is the comparator's explanation, e.g. `clipboard holds MD5; this run computed SHA256`. It is distinct from HASHED, which means the user never asked. Yellow marks a condition the user can clear; it must never mark a *successful* comparison against a weak algorithm, because a signal that can never go green stops being read.
 - Fallback when truecolor unavailable: `$PSStyle.Background.Green/Red` + black/white FG.
 
 ## 3. Hash comparison block
@@ -73,7 +75,7 @@ Row values by state:
 Dim gray: `{full path} · modified {yyyy-MM-dd HH:mm} UTC`, blank line, then existing pause prompt (`Press any key to close…`) unless `-NoPause`.
 
 MISMATCH adds, before the footer, a red-bordered advisory (top/bottom rule of `─` in dim red, or just a red-text line if simpler):
-`Do not run this file. Re-download it, then verify again.`
+`Recommendation: Do not run this file. Re-download it, then verify again.`
 
 ## Batch mode
 

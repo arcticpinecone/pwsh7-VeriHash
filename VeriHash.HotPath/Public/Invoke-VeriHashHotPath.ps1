@@ -16,7 +16,8 @@ function Invoke-VeriHashHotPath {
         check via -ComputedResult rather than recomputed there.
         Returns VeriHash.HotPathResult.
 
-        Sidecar writes are suppressed when the verdict is MISMATCH: a file that failed
+        Sidecar writes are suppressed whenever ANY check proved the file bad -- the
+        comparator's verdict or the sidecar's own -- because a file that failed
         verification must never have its hash recorded as if it were authoritative.
     .PARAMETER Path
         File to hash + verify. Resolved with Resolve-Path -LiteralPath.
@@ -114,28 +115,47 @@ function Invoke-VeriHashHotPath {
     }
 
     # --- verdict -------------------------------------------------------------
-    # Mirrors Format-VeriHashReport's comparator rule exactly (clipboard wins;
-    # sidecar is a same-algorithm fallback). The banner and the sidecar-write
+    # Same function the renderer calls. The banner and the sidecar-write
     # decision MUST agree -- a checklist that says 'created' under a MISMATCH
-    # banner would be reporting a write that never should have happened.
-    $expectedHash = $null
-    if ($clip -and $clip.Hash) {
-        $expectedHash = ([string]$clip.Hash).ToLowerInvariant()
-    } elseif ($sidecar -and $sidecar.ExpectedHash -and $sidecar.Algorithm -eq $Algorithm) {
-        $expectedHash = ([string]$sidecar.ExpectedHash).ToLowerInvariant()
-    }
-    $isMismatch = ($null -ne $expectedHash) -and ($hashResult.Hash -ne $expectedHash)
+    # banner would be reporting a write that never should have happened -- and
+    # the only way to guarantee agreement is to ask once, not to restate the
+    # rule here and hope the two copies stay in step. They did not.
+    $comparator   = Resolve-VeriHashComparator -CompareTo $clip -SidecarInfo $sidecar -ComputedAlgorithm $Algorithm
+    $expectedHash = $comparator.ExpectedHash
+    $isMismatch   = ($null -ne $expectedHash) -and ($hashResult.Hash -ne $expectedHash)
 
     # --- sidecar creation/update ---------------------------------------------
-    # Never write over a sidecar for a file that failed verification (spec:
-    # 'do NOT write/update a sidecar when the clipboard verdict is MISMATCH').
-    $algoExtMap      = @{ 'SHA256' = '.sha256'; 'SHA512' = '.sha512'; 'MD5' = '.md5' }
-    $sidecarPath     = "$resolved$($algoExtMap[$Algorithm])"
+    # Never write over a sidecar for a file that failed verification.
+    #
+    # Suppression is keyed off ALL available negative evidence, not off the
+    # comparator's verdict alone. Test-VeriHashSidecar independently compares
+    # the file against its sidecar using THAT sidecar's algorithm, re-hashing
+    # when it has to, and a 'mismatch' from it is a real fact about the file.
+    # When the comparator abstains -- an unusable clipboard, or a .sha512
+    # sidecar under a SHA256 run -- $isMismatch is false, and keying only off
+    # it would overwrite a good vendor hash with a corrupt file's digest and
+    # report the write as a green checklist row. The algorithm guard exists to
+    # stop VeriHash COMPARING across algorithms; it must not stop VeriHash
+    # BELIEVING a comparison something else already made correctly.
+    $sidecarProvenBad = ($null -ne $sidecar) -and ($sidecar.SidecarStatus -eq 'mismatch')
+    $suppressWrite    = $isMismatch -or $sidecarProvenBad
+
+    $algoExtMap = @{ 'SHA256' = '.sha256'; 'SHA512' = '.sha512'; 'MD5' = '.md5' }
+    $algoExt    = $algoExtMap[$Algorithm]
+    if (-not $algoExt) {
+        # A hashtable miss returns $null, not an error, which would make
+        # $sidecarPath equal $resolved -- and the write below would replace the
+        # file being verified with a 100-byte text file, reporting '+ updated'.
+        # Unreachable while $Algorithm comes from a ValidateSet parameter; this
+        # guard is what keeps it unreachable once it comes from anywhere else.
+        throw "unmapped algorithm '$Algorithm' -- refusing to derive a sidecar path"
+    }
+    $sidecarPath     = "$resolved$algoExt"
     $sidecarLeaf     = [System.IO.Path]::GetFileName($sidecarPath)
     $sidecarLeafName = Split-Path -Leaf $resolved
     $sidecarRecord   = $sidecar
 
-    if ($isMismatch) {
+    if ($suppressWrite) {
         # An existing sidecar record already describes itself accurately
         # (matched / mismatch / error); only synthesize when there is nothing.
         if ($null -eq $sidecarRecord) {
@@ -194,8 +214,19 @@ function Invoke-VeriHashHotPath {
     # from this run (a false alarm on a good file). The expected value lives in
     # $sidecar.ExpectedHash, which $expectedHash already reads with the
     # algorithm guard the banner uses.
+    # An unusable comparator must not report 'matched'. The user asked a
+    # question and got no answer; labelling that with the word for a successful
+    # verification is survivable in the single-file view (the yellow banner is
+    # right there) but not in batch, where the banners scroll away and the
+    # tally is all that remains.
+    #
+    # Source 'none' still reports 'matched' -- a plain hash-only run, where the
+    # user never asked anything, has reported that since v2.0 and nobody is
+    # misled by it.
     $hasComparator = ($null -ne $expectedHash)
-    $matchResult   = if ($isMismatch) { 'mismatch' } else { 'matched' }
+    $matchResult   = if ($isMismatch) { 'mismatch' }
+                     elseif ($comparator.Source -eq 'unusable') { 'unverified' }
+                     else { 'matched' }
 
     $sigSkippedNonPE = (-not $isPE) -and ($sigResult.Status -eq 'skipped')
     $effectiveSigMs = if ($sigSkippedNonPE) { 0 } else { $sigDoneMs }

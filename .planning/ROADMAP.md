@@ -42,7 +42,7 @@ See: `.planning/notes/sidecar-autodetect-exploration.md`
 **Requirements**: FMT-01, FMT-02, FMT-03, FMT-04, FMT-05, FMT-06, FMT-07
 **Success Criteria** (what must be TRUE):
   1. Single-file mode renders header, verdict banner, stacked hash comparison, checklist grid, and footer — in that order
-  2. A MISMATCH highlights the diverging 8-char hash groups on both lines, names the divergence character, and shows the "Do not run this file" advisory
+  2. A MISMATCH highlights the diverging 8-char hash groups on both lines, names the divergence character, and shows the `Recommendation: Do not run this file.` advisory
   3. A MISMATCH never writes or updates a sidecar file
   4. Batch mode renders each file compactly and closes with the middot tally, while `BatchResult.TallyLine` stays byte-locked
   5. Output is legible with `NO_COLOR` set and on a non-UTF-8 code page
@@ -66,13 +66,37 @@ See: `HANDOFF-console-spec.md` (supersedes `.planning/notes/output-formatting-ex
 
 See: `.planning/notes/manifest-exploration.md`
 
+#### Phase 9: Comparator Correctness
+**Goal**: A verdict is never stronger than the evidence behind it, and the algorithm VeriHash computes is the one the user asked about
+**Depends on**: Phase 7 (the renderer and comparator this corrects). Numbered after Phase 8 but **not** behind it in execution order — 09-01 fixes live bugs in shipped output
+**Requirements**: CMP-01 … CMP-14, FMT-05 (amended), FMT-07 (extended)
+**Success Criteria** (what must be TRUE):
+  1. An MD5 on the clipboard during a SHA256 run of an intact file produces no MISMATCH banner, no advisory, and no suppressed sidecar write
+  2. Comparator selection exists in exactly one place, reachable from both modules at runtime
+  3. A hash the user supplied but VeriHash could not compare produces a yellow `UNVERIFIED` banner, distinct from both `MISMATCH` and `HASHED`
+  4. No file that any check proved bad ever has a sidecar written or overwritten for it
+  5. A batch containing unverified files reports them as unverified on `Tally` and in the rendered summary — never as `missing`, never silently as `matched`
+  6. `BatchResult.TallyLine` keeps its byte-locked format string and its numbers
+  7. No run writes to the path of the file it was asked to verify, under any algorithm value
+  8. With no explicit `-Algorithm`, a supported clipboard hash determines the algorithm the file is hashed with, reads the file once, and leaves every sidecar untouched
+  9. `VeriHash.ps1 <file> -Algorithm SHA512` computes SHA512 and writes `.sha512`
+
+Plans:
+
+- [x] 09-01 — Comparator extraction, algorithm guard, `UNVERIFIED` state, sidecar-write suppression, `MatchResult` unverified, FMT-05 advisory
+- [ ] 09-02 — Unsupported-hex reporting (CMP-10)
+- [ ] 09-03 — Clipboard-driven algorithm + CLI `-Algorithm` (CMP-04 … CMP-08, CMP-13)
+
+See: `.planning/notes/comparator-algorithm-exploration.md`
+
 ### Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. Sidecar Auto-Detect | 2/2 | ✅ Complete | 2026-04-20 |
-| 7. Output Formatting | 0/TBD | Not started | - |
+| 7. Output Formatting | 1/1 | ✅ Complete | 2026-08-15 |
 | 8. Manifest Spot-Check | 0/TBD | Not started | - |
+| 9. Comparator Correctness | 1/3 | In progress | - |
 
 ## Backlog (Resolved)
 

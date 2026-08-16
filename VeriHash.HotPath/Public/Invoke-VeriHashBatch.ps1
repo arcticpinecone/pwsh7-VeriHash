@@ -29,10 +29,11 @@ function Invoke-VeriHashBatch {
         [switch]$Log
     )
 
-    $results  = New-Object 'System.Collections.Generic.List[object]'
-    $matched  = 0
-    $mismatch = 0
-    $missing  = 0
+    $results    = New-Object 'System.Collections.Generic.List[object]'
+    $matched    = 0
+    $mismatch   = 0
+    $missing    = 0
+    $unverified = 0
 
     foreach ($p in $FilePath) {
         try {
@@ -41,6 +42,15 @@ function Invoke-VeriHashBatch {
             switch ($r.MatchResult) {
                 'matched'  { $matched++ }
                 'mismatch' { $mismatch++ }
+                # Counted in BOTH buckets on purpose. $unverified is the honest
+                # count and surfaces on Tally; $matched keeps TallyLine's three
+                # numbers arithmetically identical to what the old
+                # 'not mismatched' derivation produced, which is what the
+                # byte-lock actually protects. Without the explicit arm these
+                # would fall to default and tally as 'missing' -- a file that
+                # exists and hashed fine, reported as absent.
+                'unverified' { $unverified++; $matched++ }
+                'missing'  { $missing++ }
                 default    { $missing++ }
             }
         } catch {
@@ -73,7 +83,17 @@ function Invoke-VeriHashBatch {
     return [pscustomobject]@{
         PSTypeName = 'VeriHash.BatchResult'
         Results    = $results.ToArray()
-        Tally      = @{ Total = $FilePath.Count; Matched = $matched; Mismatch = $mismatch; Missing = $missing }
+        # Tally is NOT byte-locked -- TallyLine is. This hashtable is the seam
+        # that lets new facts surface without breaking the parseable string,
+        # and Unverified is the field a caller should read to learn that
+        # nothing was actually verified.
+        Tally      = @{
+            Total      = $FilePath.Count
+            Matched    = $matched
+            Mismatch   = $mismatch
+            Missing    = $missing
+            Unverified = $unverified
+        }
         TallyLine  = $tallyLine
     }
 }

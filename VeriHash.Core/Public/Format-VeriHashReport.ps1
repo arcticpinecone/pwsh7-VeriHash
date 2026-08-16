@@ -8,8 +8,10 @@ function Format-VeriHashReport {
         renderers in a fixed order: header, verdict banner, hash comparison,
         checklist grid, footer.
 
-        The comparator is the clipboard when one is present, otherwise the
-        sidecar, otherwise nothing (the HASHED state).
+        Comparator selection is delegated to Resolve-VeriHashComparator, which
+        Invoke-VeriHashHotPath also calls -- the banner and the sidecar-write
+        decision MUST agree, and the only way to guarantee that is for both to
+        ask the same function.
     .PARAMETER Result
         A VeriHash.Result object (pipeline-bound).
     .PARAMETER CompareTo
@@ -47,29 +49,22 @@ function Format-VeriHashReport {
         $g = $p.Glyph
 
         # --- resolve the comparator -------------------------------------------
-        # The clipboard wins when present -- it is what the user just deliberately
-        # copied. A sidecar is the fallback comparator, not a competitor.
-        $expectedHash   = $null
-        $comparatorName = 'none'
-        if ($CompareTo -and $CompareTo.Hash) {
-            $expectedHash   = ([string]$CompareTo.Hash).ToLowerInvariant()
-            $comparatorName = 'clipboard'
-        } elseif ($SidecarInfo -and $SidecarInfo.ExpectedHash -and
-                  $SidecarInfo.Algorithm -eq $Result.Algorithm) {
-            # Algorithm guard: Test-VeriHashSidecar prefers .sha512 > .sha256 > .md5
-            # and hashes with WHICHEVER it found, while the hot path hashes with the
-            # requested algorithm. Comparing a SHA512 sidecar against a SHA256
-            # compute would report a false MISMATCH on a perfectly good file.
-            $expectedHash   = ([string]$SidecarInfo.ExpectedHash).ToLowerInvariant()
-            $comparatorName = 'sidecar'
-        }
+        # The rule lives in exactly one function, called from here and from
+        # Invoke-VeriHashHotPath. It used to be restated in both, and the two
+        # copies disagreed.
+        $comparator     = Resolve-VeriHashComparator -CompareTo $CompareTo -SidecarInfo $SidecarInfo `
+                                                     -ComputedAlgorithm $Result.Algorithm
+        $expectedHash   = $comparator.ExpectedHash
+        $comparatorName = $comparator.Source
 
         $clipboardMatch = $null
         if ($comparatorName -eq 'clipboard') { $clipboardMatch = ($Result.Hash -eq $expectedHash) }
 
-        $state = if ($comparatorName -eq 'none') { 'Hashed' }
-                 elseif ($Result.Hash -eq $expectedHash) { 'Match' }
-                 else { 'Mismatch' }
+        $state = switch ($comparatorName) {
+            'unusable' { 'Unverified' }
+            'none'     { 'Hashed' }
+            default    { if ($Result.Hash -eq $expectedHash) { 'Match' } else { 'Mismatch' } }
+        }
 
         # --- 1. header ---------------------------------------------------------
         $fileName = Split-Path -Leaf $Result.FilePath
@@ -79,7 +74,8 @@ function Format-VeriHashReport {
 
         # --- 2. verdict banner (blank line above and below) --------------------
         Write-Host ''
-        Write-Host (Format-VeriHashBanner -State $state -Algorithm $Result.Algorithm -Source $comparatorName -Palette $p)
+        Write-Host (Format-VeriHashBanner -State $state -Algorithm $Result.Algorithm -Source $comparatorName `
+                                          -Palette $p -Reason $comparator.Reason)
         Write-Host ''
 
         # --- 3. hash comparison block ------------------------------------------
@@ -121,6 +117,8 @@ function Format-VeriHashReport {
         if ($SidecarInfo)              { $checklistSplat['SidecarInfo']    = $SidecarInfo }
         if ($Signature)                { $checklistSplat['Signature']      = $Signature }
         if ($null -ne $clipboardMatch) { $checklistSplat['ClipboardMatch'] = $clipboardMatch }
+        $checklistSplat['ComparatorSource'] = $comparatorName
+        if ($comparator.Reason)        { $checklistSplat['ComparatorReason'] = $comparator.Reason }
         foreach ($row in (Format-VeriHashChecklist @checklistSplat)) { Write-Host $row }
 
         if ($Compact) { return }
@@ -131,7 +129,7 @@ function Format-VeriHashReport {
         if ($state -eq 'Mismatch') {
             $rule = $g.Rule * $p.Width
             Write-Host ("{0}{1}{2}" -f $c.Red, $rule, $c.Reset)
-            Write-Host ("{0}Do not run this file. Re-download it, then verify again.{1}" -f $c.Red, $c.Reset)
+            Write-Host ("{0}Recommendation: Do not run this file. Re-download it, then verify again.{1}" -f $c.Red, $c.Reset)
             Write-Host ("{0}{1}{2}" -f $c.Red, $rule, $c.Reset)
             Write-Host ''
         }

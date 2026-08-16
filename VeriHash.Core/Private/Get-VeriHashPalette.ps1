@@ -60,6 +60,7 @@ function Get-VeriHashPalette {
             Blue           = "$e[38;2;121;184;255m"
             BannerMatch    = "$e[48;2;38;200;134m$e[38;2;8;23;13m"
             BannerMismatch = "$e[48;2;211;69;49m$e[38;2;255;255;255m"
+            BannerWarn     = "$e[48;2;210;153;34m$e[38;2;28;20;2m"
             BannerHashed   = "$e[48;2;48;54;61m"
             Diff           = "$e[48;2;92;30;25m$e[38;2;255;160;150m"
         }
@@ -74,6 +75,7 @@ function Get-VeriHashPalette {
             Blue           = "$e[94m"
             BannerMatch    = "$e[42m$e[30m"  # green bg, black fg
             BannerMismatch = "$e[41m$e[97m"  # red bg, white fg
+            BannerWarn     = "$e[43m$e[30m"  # yellow bg, black fg
             BannerHashed   = "$e[100m"       # bright black bg
             Diff           = "$e[41m$e[97m"
         }

@@ -25,15 +25,22 @@ function Format-VeriHashBatchTally {
     $c = $p.Color
     $g = $p.Glyph
 
-    $matched  = @($Results | Where-Object { $_.MatchResult -eq 'matched'  }).Count
-    $mismatch = @($Results | Where-Object { $_.MatchResult -eq 'mismatch' }).Count
-    $missing  = @($Results | Where-Object { $_.MatchResult -eq 'missing'  }).Count
+    $matched    = @($Results | Where-Object { $_.MatchResult -eq 'matched'    }).Count
+    $mismatch   = @($Results | Where-Object { $_.MatchResult -eq 'mismatch'   }).Count
+    $missing    = @($Results | Where-Object { $_.MatchResult -eq 'missing'    }).Count
+    $unverified = @($Results | Where-Object { $_.MatchResult -eq 'unverified' }).Count
 
     Write-Host ("{0}{1}{2}" -f $c.Dim, ($g.Rule * $p.Width), $c.Reset)
 
     $mismatchColor = if ($mismatch -gt 0) { $c.Red } else { $c.Dim }
-    Write-Host ("{0}batch of {1} {2} {3}{4} matched{0} {2} {5}{6} mismatch{0} {2} {7} missing{8}" -f `
-        $c.Dim, $Results.Count, $g.Sep, $c.Green, $matched, $mismatchColor, $mismatch, $missing, $c.Reset)
+    $summary = "{0}batch of {1} {2} {3}{4} matched{0} {2} {5}{6} mismatch{0} {2} {7} missing" -f `
+        $c.Dim, $Results.Count, $g.Sep, $c.Green, $matched, $mismatchColor, $mismatch, $missing
+    # Appended only when non-zero: a permanent '0 unverified' is wallpaper, and
+    # a signal that is always present stops being read.
+    if ($unverified -gt 0) {
+        $summary += "{0} {1} {2}{3} unverified" -f $c.Dim, $g.Sep, $c.Yellow, $unverified
+    }
+    Write-Host ($summary + $c.Reset)
 
     # Column width: the spec's example pads to 18 + 1 space; widen for longer names.
     $nameWidth = 18
@@ -44,9 +51,12 @@ function Format-VeriHashBatchTally {
 
     foreach ($r in $Results) {
         switch ($r.MatchResult) {
-            'matched'  { $glyph = "$($c.Green)$($g.Ok)$($c.Reset)"; $status = 'match'    }
-            'mismatch' { $glyph = "$($c.Red)$($g.Bad)$($c.Reset)";  $status = 'mismatch' }
-            default    { $glyph = "$($c.Dim)$($g.None)$($c.Reset)"; $status = 'missing'  }
+            'matched'    { $glyph = "$($c.Green)$($g.Ok)$($c.Reset)";   $status = 'match'      }
+            'mismatch'   { $glyph = "$($c.Red)$($g.Bad)$($c.Reset)";    $status = 'mismatch'   }
+            # Without this arm an unverified file falls to default and prints
+            # 'missing' -- a file that exists and hashed fine, reported absent.
+            'unverified' { $glyph = "$($c.Yellow)$($g.Warn)$($c.Reset)"; $status = 'unverified' }
+            default      { $glyph = "$($c.Dim)$($g.None)$($c.Reset)";   $status = 'missing'    }
         }
         if ($r.MatchResult -eq 'matched' -and $r.Signature -eq 'valid') {
             $status = "match $($g.Sep) signed"

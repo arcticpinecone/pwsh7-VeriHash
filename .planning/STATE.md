@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: UX Polish & Smart Routing
 status: ready_to_plan
-last_updated: "2026-08-15T00:00:00.000Z"
-last_activity: 2026-08-15
+last_updated: "2026-08-16T00:00:00.000Z"
+last_activity: 2026-08-16
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 67
 ---
 
@@ -20,15 +20,15 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-19 for v2.1)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.1 — UX Polish & Smart Routing → Phase 7: Output Formatting
+**Current focus:** v2.1 — UX Polish & Smart Routing → Phase 9: Comparator Correctness
 
 ## Current Position
 
 **Milestone:** v2.1 — UX Polish & Smart Routing
-**Phase:** 8 of 8 (Manifest Spot-Check) — next phase to plan
-**Plan:** 0 of TBD — ready to plan
-**Status:** Phase 7 complete (1/1 plan executed, 296 tests pass) — Phase 8 next
-**Last activity:** 2026-08-15 — Phase 7 executed (console output redesign)
+**Phase:** 9 of 9 (Comparator Correctness) — 09-01 executed, 09-02 and 09-03 to plan
+**Plan:** 1 of 3 complete
+**Status:** 09-01 shipped (321 tests pass). Phase 8 (Manifest Spot-Check) still unplanned.
+**Last activity:** 2026-08-16 — 09-01 executed (comparator extraction, UNVERIFIED state, sidecar-write suppression)
 
 Progress: [███████░░░] 67%
 
@@ -51,6 +51,10 @@ See `.planning/MILESTONES.md` for full archive.
 - SIDE-06: Sidecar auto-detect intercepts BEFORE manifest/hash branching — identical with/without -Manifest
 - FMT: renderer waits for both hot-path ThreadJobs so the checklist is one block; parallelism is unaffected
 - FMT: sidecar writes are suppressed on clipboard MISMATCH
+- CMP: sidecar-write suppression keys off ALL negative evidence (comparator verdict OR `SidecarStatus`), superseding the FMT decision above
+- CMP: comparator selection lives in one function, `Resolve-VeriHashComparator`, public in Core so HotPath can reach it across the module boundary
+- CMP: a pasted hash is a question, not a comparator — if it cannot be answered, the banner abstains (`UNVERIFIED`) rather than silently answering with the sidecar
+- CMP: `BatchResult.Tally` is the seam for new counts; `TallyLine` stays byte-locked
 - FMT: `BatchResult.TallyLine` stays byte-locked; console display is a separate concern
 - FMT: the CLI pins `[Console]::OutputEncoding` to UTF-8; anything capturing its output must decode UTF-8 too
 
@@ -64,6 +68,6 @@ None yet.
 
 ## Session Continuity
 
-**Stopped at:** Phase 7 complete — all plans executed, verified
-**Resume file:** `.planning/ROADMAP.md`
-**Next action:** `/gsd-plan-phase 8` to plan the Manifest Spot-Check phase.
+**Stopped at:** Phase 9 plan 09-01 complete — 321 tests pass, verified against pre-fix code (10 of 12 new tests fail on the old build)
+**Resume file:** `.planning/notes/comparator-algorithm-exploration.md`
+**Next action:** Plan 09-03 (clipboard-driven algorithm + CLI `-Algorithm`) or 09-02 (unsupported-hex reporting). Phase 8 (Manifest Spot-Check) remains unplanned.

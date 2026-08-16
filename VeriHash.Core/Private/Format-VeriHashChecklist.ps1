@@ -17,6 +17,14 @@ function Format-VeriHashChecklist {
     .PARAMETER ClipboardMatch
         $true / $false when a clipboard hash was present and compared,
         $null when there was nothing to compare against.
+    .PARAMETER ComparatorSource
+        Resolve-VeriHashComparator's Source. Only 'unusable' changes rendering
+        here -- it selects the clipboard row's fourth shape, which no other
+        parameter can distinguish from an empty clipboard.
+    .PARAMETER ComparatorReason
+        Resolve-VeriHashComparator's Reason, used as the clipboard row's clause
+        when the record carries no display Format of its own (an unsupported
+        hash length rather than a wrong algorithm).
     .OUTPUTS
         System.String[]
     #>
@@ -30,7 +38,9 @@ function Format-VeriHashChecklist {
         [pscustomobject]$CompareTo,
         [pscustomobject]$SidecarInfo,
         [pscustomobject]$Signature,
-        [nullable[bool]]$ClipboardMatch
+        [nullable[bool]]$ClipboardMatch,
+        [string]$ComparatorSource,
+        [string]$ComparatorReason
     )
     $c = $Palette.Color
     $g = $Palette.Glyph
@@ -40,7 +50,21 @@ function Format-VeriHashChecklist {
     function Row { param($Label, $Value) return "$($c.Dim)$('{0,-10}' -f $Label)$($c.Reset)  $Value" }
 
     # --- clipboard ---
-    $clipRow = if ($null -eq $CompareTo) {
+    # Four shapes, not three. 'Unusable' is selected on ComparatorSource rather
+    # than on ClipboardMatch, because $null ClipboardMatch means 'not compared'
+    # and cannot distinguish 'nothing was on the clipboard' from 'something was
+    # and I could not use it'. Telling a user who deliberately copied a hash
+    # that their clipboard was empty is its own small lie.
+    $clipRow = if ($ComparatorSource -eq 'unusable') {
+        $clause = if ($CompareTo -and $CompareTo.Format) {
+            "not compared ($($CompareTo.Format)) $d different algorithm than this run"
+        } elseif ($ComparatorReason) {
+            $ComparatorReason
+        } else {
+            "not compared $d could not be used"
+        }
+        "$($c.Yellow)$($g.Warn)$($c.Reset) $clause"
+    } elseif ($null -eq $CompareTo) {
         "$($c.Dim)$($g.None) nothing recognizable $d copy the vendor's hash and re-run$($c.Reset)"
     } elseif ($ClipboardMatch) {
         "$($c.Green)$($g.Ok)$($c.Reset) match ($($CompareTo.Format))"
