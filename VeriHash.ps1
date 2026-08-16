@@ -1,9 +1,9 @@
 ﻿<#
     VeriHash.ps1 — Cross-platform file integrity verification (thin CLI dispatcher)
     Copyright (C) 2024-2026 arcticpinecone <arcticpinecone@arcticpinecone.eu>
-    SPDX-License-Identifier: AGPL-3.0-or-later
+    SPDX-License-Identifier: MIT
     Version: 2.0.0 | Updated: April 19, 2026
-    See LICENSE.md for full AGPL-3.0 terms.
+    See LICENSE.md for full MIT terms.
 #>
 <#
 .SYNOPSIS

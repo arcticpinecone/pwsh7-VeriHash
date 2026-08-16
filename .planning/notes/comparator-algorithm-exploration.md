@@ -1,10 +1,11 @@
----
-title: Comparator correctness and clipboard-driven algorithm selection
-date: 2026-08-16
-context: Post-Phase-7 field report — an MD5 on the clipboard produced a false MISMATCH on an intact 596 MB installer
+# Comparator Correctness & Clipboard-Driven Algorithm
+
 ---
 
-# Comparator Correctness & Clipboard-Driven Algorithm
+date: 2026-08-16
+context: Post-Phase-7 field report — an MD5 on the clipboard produced a false MISMATCH on an intact 596 MB installer
+
+---
 
 ## Problem
 
@@ -572,7 +573,7 @@ New `CMP` group for `.planning/REQUIREMENTS.md`:
 
 ## Proposed roadmap placement
 
-Phase 9 of v2.1, after Phase 8 (Manifest Spot-Check) in numbering but **not** in execution order — Step 1 fixes a live correctness bug in shipped Phase 7 output and should not wait behind Phase 8.
+Phase 9 of v3.0, after Phase 8 (Manifest Spot-Check) in numbering but **not** in execution order — Step 1 fixes a live correctness bug in shipped Phase 7 output and should not wait behind Phase 8.
 
 **Goal**: A verdict is never stronger than the evidence behind it, and the algorithm VeriHash computes is the one the user asked about.
 

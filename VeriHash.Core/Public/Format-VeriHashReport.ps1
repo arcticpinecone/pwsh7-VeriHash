@@ -1,7 +1,7 @@
 function Format-VeriHashReport {
     <#
     .SYNOPSIS
-        Renders a VeriHash.Result to the host in the v2.1 console layout.
+        Renders a VeriHash.Result to the host in the v3.0 console layout.
     .DESCRIPTION
         Pure renderer -- no I/O, no Get-Item, no Get-FileHash. Every fact must
         already be on the objects passed in. Composes the private block
@@ -111,11 +111,11 @@ function Format-VeriHashReport {
                 $diffFromGroup = if ($diffIndex -lt 0) { -1 } else { [int][Math]::Floor($diffIndex / 8) }
 
                 Write-Host ("{0}expected  {1}{2}" -f $c.Dim, $comparatorName, $c.Reset)
-                foreach ($l in (Format-VeriHashHexGroups -Hash $expectedHash -Palette $p -DiffFromGroup $diffFromGroup)) {
+                foreach ($l in (Format-VeriHashHexGroup -Hash $expectedHash -Palette $p -DiffFromGroup $diffFromGroup)) {
                     Write-Host $l
                 }
                 Write-Host ("{0}computed  {1} ms{2}" -f $c.Dim, $Result.ElapsedMs, $c.Reset)
-                foreach ($l in (Format-VeriHashHexGroups -Hash $Result.Hash -Palette $p -DiffFromGroup $diffFromGroup)) {
+                foreach ($l in (Format-VeriHashHexGroup -Hash $Result.Hash -Palette $p -DiffFromGroup $diffFromGroup)) {
                     Write-Host $l
                 }
                 if ($diffIndex -ge 0) {
@@ -124,7 +124,7 @@ function Format-VeriHashReport {
                 }
             } else {
                 Write-Host ("{0}{1}{2}" -f $c.Dim, $Result.Algorithm.ToLowerInvariant(), $c.Reset)
-                foreach ($l in (Format-VeriHashHexGroups -Hash $Result.Hash -Palette $p)) {
+                foreach ($l in (Format-VeriHashHexGroup -Hash $Result.Hash -Palette $p)) {
                     Write-Host $l
                 }
             }
@@ -135,7 +135,7 @@ function Format-VeriHashReport {
                 Write-Host ''
                 Write-Host ("{0}{1}{2} ms{3}" -f `
                     $c.Dim, ('{0,-10}' -f $Companion.Algorithm.ToLowerInvariant()), $Companion.ElapsedMs, $c.Reset)
-                foreach ($l in (Format-VeriHashHexGroups -Hash $Companion.Hash -Palette $p)) {
+                foreach ($l in (Format-VeriHashHexGroup -Hash $Companion.Hash -Palette $p)) {
                     Write-Host $l
                 }
             }

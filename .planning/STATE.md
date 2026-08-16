@@ -1,6 +1,6 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
+milestone: v3.0
 milestone_name: UX Polish & Smart Routing
 status: ready_to_plan
 last_updated: "2026-08-16T00:00:00.000Z"
@@ -17,14 +17,14 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-19 for v2.1)
+See: `.planning/PROJECT.md` (updated 2026-04-19 for v3.0)
 
 **Core value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
-**Current focus:** v2.1 — UX Polish & Smart Routing → Phase 9: Comparator Correctness
+**Current focus:** v3.0 — UX Polish & Smart Routing → Phase 9: Comparator Correctness
 
 ## Current Position
 
-**Milestone:** v2.1 — UX Polish & Smart Routing
+**Milestone:** v3.0 — UX Polish & Smart Routing
 **Phase:** 9 of 9 (Comparator Correctness) — 09-01 and 09-03 executed, 09-02 to plan
 **Plan:** 2 of 3 complete
 **Status:** 09-01 and 09-03 shipped (353 tests pass). Phase 8 (Manifest Spot-Check) still unplanned.
@@ -35,7 +35,7 @@ Progress: [███████░░░] 67%
 ### Shipped Milestones
 
 | Version | Name | Phases | Plans | Requirements | Shipped |
-|---------|------|--------|-------|--------------|---------|
+| ------- | ---- | ------ | ----- | ------------ | ------- |
 | v2.0 | Modular Rebuild | 5 | 15 | 38/38 | 2026-04-19 |
 | v1.0 | Privacy + Foundation | 3 | 6 | 11/11 | 2026-04-18 |
 

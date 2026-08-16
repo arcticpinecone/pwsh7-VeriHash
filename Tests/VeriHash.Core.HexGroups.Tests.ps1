@@ -38,7 +38,7 @@ Describe 'Get-VeriHashDiffIndex (FMT)' {
     }
 }
 
-Describe 'Format-VeriHashHexGroups (FMT)' {
+Describe 'Format-VeriHashHexGroup (FMT)' {
     BeforeAll {
         # SGR sequences contain [ and ; which -BeLike would read as a wildcard
         # character class, so colour assertions go through escaped regex.
@@ -50,7 +50,7 @@ Describe 'Format-VeriHashHexGroups (FMT)' {
         # @() is required: PowerShell unrolls a single-element array through the
         # pipeline, which would make $lines[0] the first CHARACTER.
         $lines = @(InModuleScope VeriHash.Core -Parameters @{ h = $script:Sha256 } {
-            param($h) Format-VeriHashHexGroups -Hash $h -Palette (Get-VeriHashPalette)
+            param($h) Format-VeriHashHexGroup -Hash $h -Palette (Get-VeriHashPalette)
         })
         $lines | Should -HaveCount 1
         (Remove-Ansi $lines[0]) | Should -BeExactly '71792c02 8e07b0fd d30f4e2a 9c1b3d5e 8a46f1c2 9d073bb5 e6c48d90 a2f1e3b7'
@@ -58,7 +58,7 @@ Describe 'Format-VeriHashHexGroups (FMT)' {
 
     It 'Chunks MD5 into four groups' {
         $lines = @(InModuleScope VeriHash.Core {
-            Format-VeriHashHexGroups -Hash '441b45a2052b1f74aa946ba587a8f4f7' -Palette (Get-VeriHashPalette)
+            Format-VeriHashHexGroup -Hash '441b45a2052b1f74aa946ba587a8f4f7' -Palette (Get-VeriHashPalette)
         })
         $lines | Should -HaveCount 1
         (Remove-Ansi $lines[0]) | Should -BeExactly '441b45a2 052b1f74 aa946ba5 87a8f4f7'
@@ -67,7 +67,7 @@ Describe 'Format-VeriHashHexGroups (FMT)' {
     It 'Wraps SHA512 into two lines of eight groups, preserving group boundaries' {
         $sha512 = '0' * 128
         $lines = @(InModuleScope VeriHash.Core -Parameters @{ h = $sha512 } {
-            param($h) Format-VeriHashHexGroups -Hash $h -Palette (Get-VeriHashPalette)
+            param($h) Format-VeriHashHexGroup -Hash $h -Palette (Get-VeriHashPalette)
         })
         $lines | Should -HaveCount 2
         foreach ($l in $lines) {
@@ -77,7 +77,7 @@ Describe 'Format-VeriHashHexGroups (FMT)' {
 
     It 'Colours every group blue when no diff is requested' {
         $lines = @(InModuleScope VeriHash.Core -Parameters @{ h = $script:Sha256 } {
-            param($h) Format-VeriHashHexGroups -Hash $h -Palette (Get-VeriHashPalette)
+            param($h) Format-VeriHashHexGroup -Hash $h -Palette (Get-VeriHashPalette)
         })
         $lines[0] | Should -Match $script:BlueSgr
         $lines[0] | Should -Not -Match $script:DiffSgr
@@ -85,7 +85,7 @@ Describe 'Format-VeriHashHexGroups (FMT)' {
 
     It 'Applies diff colours from the requested group onward, leaving the prefix blue' {
         $lines = @(InModuleScope VeriHash.Core -Parameters @{ h = $script:Sha256 } {
-            param($h) Format-VeriHashHexGroups -Hash $h -Palette (Get-VeriHashPalette) -DiffFromGroup 2
+            param($h) Format-VeriHashHexGroup -Hash $h -Palette (Get-VeriHashPalette) -DiffFromGroup 2
         })
         $lines[0] | Should -Match $script:DiffSgr
         $lines[0] | Should -Match $script:BlueSgr

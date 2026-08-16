@@ -3,9 +3,9 @@
 **Defined:** 2026-04-19
 **Core Value:** Trustworthy file integrity verification — fast, scriptable, privacy-respecting.
 
-## v2.1 Requirements
+## v3.0 Requirements
 
-Requirements for v2.1 UX Polish & Smart Routing. Each maps to roadmap phases.
+Requirements for v3.0 UX Polish & Smart Routing. Each maps to roadmap phases.
 
 ### Sidecar Auto-Detect
 
@@ -58,21 +58,21 @@ Requirements for v2.1 UX Polish & Smart Routing. Each maps to roadmap phases.
 
 ## Future Requirements
 
-_None deferred from v2.1._
+*None deferred from v3.0.*
 
 ## Out of Scope
 
 | Feature | Reason |
-|---------|--------|
+| --------- | -------- |
 | Recursive folder hashing for manifests | Manifest MVP is flat-files-in-one-directory; deferred from v2.0 |
-| Multiple-manifest disambiguation | v2.1 picks the most recent manifest; interactive selection deferred |
+| Multiple-manifest disambiguation | v3.0 picks the most recent manifest; interactive selection deferred |
 | Custom colour themes | 6-colour palette is hardcoded; user customisation deferred |
-| Batch progress bar | Compact table is sufficient for v2.1; live progress deferred |
+| Batch progress bar | Compact table is sufficient for v3.0; live progress deferred |
 
 ## Traceability
 
 | Requirement | Phase | Status |
-|-------------|-------|--------|
+| ------------- | ------- | -------- |
 | SIDE-01 | Phase 6 | Pending |
 | SIDE-02 | Phase 6 | Pending |
 | SIDE-03 | Phase 6 | Pending |
@@ -93,7 +93,8 @@ _None deferred from v2.1._
 | SPOT-05 | Phase 8 | Pending |
 
 **Coverage:**
-- v2.1 requirements: 18 total
+
+- v3.0 requirements: 18 total
 - Mapped to phases: 18
 - Unmapped: 0 ✓
 

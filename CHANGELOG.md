@@ -7,9 +7,39 @@
 
 ---
 
-### [Unreleased] — v2.1
+### [Unreleased] — v3.0
 
 > UX Polish & Smart Routing
+
+Numbered 3.0 rather than 2.1: the default algorithm, the sidecar extension policy, and the
+entire console surface changed behaviour. A script written against v2.0 can observe different
+output for the same invocation, so the major version moves.
+
+**BREAKING CHANGES:**
+
+- 💥 **The clipboard can change which algorithm runs.** A run that previously always computed
+  SHA256 now computes whatever algorithm a hash on the clipboard implies. Precedence is
+  explicit `-Algorithm` > clipboard > SHA256. Pass `-Algorithm SHA256` to pin the old behaviour.
+- 💥 **`.md5` and `.sha1` sidecars are never written.** Sidecars are always `.sha256`, or
+  `.sha512` under an explicit `-Algorithm SHA512`. Tooling that expected a sidecar matching the
+  requested algorithm will not find one for the weak algorithms.
+- 💥 **Console output was redesigned.** Anything scraping stdout must be re-checked.
+  `BatchResult.TallyLine` remains byte-locked as the machine-readable seam.
+- 💥 **A new `UNVERIFIED` verdict exists.** When a pasted hash cannot be answered, the banner
+  abstains instead of falling through to the sidecar's verdict. Consumers that assumed
+  MATCH/MISMATCH/HASHED were exhaustive must handle a fourth state.
+- 💥 **The CLI pins `[Console]::OutputEncoding` to UTF-8.** Anything capturing its output must
+  decode UTF-8.
+
+**LICENSE CHANGE:**
+
+- 📜 **License Update**: Changed from AGPL-3.0 to MIT
+  - Reason: VeriHash is a small local-first utility; the network-copyleft protections AGPL
+    exists to provide do not apply to it, and the permissive terms remove friction for anyone
+    vendoring the modules
+  - Previous versions (v2.0.0 and earlier) remain available under AGPL-3.0, and v1.2.1 and
+    earlier under CC-BY-SA-4.0
+  - Sole copyright holder, so no contributor relicensing consent was required
 
 **ADDED:**
 
@@ -114,8 +144,8 @@ Version: 2.0.0
 
 ---
 
-<details>
-<summary>📜 Version 1.x History</summary>
+`<details>`
+`<summary>📜 Version 1.x History</summary>`
 
 ### [Unreleased]
 

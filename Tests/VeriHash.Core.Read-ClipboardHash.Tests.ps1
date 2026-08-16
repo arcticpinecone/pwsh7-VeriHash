@@ -117,7 +117,7 @@ Describe 'Read-ClipboardHash (CORE-03 + CORE-04)' {
         }
 
         It 'Joins display groups that wrapped across lines (SHA512)' {
-            # Format-VeriHashHexGroups wraps at 8 groups, so a SHA512 always
+            # Format-VeriHashHexGroup wraps at 8 groups, so a SHA512 always
             # copies out as two lines.
             $line1 = '00112233 44556677 8899aabb ccddeeff 00112233 44556677 8899aabb ccddeeff'
             $line2 = 'ffeeddcc bbaa9988 77665544 33221100 ffeeddcc bbaa9988 77665544 33221100'

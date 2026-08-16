@@ -88,7 +88,7 @@ Trustworthy file integrity verification — fast, scriptable, privacy-respecting
 
 ### Active
 
-#### v2.1 — UX Polish & Smart Routing
+#### v3.0 — UX Polish & Smart Routing
 
 - [ ] Sidecar auto-detect: right-clicking `.sha256`/`.sha512`/`.md5` auto-routes to verification
 - [ ] Output formatting: rich sectioned single-file report + compact batch table with 6-colour palette
@@ -101,7 +101,7 @@ Trustworthy file integrity verification — fast, scriptable, privacy-respecting
 - **Module signing / PSGallery publish** — Out of scope; revisit if VeriHash is ever distributed outside this repo.
 - **Recursive folder hashing for manifest mode** — Manifest MVP is flat-files-in-one-directory only. Recursion deferred per the manifest concept doc.
 
-## Current Milestone: v2.1 UX Polish & Smart Routing
+## Current Milestone: v3.0 UX Polish & Smart Routing
 
 **Goal:** Make VeriHash smarter about user intent on right-click, and give output a polished presentation.
 
@@ -161,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-19 — v2.1 UX Polish & Smart Routing milestone started*
+*Last updated: 2026-04-19 — v3.0 UX Polish & Smart Routing milestone started*

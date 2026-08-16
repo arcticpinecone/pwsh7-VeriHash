@@ -1,4 +1,4 @@
-function Format-VeriHashHexGroups {
+function Format-VeriHashHexGroup {
     <#
     .SYNOPSIS
         Renders a hex hash as space-separated 8-character groups, wrapped to width.

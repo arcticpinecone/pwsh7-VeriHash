@@ -18,7 +18,7 @@ VeriHash\
 ├── PSScriptAnalyzerSettings.psd1      # Linter rule customisation
 ├── README.md
 ├── CHANGELOG.md
-├── LICENSE.md                         # AGPL-3.0
+├── LICENSE.md                         # MIT
 ├── Verihash Logging Concepting.md     # Design notes
 ├── Verihash Multifile Concepting.md   # Design notes
 ├── Verihash Multifile Concepting Review.md

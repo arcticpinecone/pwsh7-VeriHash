@@ -6,7 +6,7 @@
 
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash/releases)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
-[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/arcticpinecone/pwsh7-VeriHash)
 
 > **v2.0 — Modular Rewrite** · [See what changed](CHANGELOG.md)
@@ -15,20 +15,32 @@
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
-- [Requirements](#-requirements)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [OS Integration](#️-os-integration)
-- [Module Architecture](#️-module-architecture)
-- [Speed Benchmarks](#-speed-benchmarks)
-- [Why PowerShell 7?](#-why-powershell-7)
-- [PowerShell Profile Integration](#️-powershell-profile-integration)
-- [Privacy](#-privacy)
-- [Upgrading from v1](#️-upgrading-from-v1)
-- [Contributing](#-contributing)
-- [Running Tests](#-running-tests)
-- [License](#-license)
+- [VeriHash](#verihash)
+  - [Modular file integrity verification for PowerShell 7+](#modular-file-integrity-verification-for-powershell-7)
+  - [📋 Table of Contents](#-table-of-contents)
+  - [✨ Features](#-features)
+  - [📋 Requirements](#-requirements)
+  - [🚀 Installation](#-installation)
+  - [💻 Usage](#-usage)
+    - [Hash a single file](#hash-a-single-file)
+    - [Hash multiple files](#hash-multiple-files)
+    - [Create a manifest](#create-a-manifest)
+    - [Verify a manifest](#verify-a-manifest)
+    - [Clipboard matching](#clipboard-matching)
+    - [Logging](#logging)
+    - [All switches](#all-switches)
+  - [🖥️ OS Integration](#️-os-integration)
+    - [Windows (SendTo)](#windows-sendto)
+    - [Linux (KDE Dolphin)](#linux-kde-dolphin)
+  - [🏗️ Module Architecture](#️-module-architecture)
+  - [⚡ Speed Benchmarks](#-speed-benchmarks)
+  - [❓ Why PowerShell 7?](#-why-powershell-7)
+  - [⚙️ PowerShell Profile Integration](#️-powershell-profile-integration)
+  - [🔒 Privacy](#-privacy)
+  - [⚠️ Upgrading from v1](#️-upgrading-from-v1)
+  - [🤝 Contributing](#-contributing)
+  - [🧪 Running Tests](#-running-tests)
+  - [📄 License](#-license)
 
 ---
 
@@ -77,27 +89,35 @@ No module installation or `Install-Module` needed — run directly from the clon
 ## 💻 Usage
 
 ### Hash a single file
+
 ```powershell
 .\VeriHash.ps1 file.exe
 ```
+
 Computes SHA256, checks clipboard for a matching hash, checks for a sibling `.sha256` sidecar file, and displays Authenticode signature status for PE files.
 
 ### Hash multiple files
+
 ```powershell
 .\VeriHash.ps1 file1.exe, file2.dll, file3.zip
 ```
+
 Processes each file with full hash/sidecar/clipboard/signature checks, then prints a tally: `2/3 matched, 1 mismatch, 0 missing`.
 
 ### Create a manifest
+
 ```powershell
 .\VeriHash.ps1 file1.txt, file2.txt -Manifest
 ```
+
 Creates a `sha256sum`-compatible manifest in the files' parent directory. Atomic write (no partial manifests on Ctrl+C).
 
 ### Verify a manifest
+
 ```powershell
 .\VeriHash.ps1 manifest.sha256 -Manifest
 ```
+
 Extension auto-detect: `.sha256`, `.sha512`, `.md5` files are verified. Returns exit code 0 (all pass), 1 (mismatch), 2 (missing), 3 (parse error).
 
 ### Clipboard matching
@@ -118,17 +138,19 @@ writes a `.md5` or `.sha1`.
 An explicit `-Algorithm` always outranks the clipboard.
 
 ### Logging
+
 ```powershell
 .\VeriHash.ps1 file.exe -Log
 # or set environment variable:
 $env:VERIHASH_LOG = '1'
 ```
+
 Appends one line per file to `~/.verihash/verihash.log`.
 
 ### All switches
 
 | Switch | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `-Algorithm` | `MD5` \| `SHA1` \| `SHA256` \| `SHA512`. Omit to let the clipboard decide, else SHA256 |
 | `-Manifest` | Create or verify a sha256sum manifest |
 | `-InstallSendTo` | Install Windows SendTo / Linux context menu |
@@ -143,14 +165,18 @@ Appends one line per file to `~/.verihash/verihash.log`.
 ## 🖥️ OS Integration
 
 ### Windows (SendTo)
+
 ```powershell
 .\VeriHash.ps1 -InstallSendTo
 ```
+
 Installs two shortcuts in your SendTo folder:
+
 - **VeriHash** — right-click → Send to → VeriHash to hash files
 - **VeriHash - Manifest** — right-click → Send to → create/verify manifest
 
 ### Linux (KDE Dolphin)
+
 ```powershell
 # User-level
 ./VeriHash.ps1 -InstallSendTo
@@ -161,6 +187,7 @@ sudo pwsh -File VeriHash.ps1 -InstallSendTo -SystemWide
 # KDE-specific
 ./VeriHash.ps1 -InstallKDE
 ```
+
 Creates `.desktop` service menu entries with Compute Hash, Verify Hash, and Manifest Hash actions.
 
 ---
@@ -169,7 +196,7 @@ Creates `.desktop` service menu entries with Compute Hash, Verify Hash, and Mani
 
 VeriHash v2 is a modular rewrite. The ~900-line v1 monolith has been replaced with focused modules and a thin CLI dispatcher.
 
-```
+```pwsh
 VeriHash.ps1                  ← Thin CLI dispatcher (≤200 lines)
 │
 ├── VeriHash.Core/            ← Core module
@@ -195,6 +222,7 @@ VeriHash.ps1                  ← Thin CLI dispatcher (≤200 lines)
 ```
 
 **Design principles:**
+
 - **Modules own logic** — no business logic in the CLI script
 - **CLI owns UX** — pause-at-end, help banner, manifest output rendering
 - **Lazy loading** — Integrations.ps1 only loaded when `-InstallSendTo` or `-InstallKDE` is used
@@ -207,7 +235,7 @@ VeriHash.ps1                  ← Thin CLI dispatcher (≤200 lines)
 VeriHash uses .NET's optimized hash streams and parallel ThreadJob execution:
 
 | File Size | SHA256 Time | Throughput | Signature |
-|-----------|-------------|------------|-----------|
+| ----------- | ------------- | ------------ | ----------- |
 | 10 MB | ~50 ms | ~200 MB/s | Parallel |
 | 1 GB | ~5 s | ~200 MB/s | Parallel |
 | 4 GB | ~20 s | ~200 MB/s | Parallel |
@@ -242,6 +270,7 @@ function verihash {
 ```
 
 Then use from anywhere:
+
 ```powershell
 verihash file.exe
 verihash *.dll -Manifest
@@ -266,7 +295,7 @@ See `Microsoft.PowerShell_profile_example.ps1` in the repo for a full example.
 v2.0 is a clean break. Key changes:
 
 | v1 | v2 |
-|----|-----|
+| ---- | ----- |
 | `.\VeriHash.ps1 file.exe -Hash "abc..."` | Copy hash to clipboard, then `.\VeriHash.ps1 file.exe` |
 | `-Algorithm MD5,SHA512` | `-Algorithm MD5\|SHA1\|SHA256\|SHA512`, or let the clipboard choose |
 | `-OnlyVerify` | Removed — verification is automatic |
@@ -315,4 +344,4 @@ Required: `Install-Module Pester -Scope CurrentUser` and `Install-Module PSScrip
 
 ## 📄 License
 
-[AGPL-3.0-or-later](LICENSE.md) — © 2024-2026 arcticpinecone
+[MIT](LICENSE.md) — © 2024-2026 arcticpinecone
