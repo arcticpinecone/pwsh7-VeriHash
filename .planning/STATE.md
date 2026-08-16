@@ -56,7 +56,7 @@ See `.planning/MILESTONES.md` for full archive.
 
 ### Pending Todos
 
-None yet.
+- [manifest-summary-undercounts](todos/pending/manifest-summary-undercounts.md) — `Test-VeriHashManifest` produces 5 entry statuses and counts 3; `parse-error` and `traversal-rejected` are in `Total` but no bucket, so the summary line does not add up. Fails loud (red, exit 3), but the arithmetic is false. Found by the switch-default audit, 2026-08-16.
 
 ### Blockers/Concerns
 
