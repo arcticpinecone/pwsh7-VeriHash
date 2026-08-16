@@ -2,8 +2,89 @@
 
 ## Version History
 
-- Current Feature/Release info is shown first: [v1.3.0]
--- Version Release History contains older release notes.
+- Current stable release: [v2.0.0]
+- Version 1.x history is collapsed below.
+
+---
+
+### [v2.0.0] (Current)
+
+Version: 2.0.0
+> Modular Rewrite — focused modules replace the monolith
+
+**ARCHITECTURE:**
+
+- 🏗️ **Modular rewrite**: The ~900-line `VeriHash.ps1` monolith is replaced by a ≤200-line thin CLI dispatcher and three focused PowerShell modules:
+  - **VeriHash.Core** — hashing, clipboard parsing, sidecar verify, formatting, logging, platform detection
+  - **VeriHash.HotPath** — PE-only Authenticode, parallel hash + signature via ThreadJob, multi-file batch loop with tally
+  - **VeriHash.Manifest** — GNU `sha256sum`-compatible manifest create and verify with atomic writes, path-traversal guard, machine-readable exit codes
+
+**NEW FEATURES:**
+
+- 📦 **Manifest mode**: Create and verify `sha256sum`-compatible manifests
+  - `.\VeriHash.ps1 file1.txt, file2.txt -Manifest` — creates manifest
+  - `.\VeriHash.ps1 manifest.sha256 -Manifest` — verifies manifest (extension auto-detect)
+  - Exit codes: 0 (all pass), 1 (mismatch), 2 (missing), 3 (parse error)
+  - Atomic writes via temp-file-then-rename (no partial manifests on Ctrl+C)
+  - Path traversal guard rejects entries escaping manifest directory
+- 🔄 **Multi-file batch mode**: Process multiple files in a single invocation
+  - Full result per file (hash, sidecar, clipboard, signature)
+  - Final tally: `X/N matched, Y mismatch, Z missing`
+- 📋 **Prefixed clipboard parsing**: `sha256:71792c...` prefix form is recognized alongside plain hex
+  - Explicit prefix overrides length-based algorithm inference
+- ⚡ **PE-only signature checking**: Non-PE files skip Authenticode (no `MZ` header → instant skip)
+- 🔀 **Parallel hash + signature**: ThreadJob concurrency for PE files (wall-clock ≈ max, not sum)
+- 📝 **Built-in plain-text logging**: `-Log` flag or `$env:VERIHASH_LOG=1` writes to `~/.verihash/verihash.log`
+- 🖥️ **Manifest SendTo shortcut**: `-InstallSendTo` now creates both `VeriHash.lnk` and `VeriHash - Manifest.lnk`
+- 🐧 **KDE manifest action**: KDE context menu includes Compute Hash, Verify Hash, and Manifest Hash actions
+
+**⚠️ BREAKING CHANGES:**
+
+- **Dropped parameters:**
+  - `-Hash` / `-InputHash` — copy hash to clipboard instead
+  - `-Algorithm` — SHA256 is always computed; use module API for others
+  - `-OnlyVerify` — verification is automatic when sidecar/clipboard match exists
+  - `-SkipSignatureCheck` — non-PE files are auto-skipped; PE files always check
+  - `-Force` — sidecar conflicts are handled interactively
+  - `-LogLevel` — replaced by simple `-Log` on/off switch
+- **Renamed parameters:**
+  - `-SendTo` → `-InstallSendTo` (clearer intent)
+- **Removed features:**
+  - ❌ **VirusTotal integration** — removed entirely (scope creep; never shipped in releases)
+  - ❌ **PSFramework dependency** — replaced by built-in plain-text logger
+  - ❌ **QuickHash.ps1** — removed (v2 hot-path replaces its purpose)
+  - ❌ **VeriHash.LogUtils.ps1** — removed (log analysis utilities, no v2 consumer)
+  - ❌ **VeriHash.Config.ps1** — removed (v2 has no config file system)
+  - ❌ **VeriHash-OpenWith.bat** — removed (replaced by proper .lnk shortcuts)
+  - ❌ **Interactive file picker** — replaced by help banner with usage examples
+- **Behavior changes:**
+  - `[string[]]$FilePath` replaces `[string]$FilePath` (array input for multi-file)
+  - Pause-at-end auto-detects GUI launch; terminal sessions skip pause automatically
+  - No-args invocation shows help banner instead of file picker dialog
+
+---
+
+<details>
+<summary>📜 Version 1.x History</summary>
+
+### [Unreleased]
+
+**BUG FIXES:**
+
+- 🔧 **Fixed `Get-VeriHashLogSummary` not reading logs properly**: Was showing only 2 entries instead of 200+
+  - `ConvertFrom-VeriHashLog` now handles UTF-8 BOM at file start
+  - Strips trailing commas from JSON lines (PSFramework array format artifact)
+  - Skips standalone comma lines in log files
+
+**IMPROVEMENTS:**
+
+- 🧪 **Test logs now separated from production logs**: Tests no longer pollute user's log history
+  - New `VERIHASH_TEST_MODE=1` environment variable redirects logs to `logs/test/` subdirectory
+  - `VeriHash.Tests.ps1` sets this automatically in `BeforeAll`/`AfterAll`
+
+- 🤖 **Fixed interactive prompts blocking test runs**: All test invocations now include `-NoPause -Force`
+  - Prevents "Press Enter to continue..." prompts during automated testing
+  - Prevents sidecar conflict prompts during automated testing
 
 ---
 
@@ -488,3 +569,5 @@ Version: 1.2.1 - 2025-01-16
         - Includes digital signature validation for files.
         - Option to compare computed hash with input hash.
         - Automatic generation of .sha2_256 verification files.
+
+</details>

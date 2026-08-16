@@ -113,12 +113,36 @@ if (-not $SkipAnalyzer) {
     Write-Host "─────────────────────────────────────────────" -ForegroundColor DarkGray
 
     $settingsPath = Join-Path $scriptRoot "PSScriptAnalyzerSettings.psd1"
-    $scriptPath = Join-Path $scriptRoot "VeriHash.ps1"
+    $scriptPaths = @(
+        (Join-Path $scriptRoot "VeriHash.ps1"),
+        (Join-Path $scriptRoot "VeriHash.Integrations.ps1")
+    )
+    # VeriHash.Core public + private function files
+    $coreRoot = Join-Path $scriptRoot "VeriHash.Core"
+    if (Test-Path $coreRoot) {
+        $scriptPaths += (Get-ChildItem -Path $coreRoot -Recurse -Filter '*.ps1' -File).FullName
+    }
 
-    if (Test-Path $settingsPath) {
-        $analysisResults = Invoke-ScriptAnalyzer -Path $scriptPath -Settings $settingsPath
-    } else {
-        $analysisResults = Invoke-ScriptAnalyzer -Path $scriptPath
+    # VeriHash.HotPath public + private function files
+    $hotPathRoot = Join-Path $scriptRoot "VeriHash.HotPath"
+    if (Test-Path $hotPathRoot) {
+        $scriptPaths += (Get-ChildItem -Path $hotPathRoot -Recurse -Filter '*.ps1' -File).FullName
+    }
+
+    # VeriHash.Manifest public + private function files
+    $manifestRoot = Join-Path $scriptRoot "VeriHash.Manifest"
+    if (Test-Path $manifestRoot) {
+        $scriptPaths += (Get-ChildItem -Path $manifestRoot -Recurse -Filter '*.ps1' -File).FullName
+    }
+
+    $analysisResults = @()
+    foreach ($path in $scriptPaths) {
+        if (Test-Path $settingsPath) {
+            $results = Invoke-ScriptAnalyzer -Path $path -Settings $settingsPath
+        } else {
+            $results = Invoke-ScriptAnalyzer -Path $path
+        }
+        if ($results) { $analysisResults += $results }
     }
 
     if ($analysisResults) {
@@ -148,7 +172,7 @@ if (-not $SkipAnalyzer) {
 # [3/3] Performance Profiler (Quick Check)
 # ════════════════════════════════════════════════════════════════════════════════
 $profilerScript = Join-Path $scriptRoot "Profile-VeriHashTiming.ps1"
-$testIconFile = Join-Path $scriptRoot "Tests\VeriHash_1024.ico"
+$testIconFile = Join-Path $scriptRoot "Tests\Fixtures\VeriHash_1024.ico"
 
 if (-not $SkipProfiler -and (Test-Path $profilerScript) -and (Test-Path $testIconFile)) {
     Write-Host "[3/3] Performance Profiler (Quick Check)" -ForegroundColor Yellow

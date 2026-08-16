@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - '**.ps1'
+      - 'Tests/**'
+      - 'PSScriptAnalyzerSettings.psd1'
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - '**.ps1'
+      - 'Tests/**'
+      - 'PSScriptAnalyzerSettings.psd1'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Force -Scope CurrentUser -MaximumVersion 5.99
+
+      - name: Run Pester Tests
+        run: |
+          # Add repo root to PSModulePath so Test-ModuleManifest can resolve RequiredModules
+          $env:PSModulePath = "$PWD$([IO.Path]::PathSeparator)$env:PSModulePath"
+          $config = New-PesterConfiguration
+          $config.Run.Path = './Tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+  lint:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        run: |
+          $files = @(
+              './VeriHash.ps1',
+              './VeriHash.Config.ps1',
+              './VeriHash.LogUtils.ps1'
+          )
+          $settings = './PSScriptAnalyzerSettings.psd1'
+          $totalIssues = 0
+
+          foreach ($file in $files) {
+              $results = Invoke-ScriptAnalyzer -Path $file -Settings $settings
+              if ($results) {
+                  $totalIssues += $results.Count
+                  Write-Host "❌ $file - $($results.Count) issue(s):" -ForegroundColor Red
+                  $results | Format-Table RuleName, Severity, Line, Message -AutoSize
+              } else {
+                  Write-Host "✅ $file - Clean" -ForegroundColor Green
+              }
+          }
+
+          if ($totalIssues -gt 0) {
+              Write-Error "PSScriptAnalyzer found $totalIssues total issue(s)"
+              exit 1
+          }
+
+          Write-Host "`n✅ All files pass PSScriptAnalyzer" -ForegroundColor Green

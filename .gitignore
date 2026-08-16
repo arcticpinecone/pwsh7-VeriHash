@@ -12,6 +12,9 @@ Thumbs.db
 .claude/settings.local.json
 .claude/*
 
+# Serena MCP tool (local AI session data)
+.serena/
+
 # Exclude test example files but keep actual test files
 Get-Planet.Tests.ps1
 tmp/*
@@ -20,3 +23,7 @@ tmp/*
 Tests/*.sha256
 Tests/*.sha512
 Tests/*.md5
+
+# Allow committed Tests/Fixtures/ assets (overrides *.sha256/*.sha512/*.md5/*.txt above)
+!Tests/Fixtures/
+!Tests/Fixtures/**

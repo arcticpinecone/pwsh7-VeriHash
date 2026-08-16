@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <ViewDefinitions>
+
+    <!-- VeriHash.HotPathResult — single-file result: show key fields only -->
+    <View>
+      <Name>VeriHash.HotPathResult</Name>
+      <ViewSelectedBy>
+        <TypeName>VeriHash.HotPathResult</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>File</Label><Width>40</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Algorithm</Label><Width>8</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Hash</Label><Width>20</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Match</Label><Width>10</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Signature</Label><Width>12</Width></TableColumnHeader>
+          <TableColumnHeader><Label>ms</Label><Width>6</Width><Alignment>Right</Alignment></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><ScriptBlock>[System.IO.Path]::GetFileName($_.FilePath)</ScriptBlock></TableColumnItem>
+              <TableColumnItem><PropertyName>HashAlgorithm</PropertyName></TableColumnItem>
+              <TableColumnItem><ScriptBlock>if ($_.Hash) { $_.Hash.Substring(0, [Math]::Min(16, $_.Hash.Length)) + '...' } else { '(none)' }</ScriptBlock></TableColumnItem>
+              <TableColumnItem><PropertyName>MatchResult</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Signature</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>WallClockMs</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
+    <!-- VeriHash.BatchResult — batch result: show only the tally line -->
+    <View>
+      <Name>VeriHash.BatchResult</Name>
+      <ViewSelectedBy>
+        <TypeName>VeriHash.BatchResult</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem><Label>Summary</Label><PropertyName>TallyLine</PropertyName></ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+
+  </ViewDefinitions>
+</Configuration>
