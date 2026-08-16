@@ -12,10 +12,11 @@ Target: `Format-VeriHashReport` in VeriHash.Core (dev branch). Rendered with ANS
 
 ## 1. Header
 
-```
+```pwsh
 VeriHash 2.0 · SHA256 · installer.exe (45.32 MB)
 VeriHash 2.0 · MD5 (clipboard) + SHA256 · installer.exe (45.32 MB)
 ```
+
 - Dim gray, except filename in default foreground; size dim.
 - `·` separator (U+00B7). Fallback to `-` if console codepage isn't UTF-8 (set `[Console]::OutputEncoding = [Text.UTF8Encoding]::new()` first; VT + UTF-8 is assumed throughout).
 - **The algorithm segment is load-bearing.** It names what was actually computed, appends `(clipboard)` when the clipboard selected it, and appends `+ SHA256` when a weak primary earned a companion. A user reading grouped hex by eye has no other signal telling them which algorithm is on screen, and comparing an MD5 against a vendor page's SHA256 by eye is a silent failure.
@@ -25,11 +26,11 @@ VeriHash 2.0 · MD5 (clipboard) + SHA256 · installer.exe (45.32 MB)
 One full-width-of-content line, reversed video (colored BACKGROUND, not colored text) — this is the only filled element on screen and readable at a glance.
 
 | State | Text | BG (truecolor) | FG |
-|---|---|---|---|
-| Match | `  ✓  MATCH — SHA256 matches hash on clipboard` | `38;200;134` (green) | near-black `8;23;13` |
-| Mismatch | `  ✗  MISMATCH — file does NOT match clipboard hash` | `211;69;49` (red) | white |
-| Unverified | `  !  UNVERIFIED — {reason}` | amber `210;153;34` | near-black `28;20;2` |
-| No clipboard hash | `  ●  HASHED — no hash on clipboard to compare against` | gray `48;54;61` | default fg |
+| --- | --- | --- | --- |
+| Match | `✓  MATCH — SHA256 matches hash on clipboard` | `38;200;134` (green) | near-black `8;23;13` |
+| Mismatch | `✗  MISMATCH — file does NOT match clipboard hash` | `211;69;49` (red) | white |
+| Unverified | `!  UNVERIFIED — {reason}` | amber `210;153;34` | near-black `28;20;2` |
+| No clipboard hash | `●  HASHED — no hash on clipboard to compare against` | gray `48;54;61` | default fg |
 
 - Pad the line to a fixed width (e.g. 76 cols or `[Console]::WindowWidth - 4`, whichever is smaller) so the bar reads as a bar.
 - Sidecar-only verification uses the same MATCH/MISMATCH banners with `— SHA256 matches sidecar file` wording when no clipboard hash exists but a sidecar does.
@@ -40,7 +41,7 @@ One full-width-of-content line, reversed video (colored BACKGROUND, not colored 
 
 Both hashes, chunked into 8-char groups separated by single spaces, expected above computed so agreement reads as columns:
 
-```
+```pwsh
 expected  clipboard
 71792c02 8e07b0fd d30f4e2a 9c1b3d5e 8a46f1c2 9d073bb5 e6c48d90 a2f1e3b7
 computed  52 ms
@@ -54,7 +55,7 @@ computed  52 ms
 - MD5 = 4 groups, SHA1 = 5 groups, SHA512 = 16 groups (wrap at console width; keep group boundaries).
 - **Companion block.** When a weak primary (MD5, SHA1) earned a SHA256 companion, its digest follows the comparison after a blank line, under a 10-char label and its own timing:
 
-```
+```pwsh
 sha256    2018 ms
 9f2b1a44 6c30e7d1 4b8e0a35 c7d21f60 8ae4b913 20fc55d7 e1a3b846 7c0d9e22
 ```
@@ -65,7 +66,7 @@ sha256    2018 ms
 
 Two columns: 10-char left-aligned label (dim gray), value. One glyph + one clause per row.
 
-```
+```pwsh
 clipboard   ✓ match (plain hex, SHA256)
 sidecar     ✓ match — installer.exe.sha256
 signature   ✓ valid — {signer CN}
@@ -76,13 +77,14 @@ Glyphs/colors: `✓` green, `✗` red, `!` dark yellow (`210;153;34`), `−` gra
 
 - **Weak-algorithm clause.** An MD5 or SHA1 comparison appends `— weak; prefer SHA256 if the vendor lists one` (preceded by a space) inside the parenthetical, on match *and* mismatch:
 
-```
+```pwsh
 clipboard   ✓ match (plain hex, MD5 — weak; prefer SHA256 if the vendor lists one)
 ```
 
   It never reaches the banner. A successful MD5 comparison is green: the comparison is not uncertain, and the weakness belongs to the vendor's choice rather than to the verification. Yellow is reserved for *your question went unanswered*, which the user can clear.
 
 Row values by state:
+
 - clipboard: `✓ match (…)` / `✗ mismatch (…)` / `− nothing recognizable — copy the vendor's hash and re-run`. Parenthetical = detected format: `plain hex, SHA256` or `prefixed, sha256:`.
 - sidecar: `✓ match — {name}` / `✓ created — {name}` / `✗ sidecar mismatch — {name}` / `− none found · not written on mismatch` (do NOT write/update a sidecar when the clipboard verdict is MISMATCH).
 - signature: `✓ valid — {signer}` / `✗ invalid — {reason}` / `! unsigned` / `− skipped (not a PE file)`.
@@ -99,12 +101,13 @@ MISMATCH adds, before the footer, a red-bordered advisory (top/bottom rule of `�
 
 Per-file: header + banner + checklist only (skip the hash comparison block except for mismatched files). After the last file, a tally footer separated by a dim rule:
 
-```
+```pwsh
 batch of 3 · 2 matched · 1 mismatch · 0 missing
  ✓ setup-x64.exe      match · signed
  ✓ setup-arm64.exe    match · signed
  ✗ langpack.msi       mismatch
 ```
+
 Counts colored: matched green, mismatch red (only when > 0), missing dim.
 
 ## Color palette (truecolor RGB)
