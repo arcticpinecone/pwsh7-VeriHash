@@ -2,13 +2,14 @@
 
 ## Version History
 
-- Current stable release: [v2.0.0]
+- Current stable release: [v3.0.0]
 - Version 1.x history is collapsed below.
 
 ---
 
-### [Unreleased] — v3.0
+### [v3.0.0] (Current)
 
+Version: 3.0.0 - 2026-08-16
 > UX Polish & Smart Routing
 
 Numbered 3.0 rather than 2.1: the default algorithm, the sidecar extension policy, and the
@@ -108,9 +109,9 @@ output for the same invocation, so the major version moves.
 
 ---
 
-### [v2.0.0] (Current)
+### [v2.0.0]
 
-Version: 2.0.0
+Version: 2.0.0 - 2026-04-19
 > Modular Rewrite — focused modules replace the monolith
 
 **ARCHITECTURE:**
@@ -168,7 +169,12 @@ Version: 2.0.0
 `<details>`
 `<summary>📜 Version 1.x History</summary>`
 
-### [Unreleased]
+### [Unreleased — v1.x, never shipped]
+
+> Work that landed after v1.3.0 and was superseded by the v2.0 rewrite before it
+> could be released. Kept for the record. `Get-VeriHashLogSummary`,
+> `ConvertFrom-VeriHashLog`, and PSFramework logging no longer exist — v2.0
+> replaced them with plain-text `Write-VeriHashLog`.
 
 **BUG FIXES:**
 
@@ -189,7 +195,7 @@ Version: 2.0.0
 
 ---
 
-### [v1.3.0] (Current)
+### [v1.3.0]
 
 Version: 1.3.0 - 2025-12-27
 > Linux Desktop Integration & Cross-Platform Enhancements
@@ -300,7 +306,7 @@ sudo pwsh -File VeriHash.ps1 -SendTo -SystemWide
 
 ---
 
-### [v1.2.6] (Previous)
+### [v1.2.6]
 
 Version: 1.2.6 - 2025-12-05
 > Critical Bug Fix - Duration Display Rounding Error
