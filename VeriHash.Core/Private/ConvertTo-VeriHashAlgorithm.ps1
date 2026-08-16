@@ -12,7 +12,7 @@ function ConvertTo-VeriHashAlgorithm {
         [string]$Hash
     )
 
-    if ($Hash -match '^(?<algo>md5|sha256|sha512):(?<hex>[A-Fa-f0-9]+)$') {
+    if ($Hash -match '^(?<algo>md5|sha1|sha256|sha512):(?<hex>[A-Fa-f0-9]+)$') {
         $algo = $matches.algo.ToUpperInvariant()
         if ($matches.hex.Length -ne (Get-VeriHashHexLength -Algorithm $algo)) { return $null }
         return $algo
@@ -21,6 +21,7 @@ function ConvertTo-VeriHashAlgorithm {
     if ($Hash -match '^[A-Fa-f0-9]+$') {
         switch ($Hash.Length) {
             32  { return 'MD5'    }
+            40  { return 'SHA1'   }
             64  { return 'SHA256' }
             128 { return 'SHA512' }
         }

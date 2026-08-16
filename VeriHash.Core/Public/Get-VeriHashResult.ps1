@@ -19,7 +19,7 @@ function Get-VeriHashResult {
         [Parameter(Mandatory)]
         [string]$Path,
 
-        [ValidateSet('MD5', 'SHA256', 'SHA512')]
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
         [string]$Algorithm = 'SHA256'
     )
     $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath

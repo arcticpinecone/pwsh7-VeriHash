@@ -51,7 +51,7 @@ function Resolve-VeriHashComparator {
         [pscustomobject]$SidecarInfo,
 
         [Parameter(Mandatory)]
-        [ValidateSet('MD5', 'SHA256', 'SHA512')]
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
         [string]$ComputedAlgorithm
     )
 

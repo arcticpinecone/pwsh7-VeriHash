@@ -15,7 +15,10 @@ function Get-VeriHashHexLength {
         [Parameter(Mandatory)]
         [string]$Algorithm
     )
-    $map = @{ MD5 = 32; SHA256 = 64; SHA512 = 128 }
+    # SHA1 is here because vendors still publish it, not because VeriHash
+    # endorses it. It is answerable as a question; it is never written as a
+    # durable record -- see the sidecar rule in Invoke-VeriHashHotPath.
+    $map = @{ MD5 = 32; SHA1 = 40; SHA256 = 64; SHA512 = 128 }
     $len = $map[$Algorithm.ToUpperInvariant()]
     if ($null -eq $len) { return 0 }
     return [int]$len

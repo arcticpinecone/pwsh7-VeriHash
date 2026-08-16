@@ -43,13 +43,18 @@ Requirements for v2.1 UX Polish & Smart Routing. Each maps to roadmap phases.
 - [x] **CMP-11**: A sidecar is never written or overwritten for a file that any check proved bad. Suppression is keyed off the comparator's verdict *and* `SidecarStatus`, not off the banner state alone
 - [x] **CMP-12**: `MatchResult` distinguishes *verified and equal* from *not verified*; a batch exposes the unverified count on `BatchResult.Tally`, and every per-file line and summary count reports unverified files as unverified rather than as missing
 - [x] **CMP-14**: A value outside a closed set never resolves to a silent fallback — an unmapped algorithm never yields a sidecar path equal to the target file, and an unhandled banner state never renders an empty bar
-- [ ] **CMP-04**: When no explicit `-Algorithm` is given, a recognised clipboard hash selects the algorithm the file is hashed with
-- [ ] **CMP-05**: A clipboard-selected algorithm writes no sidecar and modifies no existing sidecar
-- [ ] **CMP-06**: The header names the algorithm actually computed, and attributes it when the clipboard selected it
-- [ ] **CMP-07**: An MD5 comparison is labelled weak in the clipboard row, on both match and mismatch
-- [ ] **CMP-08**: `VeriHash.ps1` accepts `-Algorithm MD5|SHA256|SHA512` and passes it through; batch mode always passes an explicit algorithm
-- [ ] **CMP-10**: A clipboard holding plausible but unsupported hex is reported as such, naming the likely algorithm where the length is well known, and is never reported as an empty or unrecognisable clipboard
-- [ ] **CMP-13**: A clipboard-selected algorithm does not cause the file to be read a second time
+- [x] **CMP-04**: When no explicit `-Algorithm` is given, a recognised clipboard hash selects the algorithm the file is hashed with
+- [x] ~~**CMP-05**: A clipboard-selected algorithm writes no sidecar and modifies no existing sidecar~~ — **superseded by CMP-16.** The concern (a vendor's weak choice leaving a weak permanent record) is met by never writing `.md5`/`.sha1` at all, which is stronger than writing nothing
+- [x] **CMP-06**: The header names the algorithm actually computed, and attributes it when the clipboard selected it
+- [x] **CMP-07**: An MD5 or SHA1 comparison is labelled weak in the clipboard row, on both match and mismatch, and never on the banner
+- [x] **CMP-08**: `VeriHash.ps1` accepts `-Algorithm MD5|SHA1|SHA256|SHA512` and passes it through only when bound; batch mode always passes an explicit algorithm
+- [ ] **CMP-10**: A clipboard holding plausible but unsupported hex is reported as such, naming the likely algorithm where the length is well known, and is never reported as an empty or unrecognisable clipboard — *narrowed by CMP-17: 40 hex is now supported, so this covers 56 (SHA-224), 96 (SHA-384), and other lengths*
+- [x] **CMP-13**: A weak-primary run does not cause the file to be read a second time — the sidecar check is pinned to SHA256 and served from the companion digest
+- [x] **CMP-15**: A weak primary algorithm (MD5, SHA1) is computed **and** a SHA256 companion is computed in the same run
+- [x] **CMP-16**: The sidecar is always `.sha256` (or `.sha512` under an explicit SHA512); `.md5` and `.sha1` are never written under any algorithm selection
+- [x] **CMP-17**: SHA1 is a fully supported algorithm — hashable, comparable, and inferrable from a 40-character paste
+- [x] **CMP-18**: The header names every algorithm computed and attributes the primary when the clipboard selected it
+- [x] **CMP-19**: Whitespace-grouped, vendor-labelled, and sha256sum-formatted pastes are recognised; whitespace is never joined across what may be two separate digests
 
 ## Future Requirements
 

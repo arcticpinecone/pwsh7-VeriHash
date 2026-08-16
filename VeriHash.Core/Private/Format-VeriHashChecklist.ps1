@@ -50,6 +50,18 @@ function Format-VeriHashChecklist {
     function Row { param($Label, $Value) return "$($c.Dim)$('{0,-10}' -f $Label)$($c.Reset)  $Value" }
 
     # --- clipboard ---
+    # The weakness belongs to the vendor's choice of algorithm, not to the
+    # verification, so it rides the clipboard row on BOTH match and mismatch and
+    # never reaches the banner. A green MATCH stays green: the comparison is not
+    # uncertain, VeriHash knows the answer. A user whose vendors publish MD5
+    # would otherwise see a permanent yellow they can never clear, and a signal
+    # that never goes green is wallpaper.
+    $weakNote = if ($CompareTo -and $CompareTo.Algorithm -in @('MD5', 'SHA1')) {
+        " $d weak; prefer SHA256 if the vendor lists one"
+    } else {
+        ''
+    }
+
     # Four shapes, not three. 'Unusable' is selected on ComparatorSource rather
     # than on ClipboardMatch, because $null ClipboardMatch means 'not compared'
     # and cannot distinguish 'nothing was on the clipboard' from 'something was
@@ -67,9 +79,9 @@ function Format-VeriHashChecklist {
     } elseif ($null -eq $CompareTo) {
         "$($c.Dim)$($g.None) nothing recognizable $d copy the vendor's hash and re-run$($c.Reset)"
     } elseif ($ClipboardMatch) {
-        "$($c.Green)$($g.Ok)$($c.Reset) match ($($CompareTo.Format))"
+        "$($c.Green)$($g.Ok)$($c.Reset) match ($($CompareTo.Format)$weakNote)"
     } else {
-        "$($c.Red)$($g.Bad)$($c.Reset) mismatch ($($CompareTo.Format))"
+        "$($c.Red)$($g.Bad)$($c.Reset) mismatch ($($CompareTo.Format)$weakNote)"
     }
 
     # --- sidecar ---

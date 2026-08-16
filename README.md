@@ -34,10 +34,10 @@
 
 ## ✨ Features
 
-- 🔐 **Multiple Hash Algorithms**: SHA256 (default), MD5, SHA512
+- 🔐 **Multiple Hash Algorithms**: SHA256 (default), MD5, SHA1, SHA512
 - ⚡ **Parallel Processing**: Hash + Authenticode signature run concurrently for PE files
-- 🎯 **Smart Verification**: Auto-detects hash from clipboard (plain hex or `algo:hex` prefix)
-- 📁 **Sidecar Files**: GNU-compatible `.sha256`, `.sha512`, `.md5` — create, verify, and resolve mismatches
+- 🎯 **Smart Verification**: The clipboard picks the algorithm — paste a vendor's MD5 and VeriHash answers in MD5, plus SHA256 in the same run
+- 📁 **Sidecar Files**: GNU-compatible `.sha256` and `.sha512` written; `.sha256`, `.sha512`, `.md5` read
 - 📦 **Manifest Mode**: Create and verify `sha256sum`-compatible manifests with atomic writes
 - 🔄 **Multi-File Batch**: Process multiple files in one invocation with match/mismatch/missing tally
 - 🖥️ **Cross-Platform**: Windows, macOS, Linux
@@ -101,9 +101,21 @@ Creates a `sha256sum`-compatible manifest in the files' parent directory. Atomic
 Extension auto-detect: `.sha256`, `.sha512`, `.md5` files are verified. Returns exit code 0 (all pass), 1 (mismatch), 2 (missing), 3 (parse error).
 
 ### Clipboard matching
+
 Copy a hash to your clipboard before running VeriHash. Supported formats:
-- Plain hex: `71792c028e07b0fdd30f...` (length auto-detects MD5/SHA256/SHA512)
+
+- Plain hex: `71792c028e07b0fdd30f...` (length auto-detects MD5/SHA1/SHA256/SHA512)
 - Prefixed: `sha256:71792c028e07b0fdd30f...` (prefix overrides length detection)
+- Labelled: `SHA-256: 71792c02 8e07b0fd ...` (vendor pages, spaces and hyphens tolerated)
+- Grouped: `71792c02 8e07b0fd d30f4e2a ...` (VeriHash's own output, or `certutil`'s pairs)
+- `sha256sum` line: `71792c028e07b0fd... *installer.exe` (the filename is ignored)
+
+**The clipboard chooses the algorithm.** If a vendor published only an MD5, paste it and
+VeriHash hashes with MD5 to answer that question — then computes SHA256 as well, so you
+still get the digest worth keeping. Only the SHA256 is written to a sidecar; VeriHash never
+writes a `.md5` or `.sha1`.
+
+An explicit `-Algorithm` always outranks the clipboard.
 
 ### Logging
 ```powershell
@@ -114,8 +126,10 @@ $env:VERIHASH_LOG = '1'
 Appends one line per file to `~/.verihash/verihash.log`.
 
 ### All switches
+
 | Switch | Description |
 |--------|-------------|
+| `-Algorithm` | `MD5` \| `SHA1` \| `SHA256` \| `SHA512`. Omit to let the clipboard decide, else SHA256 |
 | `-Manifest` | Create or verify a sha256sum manifest |
 | `-InstallSendTo` | Install Windows SendTo / Linux context menu |
 | `-InstallKDE` | Install KDE Dolphin context menu |
@@ -254,7 +268,7 @@ v2.0 is a clean break. Key changes:
 | v1 | v2 |
 |----|-----|
 | `.\VeriHash.ps1 file.exe -Hash "abc..."` | Copy hash to clipboard, then `.\VeriHash.ps1 file.exe` |
-| `-Algorithm MD5,SHA512` | SHA256 always; MD5/SHA512 via module API |
+| `-Algorithm MD5,SHA512` | `-Algorithm MD5\|SHA1\|SHA256\|SHA512`, or let the clipboard choose |
 | `-OnlyVerify` | Removed — verification is automatic |
 | `-SkipSignatureCheck` | Removed — non-PE files auto-skip |
 | `-Force` | Removed — sidecar conflicts resolved interactively |

@@ -91,12 +91,19 @@ Describe 'Sidecar-write suppression keys off ALL negative evidence (CMP-11)' {
 
     Context 'VeriHash never writes to the path it was asked to verify (CMP-14)' {
         It 'Leaves the target byte-identical for every supported algorithm' -ForEach @(
-            @{ Algo = 'MD5' }, @{ Algo = 'SHA256' }, @{ Algo = 'SHA512' }
+            @{ Algo = 'MD5'; Ext = '.sha256' }
+            @{ Algo = 'SHA1'; Ext = '.sha256' }
+            @{ Algo = 'SHA256'; Ext = '.sha256' }
+            @{ Algo = 'SHA512'; Ext = '.sha512' }
         ) {
             # The property that matters. A hashtable miss on the extension map
             # returns $null rather than throwing, which would make the sidecar
             # path equal the target and replace the file being verified with a
             # ~100-byte text file -- reported as a green '+ updated' row.
+            #
+            # The weak algorithms map to .sha256, not to .md5/.sha1 (CMP-16):
+            # the sidecar records the digest worth keeping, and the companion
+            # is what supplies it.
             Mock -ModuleName VeriHash.Core Get-Clipboard { $null }
             $before = [System.IO.File]::ReadAllBytes($script:Target)
 
@@ -104,7 +111,22 @@ Describe 'Sidecar-write suppression keys off ALL negative evidence (CMP-11)' {
 
             [System.IO.File]::ReadAllBytes($script:Target) | Should -Be $before
             (Get-ChildItem -LiteralPath $script:WorkDir -File).Name |
-                Should -Contain "suppress-target.bin$(@{MD5='.md5';SHA256='.sha256';SHA512='.sha512'}[$Algo])"
+                Should -Contain "suppress-target.bin$Ext"
+        }
+
+        It 'Never writes a .md5 or .sha1 sidecar under any algorithm (CMP-16)' -ForEach @(
+            @{ Algo = 'MD5' }, @{ Algo = 'SHA1' }, @{ Algo = 'SHA256' }, @{ Algo = 'SHA512' }
+        ) {
+            # Get-PreferredSidecar ranks .sha512 > .sha256 > .md5, so a .md5
+            # written once becomes a weak file a LATER run could promote to the
+            # trusted comparator. Never writing it closes that path.
+            Mock -ModuleName VeriHash.Core Get-Clipboard { $null }
+
+            $null = Invoke-VeriHashHotPath -Path $script:Target -Algorithm $Algo 6>$null
+
+            $written = (Get-ChildItem -LiteralPath $script:WorkDir -File).Name
+            $written | Should -Not -Contain 'suppress-target.bin.md5'
+            $written | Should -Not -Contain 'suppress-target.bin.sha1'
         }
 
         It 'Guards the derivation site rather than relying on the ValidateSet alone' {

@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-19 for v2.1)
 ## Current Position
 
 **Milestone:** v2.1 — UX Polish & Smart Routing
-**Phase:** 9 of 9 (Comparator Correctness) — 09-01 executed, 09-02 and 09-03 to plan
-**Plan:** 1 of 3 complete
-**Status:** 09-01 shipped (321 tests pass). Phase 8 (Manifest Spot-Check) still unplanned.
-**Last activity:** 2026-08-16 — 09-01 executed (comparator extraction, UNVERIFIED state, sidecar-write suppression)
+**Phase:** 9 of 9 (Comparator Correctness) — 09-01 and 09-03 executed, 09-02 to plan
+**Plan:** 2 of 3 complete
+**Status:** 09-01 and 09-03 shipped (353 tests pass). Phase 8 (Manifest Spot-Check) still unplanned.
+**Last activity:** 2026-08-16 — 09-03 executed (clipboard tolerance, clipboard-driven algorithm, SHA256 companion, SHA1 support, CLI `-Algorithm`)
 
 Progress: [███████░░░] 67%
 
@@ -55,6 +55,11 @@ See `.planning/MILESTONES.md` for full archive.
 - CMP: comparator selection lives in one function, `Resolve-VeriHashComparator`, public in Core so HotPath can reach it across the module boundary
 - CMP: a pasted hash is a question, not a comparator — if it cannot be answered, the banner abstains (`UNVERIFIED`) rather than silently answering with the sidecar
 - CMP: `BatchResult.Tally` is the seam for new counts; `TallyLine` stays byte-locked
+- CMP: a weak primary (MD5, SHA1) computes a SHA256 companion in a parallel ThreadJob — the user's question is answered without withholding the digest worth keeping
+- CMP: the sidecar is ALWAYS `.sha256` (or `.sha512` under an explicit SHA512); `.md5`/`.sha1` are never written, which supersedes the earlier "clipboard-selected algorithm writes nothing" rule
+- CMP: SHA1 is fully supported — answerable as a question, never recorded as a durable result
+- CMP: clipboard parsing tolerates grouping, vendor labels, and `sha256sum` lines, but never joins whitespace across what may be two separate digests
+- CMP: single-pass `IncrementalHash` fan-out stays deferred; two parallel `Get-FileHash` jobs cost ~5-15% wall clock at typical sizes because the OS cache serves the second reader
 - FMT: `BatchResult.TallyLine` stays byte-locked; console display is a separate concern
 - FMT: the CLI pins `[Console]::OutputEncoding` to UTF-8; anything capturing its output must decode UTF-8 too
 
@@ -68,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-**Stopped at:** Phase 9 plan 09-01 complete — 321 tests pass, verified against pre-fix code (10 of 12 new tests fail on the old build)
-**Resume file:** `.planning/notes/comparator-algorithm-exploration.md`
-**Next action:** Plan 09-03 (clipboard-driven algorithm + CLI `-Algorithm`) or 09-02 (unsupported-hex reporting). Phase 8 (Manifest Spot-Check) remains unplanned.
+**Stopped at:** Phase 9 plans 09-01 and 09-03 complete — 353 tests pass
+**Resume file:** `.planning/notes/weak-hash-companion-exploration.md`
+**Next action:** 09-02 (unsupported-hex reporting, narrowed — 40 hex is supported now, so it covers 56/96/other lengths). Phase 8 (Manifest Spot-Check) remains unplanned.

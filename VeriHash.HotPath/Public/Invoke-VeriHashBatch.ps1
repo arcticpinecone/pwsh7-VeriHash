@@ -23,7 +23,7 @@ function Invoke-VeriHashBatch {
         [Parameter(Mandatory)]
         [string[]]$FilePath,
 
-        [ValidateSet('MD5', 'SHA256', 'SHA512')]
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
         [string]$Algorithm = 'SHA256',
 
         [switch]$Log

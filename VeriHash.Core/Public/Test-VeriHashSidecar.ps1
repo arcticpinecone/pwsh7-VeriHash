@@ -17,6 +17,19 @@ function Test-VeriHashSidecar {
         caller is already holding. When the algorithms differ the parameter is
         ignored and the file is hashed with the sidecar's algorithm as before,
         because a SHA256 digest cannot answer a .sha512 sidecar.
+    .PARAMETER Algorithm
+        Pins the search to ONE sidecar extension instead of walking the
+        .sha512 > .sha256 > .md5 precedence.
+
+        The caller uses this when it knows which digest it is holding and wants
+        the check served for free. A weak-primary run (clipboard MD5, say) holds
+        a SHA256 companion; unpinned, Get-PreferredSidecar could pick a .sha512
+        and force a full second pass over the file to answer it -- on a 596 MB
+        installer that doubles the wall clock, in the function whose
+        -ComputedResult parameter exists to prevent exactly that.
+
+        Unpinned is still the default and still correct: a .sha512 that proves
+        a file corrupt is worth re-hashing for, and CMP-11 depends on it.
     .OUTPUTS
         VeriHash.Result with an additional 'Sidecar' field describing which
         sidecar was used, or $null when no sidecar exists.
@@ -32,10 +45,23 @@ function Test-VeriHashSidecar {
         [Parameter(Mandatory)]
         [string]$Path,
 
-        [pscustomobject]$ComputedResult
+        [pscustomobject]$ComputedResult,
+
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
+        [string]$Algorithm
     )
 
-    $sidecar = Get-PreferredSidecar -TargetPath $Path
+    $sidecar = if ($Algorithm) {
+        $ext  = @{ 'SHA512' = '.sha512'; 'SHA256' = '.sha256'; 'MD5' = '.md5' }[$Algorithm]
+        $pinned = if ($ext) { "$Path$ext" } else { $null }
+        if ($pinned -and (Test-Path -LiteralPath $pinned)) {
+            [pscustomobject]@{ Path = $pinned; Algorithm = $Algorithm }
+        } else {
+            $null
+        }
+    } else {
+        Get-PreferredSidecar -TargetPath $Path
+    }
     if (-not $sidecar) { return $null }
 
     $sidecarLeaf = Split-Path -Leaf $sidecar.Path

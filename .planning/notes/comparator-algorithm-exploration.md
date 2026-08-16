@@ -71,6 +71,13 @@ A mismatch is the cheap moment to investigate: the user is already stopped, and 
 
 ## Behaviour decision table
 
+> **Superseded in part, 2026-08-16.** The `Clipboard MD5, no flag` row below —
+> compute MD5 alone, leave sidecars untouched — was replaced by
+> `weak-hash-companion-exploration.md`: a weak primary now also computes a
+> SHA256 companion and writes `.sha256`. Design principle 2 still holds; it is
+> satisfied by never writing `.md5`/`.sha1` at all rather than by writing
+> nothing. Steps 1 and 3 and everything else in this note stand as written.
+
 The three user populations this must serve: people who paste a hash first (the primary workflow), people who never paste and read the grouped hex by eye, and power users who want a non-default algorithm.
 
 | Situation | Compute | Sidecar | Banner source |

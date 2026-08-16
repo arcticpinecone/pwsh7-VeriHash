@@ -24,6 +24,23 @@ function Format-VeriHashReport {
         Total wall time for the operation, when the caller can supply it. Forwarded
         to the checklist so the elapsed row names both scopes instead of showing a
         hash time that reads as the whole run's cost.
+    .PARAMETER Companion
+        An optional second VeriHash.Result for the same file, computed with a
+        different algorithm. A weak primary (MD5, SHA1) earns a SHA256
+        companion so the user's question is answered without withholding the
+        digest they should actually be keeping.
+
+        Rendered as its own labelled block below the comparison, never folded
+        into it: the banner answers ONE question -- the one the user asked --
+        and a second digest competing for that verdict is how a report starts
+        meaning two things at once.
+    .PARAMETER ClipboardChoseAlgorithm
+        Set when the run's algorithm came from the clipboard rather than from a
+        flag or the default. Drives the header's attribution, which stops being
+        decorative the moment the algorithm can change: a user reading grouped
+        hex by eye has no other signal telling them WHICH algorithm is on
+        screen, and comparing an MD5 against a vendor page's SHA256 by eye is a
+        silent failure.
     .PARAMETER Compact
         Batch mode. Emits header, banner, and checklist only -- the hash
         comparison block is kept only for mismatches, and the footer and
@@ -41,6 +58,8 @@ function Format-VeriHashReport {
         [pscustomobject]$SidecarInfo,
         [pscustomobject]$Signature,
         [nullable[int]]$TotalMs,
+        [pscustomobject]$Companion,
+        [switch]$ClipboardChoseAlgorithm,
         [switch]$Compact
     )
     process {
@@ -67,10 +86,16 @@ function Format-VeriHashReport {
         }
 
         # --- 1. header ---------------------------------------------------------
+        # The algorithm segment is load-bearing now that the clipboard can
+        # redirect it. It names what was computed, says so when the clipboard
+        # chose it, and names the companion when one ran.
         $fileName = Split-Path -Leaf $Result.FilePath
         $size     = Format-VeriHashByteSize -Bytes ([long]$Result.Size)
+        $algoLabel = [string]$Result.Algorithm
+        if ($ClipboardChoseAlgorithm) { $algoLabel += ' (clipboard)' }
+        if ($Companion)               { $algoLabel += " + $($Companion.Algorithm)" }
         Write-Host ("{0}VeriHash 2.0 {1} {2} {1} {3}{4}{0} ({5}){3}" -f `
-            $c.Dim, $g.Sep, $Result.Algorithm, $c.Reset, $fileName, $size)
+            $c.Dim, $g.Sep, $algoLabel, $c.Reset, $fileName, $size)
 
         # --- 2. verdict banner (blank line above and below) --------------------
         Write-Host ''
@@ -100,6 +125,17 @@ function Format-VeriHashReport {
             } else {
                 Write-Host ("{0}{1}{2}" -f $c.Dim, $Result.Algorithm.ToLowerInvariant(), $c.Reset)
                 foreach ($l in (Format-VeriHashHexGroups -Hash $Result.Hash -Palette $p)) {
+                    Write-Host $l
+                }
+            }
+
+            # The companion digest, on its own so it reads as an extra fact
+            # rather than as a second opinion on the verdict above it.
+            if ($Companion) {
+                Write-Host ''
+                Write-Host ("{0}{1}{2} ms{3}" -f `
+                    $c.Dim, ('{0,-10}' -f $Companion.Algorithm.ToLowerInvariant()), $Companion.ElapsedMs, $c.Reset)
+                foreach ($l in (Format-VeriHashHexGroups -Hash $Companion.Hash -Palette $p)) {
                     Write-Host $l
                 }
             }

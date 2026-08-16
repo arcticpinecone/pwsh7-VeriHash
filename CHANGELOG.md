@@ -11,8 +11,25 @@
 
 > UX Polish & Smart Routing
 
+**ADDED:**
+
+- 🔍 **The clipboard drives the algorithm**: paste the hash a vendor published and VeriHash
+  hashes with *that* algorithm instead of refusing to answer. Precedence is
+  explicit `-Algorithm` > clipboard > SHA256.
+- 🤝 **A weak hash gets a SHA256 companion**: an MD5 or SHA1 question is answered *and*
+  SHA256 is computed in the same run, in a parallel thread. Vendors who publish only MD5
+  no longer cost the user the digest worth keeping, and the sidecar is always the SHA256.
+- 🆕 **SHA1 is supported**: hashable, comparable, and inferred from a 40-character paste.
+  Weak, so it is answered but never recorded.
+- 🎛️ **`-Algorithm` on the CLI**: `MD5 | SHA1 | SHA256 | SHA512`, forwarded only when bound
+  so it can outrank the clipboard without a default silently doing the same.
+
 **CHANGED:**
 
+- 🔐 **Sidecars are always `.sha256`** (or `.sha512` under an explicit SHA512). `.md5` and
+  `.sha1` are never written. `Get-PreferredSidecar` ranks `.sha512 > .sha256 > .md5`, so a
+  `.md5` written once would become a weak file a later run could promote to the trusted
+  comparator — never writing it closes that path.
 - 🎨 **Console output redesigned**: verdict banner, stacked 8-char-group hash comparison with
   divergence highlighting, four-row checklist grid, and a compact batch summary.
   Truecolor ANSI with `NO_COLOR` and ASCII-glyph fallbacks.
@@ -31,6 +48,12 @@
 
 - 🔧 **A sidecar is no longer created when the file fails clipboard verification**:
   recording a hash for a file the user was just told not to trust would manufacture false assurance.
+- 🔧 **A spaced or labelled hash on the clipboard is recognised**: VeriHash printed hashes in
+  8-character groups but could only read a contiguous run, so copying its own output back in
+  reported an empty clipboard. Vendor labels (`SHA-256: …`), `sha256sum` lines (`<hex> *name`),
+  and `certutil`'s 2-character groups now parse too. Whitespace is never joined across what
+  may be two separate digests — two 64-hex hashes would otherwise concatenate into a
+  plausible "SHA512" and be compared against the file.
 
 ---
 

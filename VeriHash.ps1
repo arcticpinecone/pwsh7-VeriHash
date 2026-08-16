@@ -25,6 +25,10 @@
     Never pause at exit, even when launched from Explorer/SendTo.
 .PARAMETER SystemWide
     System-wide integration install (Linux only, requires sudo).
+.PARAMETER Algorithm
+    MD5 | SHA1 | SHA256 | SHA512. Omit it and a recognised hash on the clipboard
+    selects the algorithm; omit both and SHA256 is used. A weak choice (MD5,
+    SHA1) also computes SHA256, and only the SHA256 is ever written to a sidecar.
 .PARAMETER Log
     Write one log line per file to ~/.verihash/verihash.log.
 .PARAMETER Help
@@ -42,6 +46,11 @@ param(
     [switch]$InstallKDE,
     [switch]$NoPause,
     [switch]$SystemWide,
+    # No default value on purpose: $PSBoundParameters must be able to tell an
+    # explicit choice from an absent one, because an explicit flag outranks the
+    # clipboard and a default must not.
+    [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
+    [string]$Algorithm,
     [switch]$Log,
     [Alias('h', '?')]
     [switch]$Help
@@ -113,6 +122,7 @@ if ($Help) {
     Write-Host '  .\VeriHash.ps1 <file.sha256> -Manifest  # Verify sha256sum manifest' -ForegroundColor Cyan
     Write-Host ''
     Write-Host 'Switches:' -ForegroundColor White
+    Write-Host '  -Algorithm      MD5 | SHA1 | SHA256 | SHA512 (default: clipboard, else SHA256)' -ForegroundColor Yellow
     Write-Host '  -Manifest       Create or verify a sha256sum-compatible manifest' -ForegroundColor Yellow
     Write-Host '  -InstallSendTo  Install Windows SendTo / Linux context menu shortcuts' -ForegroundColor Yellow
     Write-Host '  -InstallKDE     Install KDE Dolphin context menu entry' -ForegroundColor Yellow
@@ -208,11 +218,15 @@ try {
         Write-Host "Manifest created: $($result.ManifestPath)" -ForegroundColor Green
         Write-Host "$($result.FileCount) files, $($result.Algorithm), $($result.ElapsedMs) ms" -ForegroundColor Cyan
     } else {
-        # Normal hash mode
+        # Normal hash mode. -Algorithm is forwarded ONLY when the caller bound
+        # it: passing it unconditionally would make every run look explicit and
+        # permanently outrank the clipboard.
+        $algoSplat = @{}
+        if ($PSBoundParameters.ContainsKey('Algorithm')) { $algoSplat['Algorithm'] = $Algorithm }
         if ($FilePath.Count -eq 1) {
-            Invoke-VeriHashHotPath -Path $FilePath[0] -Log:$Log
+            Invoke-VeriHashHotPath -Path $FilePath[0] -Log:$Log @algoSplat
         } else {
-            Invoke-VeriHashBatch -FilePath $FilePath -Log:$Log
+            Invoke-VeriHashBatch -FilePath $FilePath -Log:$Log @algoSplat
         }
     }
 } catch {

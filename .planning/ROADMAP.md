@@ -84,10 +84,12 @@ See: `.planning/notes/manifest-exploration.md`
 Plans:
 
 - [x] 09-01 — Comparator extraction, algorithm guard, `UNVERIFIED` state, sidecar-write suppression, `MatchResult` unverified, FMT-05 advisory
-- [ ] 09-02 — Unsupported-hex reporting (CMP-10)
-- [ ] 09-03 — Clipboard-driven algorithm + CLI `-Algorithm` (CMP-04 … CMP-08, CMP-13)
+- [ ] 09-02 — Unsupported-hex reporting (CMP-10) — narrowed: 40 hex is supported now, so this covers 56/96/other lengths
+- [x] 09-03 — Clipboard tolerance, clipboard-driven algorithm, SHA256 companion, SHA1 support, CLI `-Algorithm` (CMP-04, 06, 07, 08, 13, 15–19)
 
-See: `.planning/notes/comparator-algorithm-exploration.md`
+See: `.planning/notes/comparator-algorithm-exploration.md` and
+`.planning/notes/weak-hash-companion-exploration.md` (which supersedes the
+former's Step 2 sidecar rule).
 
 ### Progress
 
