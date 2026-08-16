@@ -19,7 +19,7 @@ function Write-VeriHashLog {
         [ValidateSet('hash', 'verify')]
         [string]$Op,
 
-        [ValidateSet('MD5', 'SHA256', 'SHA512', 'n/a')]
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512', 'n/a')]
         [string]$Algorithm = 'n/a',
 
         [string]$Hash = 'n/a',

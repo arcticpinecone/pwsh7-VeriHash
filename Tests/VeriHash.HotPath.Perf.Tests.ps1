@@ -24,3 +24,19 @@ Describe 'Invoke-VeriHashHotPath parallelism (PERF-03)' -Tag 'Performance' {
         $r.WallClockMs | Should -BeLessThan $bound -Because "wallClock=$($r.WallClockMs) hashMs=$($r.HashElapsedMs) sigMs=$($r.SigElapsedMs)"
     }
 }
+
+Describe 'Invoke-VeriHashHotPath single-pass hashing (PERF)' -Tag 'Performance' {
+    It 'Does not pay a second full hash when a same-algorithm sidecar already exists' -Skip:(-not $IsWindows) {
+        # Test-VeriHashSidecar runs BEFORE the sidecar is written, so a first run over a
+        # bare file never reaches the re-hash branch -- only a run that FINDS a sidecar
+        # does. Comparing the two runs cancels the fixed ThreadJob/import overhead, so
+        # what is left is the cost of the sidecar check itself.
+        $bare     = Invoke-VeriHashHotPath -Path $script:PerfFixture -Algorithm SHA256 6>$null
+        $withSide = Invoke-VeriHashHotPath -Path $script:PerfFixture -Algorithm SHA256 6>$null
+
+        $budget = [int]($bare.WallClockMs + (0.5 * $withSide.HashElapsedMs))
+        $withSide.WallClockMs | Should -BeLessThan $budget -Because (
+            "finding a sidecar must not cost another pass over the file: " +
+            "bare=$($bare.WallClockMs)ms withSidecar=$($withSide.WallClockMs)ms hash=$($withSide.HashElapsedMs)ms")
+    }
+}

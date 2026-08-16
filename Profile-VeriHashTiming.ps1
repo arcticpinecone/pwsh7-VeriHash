@@ -67,7 +67,9 @@ if ($IsWindows) {
             $read = $stream.Read($buf, 0, 2)
             $isPE = ($read -eq 2 -and $buf[0] -eq 0x4D -and $buf[1] -eq 0x5A)
         } finally { $stream.Dispose() }
-    } catch { }
+    } catch {
+        $isPE = $false
+    }
     if ($isPE) {
         $signature = Get-AuthenticodeSignature -LiteralPath $FilePath -ErrorAction SilentlyContinue
         $null = $signature -and $signature.Status -eq 'Valid'

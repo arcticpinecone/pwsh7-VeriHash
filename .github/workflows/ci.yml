@@ -7,12 +7,16 @@ on:
       - '**.ps1'
       - 'Tests/**'
       - 'PSScriptAnalyzerSettings.psd1'
+      # Without this, a change to the workflow itself does not trigger it, so a
+      # fix to CI could never be validated by pushing it.
+      - '.github/workflows/**'
   pull_request:
     branches: [dev, main]
     paths:
       - '**.ps1'
       - 'Tests/**'
       - 'PSScriptAnalyzerSettings.psd1'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 concurrency:
@@ -34,12 +38,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Pester
         run: |
+          # Tracks the major version the project actually develops against.
+          # This was pinned to <=5.99 while local runs and Test-All.ps1 used
+          # Pester 6, so CI was exercising a different runner than every
+          # developer -- a green CI could not be taken as evidence about the
+          # suite people actually run, in either direction.
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -Force -Scope CurrentUser -MaximumVersion 5.99
+          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 6.0 -MaximumVersion 6.99
 
       - name: Run Pester Tests
         run: |
@@ -61,7 +70,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install PSScriptAnalyzer
         run: |
@@ -72,9 +81,13 @@ jobs:
         run: |
           $files = @(
               './VeriHash.ps1',
-              './VeriHash.Config.ps1',
-              './VeriHash.LogUtils.ps1'
+              './VeriHash.Integrations.ps1'
           )
+          $modules = @('VeriHash.Core', 'VeriHash.HotPath', 'VeriHash.Manifest')
+          foreach ($mod in $modules) {
+              $files += Get-ChildItem -Path "./$mod" -Recurse -Filter '*.ps1' |
+                  Select-Object -ExpandProperty FullName
+          }
           $settings = './PSScriptAnalyzerSettings.psd1'
           $totalIssues = 0
 

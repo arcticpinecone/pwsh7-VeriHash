@@ -8,47 +8,100 @@ function Test-VeriHashSidecar {
         ('HASH  filename' two-space and 'HASH *filename' asterisk).
     .PARAMETER Path
         Path to the TARGET file (NOT the sidecar). Resolved with -LiteralPath.
+    .PARAMETER ComputedResult
+        An optional VeriHash.Result the caller has ALREADY computed for this file.
+        When its Algorithm equals the chosen sidecar's, it is reused verbatim and
+        no second pass over the file is made -- a full re-hash of a large file is
+        the single most expensive thing this function can do, and in the common
+        case (a .sha256 sidecar under a SHA256 run) it recomputes a digest the
+        caller is already holding. When the algorithms differ the parameter is
+        ignored and the file is hashed with the sidecar's algorithm as before,
+        because a SHA256 digest cannot answer a .sha512 sidecar.
+    .PARAMETER Algorithm
+        Pins the search to ONE sidecar extension instead of walking the
+        .sha512 > .sha256 > .md5 precedence.
+
+        The caller uses this when it knows which digest it is holding and wants
+        the check served for free. A weak-primary run (clipboard MD5, say) holds
+        a SHA256 companion; unpinned, Get-PreferredSidecar could pick a .sha512
+        and force a full second pass over the file to answer it -- on a 596 MB
+        installer that doubles the wall clock, in the function whose
+        -ComputedResult parameter exists to prevent exactly that.
+
+        Unpinned is still the default and still correct: a .sha512 that proves
+        a file corrupt is worth re-hashing for, and CMP-11 depends on it.
     .OUTPUTS
         VeriHash.Result with an additional 'Sidecar' field describing which
         sidecar was used, or $null when no sidecar exists.
+
+        SidecarStatus (matched|mismatch|error), SidecarName, and ExpectedHash
+        carry the same facts as data for the renderer; the Sidecar string is
+        retained for backward compatibility. ExpectedHash is the hash read OUT
+        of the sidecar -- without it a mismatch cannot be shown, only asserted.
     #>
     [CmdletBinding()]
     [OutputType('VeriHash.Result')]
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [string]$Path,
+
+        [pscustomobject]$ComputedResult,
+
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
+        [string]$Algorithm
     )
 
-    $sidecar = Get-PreferredSidecar -TargetPath $Path
+    $sidecar = if ($Algorithm) {
+        $ext  = @{ 'SHA512' = '.sha512'; 'SHA256' = '.sha256'; 'MD5' = '.md5' }[$Algorithm]
+        $pinned = if ($ext) { "$Path$ext" } else { $null }
+        if ($pinned -and (Test-Path -LiteralPath $pinned)) {
+            [pscustomobject]@{ Path = $pinned; Algorithm = $Algorithm }
+        } else {
+            $null
+        }
+    } else {
+        Get-PreferredSidecar -TargetPath $Path
+    }
     if (-not $sidecar) { return $null }
 
     $sidecarLeaf = Split-Path -Leaf $sidecar.Path
     $line = Get-Content -LiteralPath $sidecar.Path -TotalCount 1
     $parsed = Read-SidecarLine -Line $line
 
-    $actual = Get-VeriHashResult -Path $Path -Algorithm $sidecar.Algorithm
+    $actual = if ($ComputedResult -and $ComputedResult.Hash -and
+                  $ComputedResult.Algorithm -eq $sidecar.Algorithm) {
+        $ComputedResult
+    } else {
+        Get-VeriHashResult -Path $Path -Algorithm $sidecar.Algorithm
+    }
 
     if (-not $parsed) {
         return [pscustomobject]@{
-            PSTypeName = 'VeriHash.Result'
-            FilePath   = $actual.FilePath
-            Size       = $actual.Size
-            Algorithm  = $actual.Algorithm
-            Hash       = $actual.Hash
-            ElapsedMs  = $actual.ElapsedMs
-            Sidecar    = "error ($sidecarLeaf)"
+            PSTypeName    = 'VeriHash.Result'
+            FilePath      = $actual.FilePath
+            Size          = $actual.Size
+            Algorithm     = $actual.Algorithm
+            Hash          = $actual.Hash
+            ElapsedMs     = $actual.ElapsedMs
+            Sidecar       = "error ($sidecarLeaf)"
+            SidecarStatus = 'error'
+            SidecarName   = $sidecarLeaf
+            ExpectedHash  = $null
         }
     }
 
     $status = if ($actual.Hash -eq $parsed.Hash) { 'matched' } else { 'mismatch' }
 
     return [pscustomobject]@{
-        PSTypeName = 'VeriHash.Result'
-        FilePath   = $actual.FilePath
-        Size       = $actual.Size
-        Algorithm  = $actual.Algorithm
-        Hash       = $actual.Hash
-        ElapsedMs  = $actual.ElapsedMs
-        Sidecar    = "$status ($sidecarLeaf)"
+        PSTypeName    = 'VeriHash.Result'
+        FilePath      = $actual.FilePath
+        Size          = $actual.Size
+        Algorithm     = $actual.Algorithm
+        Hash          = $actual.Hash
+        ElapsedMs     = $actual.ElapsedMs
+        Sidecar       = "$status ($sidecarLeaf)"
+        SidecarStatus = $status
+        SidecarName   = $sidecarLeaf
+        ExpectedHash  = $parsed.Hash
     }
 }

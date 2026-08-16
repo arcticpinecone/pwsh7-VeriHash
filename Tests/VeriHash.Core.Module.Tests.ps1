@@ -10,12 +10,19 @@ Describe 'VeriHash.Core module sanity' {
         { Import-Module "$PSScriptRoot/../VeriHash.Core/VeriHash.Core.psd1" -Force } | Should -Not -Throw
     }
 
-    It 'Exports exactly the six locked public function names' {
+    It 'Exports exactly the nine locked public function names' {
+        # Resolve-VeriHashComparator is public only because VeriHash.HotPath
+        # calls it across a module boundary -- same reason as
+        # Format-VeriHashBatchTally. Private would resolve inside Core and
+        # throw CommandNotFoundException inside the hot path.
         $expected = @(
+            'Format-VeriHashBatchTally',
             'Format-VeriHashReport',
             'Get-VeriHashPlatform',
             'Get-VeriHashResult',
+            'Invoke-VeriHashSidecarDetect',
             'Read-ClipboardHash',
+            'Resolve-VeriHashComparator',
             'Test-VeriHashSidecar',
             'Write-VeriHashLog'
         ) | Sort-Object

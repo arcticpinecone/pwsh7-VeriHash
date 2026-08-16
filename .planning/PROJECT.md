@@ -88,7 +88,11 @@ Trustworthy file integrity verification — fast, scriptable, privacy-respecting
 
 ### Active
 
-_No active milestone. Use `/gsd-new-milestone` to start._
+#### v3.0 — UX Polish & Smart Routing
+
+- [ ] Sidecar auto-detect: right-clicking `.sha256`/`.sha512`/`.md5` auto-routes to verification
+- [ ] Output formatting: rich sectioned single-file report + compact batch table with 6-colour palette
+- [ ] Manifest spot-check: single-file verify against existing manifest in same directory
 
 ### Out of Scope
 
@@ -96,6 +100,15 @@ _No active milestone. Use `/gsd-new-milestone` to start._
 - **macOS context-menu integration** — Not implemented today and not driven by user demand.
 - **Module signing / PSGallery publish** — Out of scope; revisit if VeriHash is ever distributed outside this repo.
 - **Recursive folder hashing for manifest mode** — Manifest MVP is flat-files-in-one-directory only. Recursion deferred per the manifest concept doc.
+
+## Current Milestone: v3.0 UX Polish & Smart Routing
+
+**Goal:** Make VeriHash smarter about user intent on right-click, and give output a polished presentation.
+
+**Target features:**
+- Sidecar auto-detect — `.sha256`/`.sha512`/`.md5` → verify companion (1 line) or manifest (N lines)
+- Output formatting — rich sectioned single-file report + compact batch table, 6-colour palette
+- Manifest spot-check — single file + existing manifest → verify that entry, not create new manifest
 
 ## Current State
 
@@ -148,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-19 — v2.0 Modular Rebuild milestone completed*
+*Last updated: 2026-04-19 — v3.0 UX Polish & Smart Routing milestone started*

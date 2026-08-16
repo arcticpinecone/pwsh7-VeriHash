@@ -19,7 +19,7 @@ function Get-VeriHashResult {
         [Parameter(Mandatory)]
         [string]$Path,
 
-        [ValidateSet('MD5', 'SHA256', 'SHA512')]
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
         [string]$Algorithm = 'SHA256'
     )
     $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
@@ -28,11 +28,13 @@ function Get-VeriHashResult {
     $hash = (Get-FileHash -LiteralPath $resolved -Algorithm $Algorithm).Hash.ToLowerInvariant()
     $sw.Stop()
     return [pscustomobject]@{
-        PSTypeName = 'VeriHash.Result'
-        FilePath   = $resolved
-        Size       = [long]$info.Length
-        Algorithm  = $Algorithm
-        Hash       = $hash
-        ElapsedMs  = [int]$sw.ElapsedMilliseconds
+        PSTypeName    = 'VeriHash.Result'
+        FilePath      = $resolved
+        Size          = [long]$info.Length
+        CreationTime  = $info.CreationTime
+        LastWriteTime = $info.LastWriteTime
+        Algorithm     = $Algorithm
+        Hash          = $hash
+        ElapsedMs     = [int]$sw.ElapsedMilliseconds
     }
 }

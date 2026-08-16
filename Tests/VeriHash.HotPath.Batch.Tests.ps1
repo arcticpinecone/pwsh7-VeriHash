@@ -10,6 +10,8 @@ BeforeAll {
     $script:F3 = Join-Path $TestDrive 'extra.bin'
     [IO.File]::WriteAllBytes($script:F3, [byte[]](1..16))
 
+    $script:ProfilerScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'Profile-VeriHashTiming.ps1'
+
     Remove-Item Env:VERIHASH_LOG -ErrorAction SilentlyContinue
 }
 AfterAll {
@@ -102,20 +104,53 @@ Describe 'Invoke-VeriHashBatch preserves single-file features (MULTI-03)' {
     }
 }
 
+Describe 'Invoke-VeriHashBatch display vs contract (FMT-06)' {
+    BeforeAll {
+        . "$PSScriptRoot/TestHelpers.ps1"
+        # The tally's middot and glyphs are chosen from [Console]::OutputEncoding,
+        # so the assertions below only hold on a UTF-8 code page.
+        $script:PrevEncoding = Set-VeriHashUtf8Console
+
+        # Deliberately NOT named $script:F1/$script:F2 -- those are set by the
+        # file-level BeforeAll and read by the Describes above; reusing the names
+        # here would reassign them out from under any block that runs later.
+        $script:BatchA = Join-Path $TestDrive 'batch-a.bin'
+        $script:BatchB = Join-Path $TestDrive 'batch-b.bin'
+        [System.IO.File]::WriteAllBytes($script:BatchA, [byte[]](1..32))
+        [System.IO.File]::WriteAllBytes($script:BatchB, [byte[]](33..64))
+    }
+    AfterAll {
+        Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
+    }
+
+    It 'Displays the new middot tally on the console' {
+        $out = (Invoke-VeriHashBatch -FilePath @($script:BatchA, $script:BatchB) *>&1 | Out-String)
+        $out | Should -Match ([regex]::Escape('batch of 2 · 2 matched · 0 mismatch · 0 missing'))
+    }
+
+    It 'Keeps .TallyLine byte-locked in the legacy machine-readable format' {
+        $r = Invoke-VeriHashBatch -FilePath @($script:BatchA, $script:BatchB) 6>$null
+        $r.TallyLine | Should -BeExactly '2/2 matched, 0 mismatch, 0 missing'
+    }
+
+    It 'Renders each file compactly, without a per-file footer' {
+        $out = (Invoke-VeriHashBatch -FilePath @($script:BatchA, $script:BatchB) *>&1 | Out-String)
+        ([regex]::Matches($out, '(?m)^clipboard   ')).Count | Should -Be 2
+        $out | Should -Not -Match 'modified .* UTC'
+    }
+}
+
 Describe 'Profile-VeriHashTiming.ps1 -Strict gate (D-A7-1)' {
     It 'Without -Strict: existing callers (Test-All.ps1 step 3/3) keep working' {
-        $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'
-        { & $script -FilePath $script:F1 -Algorithm SHA256 -Quiet } | Should -Not -Throw
+        { & $script:ProfilerScript -FilePath $script:F1 -Algorithm SHA256 -Quiet } | Should -Not -Throw
     }
 
     It 'With -Strict: completes without throwing on a fast path (no false positives)' {
-        $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'
-        { & $script -FilePath $script:F1 -Algorithm SHA256 -Quiet -Strict } | Should -Not -Throw
+        { & $script:ProfilerScript -FilePath $script:F1 -Algorithm SHA256 -Quiet -Strict } | Should -Not -Throw
     }
 
     It '-Strict parameter exists in the script' {
-        $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'
-        $cmd = Get-Command $script
+        $cmd = Get-Command $script:ProfilerScript
         $cmd.Parameters.Keys | Should -Contain 'Strict'
     }
 }

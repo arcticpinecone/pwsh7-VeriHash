@@ -23,24 +23,34 @@ function Invoke-VeriHashBatch {
         [Parameter(Mandatory)]
         [string[]]$FilePath,
 
-        [ValidateSet('MD5', 'SHA256', 'SHA512')]
+        [ValidateSet('MD5', 'SHA1', 'SHA256', 'SHA512')]
         [string]$Algorithm = 'SHA256',
 
         [switch]$Log
     )
 
-    $results  = New-Object 'System.Collections.Generic.List[object]'
-    $matched  = 0
-    $mismatch = 0
-    $missing  = 0
+    $results    = New-Object 'System.Collections.Generic.List[object]'
+    $matched    = 0
+    $mismatch   = 0
+    $missing    = 0
+    $unverified = 0
 
     foreach ($p in $FilePath) {
         try {
-            $r = Invoke-VeriHashHotPath -Path $p -Algorithm $Algorithm -Log:$Log
+            $r = Invoke-VeriHashHotPath -Path $p -Algorithm $Algorithm -Log:$Log -Compact
             $results.Add($r)
             switch ($r.MatchResult) {
                 'matched'  { $matched++ }
                 'mismatch' { $mismatch++ }
+                # Counted in BOTH buckets on purpose. $unverified is the honest
+                # count and surfaces on Tally; $matched keeps TallyLine's three
+                # numbers arithmetically identical to what the old
+                # 'not mismatched' derivation produced, which is what the
+                # byte-lock actually protects. Without the explicit arm these
+                # would fall to default and tally as 'missing' -- a file that
+                # exists and hashed fine, reported as absent.
+                'unverified' { $unverified++; $matched++ }
+                'missing'  { $missing++ }
                 default    { $missing++ }
             }
         } catch {
@@ -62,13 +72,28 @@ function Invoke-VeriHashBatch {
     }
 
     # Byte-locked tally line -- DO NOT REFORMAT (CONTEXT.md <specifics>; MULTI-02 success-criterion test pins this string).
+    # This is the machine-readable contract on VeriHash.BatchResult, NOT the display:
+    # anything parsing VeriHash's output reads this string, so it survives the
+    # console redesign untouched. The human-facing summary is a separate concern,
+    # rendered by Format-VeriHashBatchTally.
     $tallyLine = '{0}/{1} matched, {2} mismatch, {3} missing' -f $matched, $FilePath.Count, $mismatch, $missing
-    Write-Host $tallyLine -ForegroundColor Yellow
+
+    Format-VeriHashBatchTally -Results $results.ToArray()
 
     return [pscustomobject]@{
         PSTypeName = 'VeriHash.BatchResult'
         Results    = $results.ToArray()
-        Tally      = @{ Total = $FilePath.Count; Matched = $matched; Mismatch = $mismatch; Missing = $missing }
+        # Tally is NOT byte-locked -- TallyLine is. This hashtable is the seam
+        # that lets new facts surface without breaking the parseable string,
+        # and Unverified is the field a caller should read to learn that
+        # nothing was actually verified.
+        Tally      = @{
+            Total      = $FilePath.Count
+            Matched    = $matched
+            Mismatch   = $mismatch
+            Missing    = $missing
+            Unverified = $unverified
+        }
         TallyLine  = $tallyLine
     }
 }

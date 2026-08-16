@@ -27,7 +27,17 @@
         # -ArgumentList + param(...) (the documented alternative to $using:). The
         # analyzer does not see the param-binding contract and false-flags every
         # parameter reference. See VeriHash.HotPath/Public/Invoke-VeriHashHotPath.ps1.
-        'PSUseUsingScopeModifierInNewRunspaces'
+        'PSUseUsingScopeModifierInNewRunspaces',
+
+        # Cross-platform project: BOM causes issues on Linux/macOS pipelines and
+        # is unnecessary for UTF-8-only PowerShell 7+ scripts. Files are saved as
+        # UTF-8 without BOM intentionally.
+        'PSUseBOMForUnicodeEncodedFile',
+
+        # New-VeriHashManifest creates manifest files — a deterministic write, not
+        # a destructive system state change. ShouldProcess overhead adds no safety
+        # value for hash-manifest generation.
+        'PSUseShouldProcessForStateChangingFunctions'
     )
 
     # Custom rule arguments (optional)

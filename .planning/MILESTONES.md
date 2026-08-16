@@ -1,5 +1,39 @@
 # Milestones
 
+## ✅ v3.0 — UX Polish & Smart Routing
+
+**Shipped:** 2026-08-16
+**Phases:** 3 of 4 (Phase 8 deferred) | **Requirements:** 32/32 in scope · 5 deferred
+**Test suite:** 371 pass · 0 fail · 5 skipped
+**Production LOC:** 3,130 (35 files) | **Test LOC:** 4,456 (36 files)
+
+### Key Accomplishments
+
+1. **The clipboard drives the algorithm** — paste a vendor's MD5 and VeriHash answers in MD5, then computes SHA256 alongside it in a parallel thread so the digest worth keeping is never lost. Precedence is explicit `-Algorithm` > clipboard > SHA256
+2. **A verdict never outruns its evidence** — comparator selection collapsed into one owner (`Resolve-VeriHashComparator`); a pasted hash that cannot be answered abstains as `UNVERIFIED` rather than silently falling back to the sidecar, and no sidecar is written for a file any check proved bad
+3. **Console redesign** — reversed-video verdict banner, stacked 8-char-group hash comparison with divergence highlighting, four-row checklist grid, truecolor with `NO_COLOR` and ASCII fallbacks
+4. **Sidecar auto-detect** — right-clicking a `.sha256`/`.sha512`/`.md5` verifies the companion file instead of uselessly hashing the sidecar text
+5. **Three fail-green defects found and fixed** — including `Test-All.ps1`, whose quality gate had never been able to report a failure
+
+### Stats
+
+- Timeline: 2026-04-19 → 2026-08-16
+- Commits since v2.0: 50
+- Relicensed AGPL-3.0 → MIT (sole copyright holder; prior grants unaffected)
+- Test LOC now exceeds production LOC by 42%, up from near-parity at v2.0
+
+### Deferred
+
+- **Phase 8 — Manifest Spot-Check (SPOT-01..05).** Additive convenience; nothing VeriHash reports is wrong without it. Requirements preserved in REQUIREMENTS.md → Future Requirements
+
+### Archives
+
+- [v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
+- [v3.0-REQUIREMENTS.md](milestones/v3.0-REQUIREMENTS.md)
+- [v3.0-MILESTONE-AUDIT.md](milestones/v3.0-MILESTONE-AUDIT.md)
+
+---
+
 ## ✅ v2.0 — Modular Rebuild
 
 **Shipped:** 2026-04-19

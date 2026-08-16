@@ -77,10 +77,9 @@ Describe 'Invoke-VeriHashHotPath: result-object shape (D-A5-1)' {
         $r.SigElapsedMs | Should -Be 0
     }
 
-    It 'Non-PE input: host output contains literal "Signature: skipped (not a PE file)"' {
-        $captured = Invoke-VeriHashHotPath -Path $script:NotPEFixture -Algorithm SHA256 6>&1 | Out-String
-        $captured | Should -Match 'Signature:\s*skipped\s*\(not a PE file\)'
-    }
+    # The standalone 'Signature: ...' line is gone as of the unified render --
+    # the signature verdict now reaches the user through the checklist grid.
+    # Covered by 'Carries the real signature verdict into the checklist row'.
 }
 
 Describe 'Invoke-VeriHashHotPath: PERF-05 wall-clock honesty' {
@@ -98,5 +97,130 @@ Describe 'Invoke-VeriHashHotPath: cross-platform' -Skip:($IsWindows) {
         $r = Invoke-VeriHashHotPath -Path $fixture -Algorithm SHA256
         $r.Signature | Should -Be 'skipped'
         $r.SignatureReason | Should -Be 'not supported on this platform'
+    }
+}
+
+Describe 'Invoke-VeriHashHotPath unified render (FMT-09)' {
+    BeforeAll {
+        . "$PSScriptRoot/TestHelpers.ps1"
+        $script:SavedColorEnv = Save-VeriHashColorEnv
+        Set-VeriHashColorEnv -Mode Truecolor
+        $script:PrevEncoding = Set-VeriHashUtf8Console
+
+        # Captures the host stream WITHOUT the returned object: the assignment
+        # inside the scriptblock swallows the success stream, so Out-String sees
+        # only the rendered report. The result is parked for shape assertions.
+        function script:RenderHotPath {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Path',
+                Justification = 'Consumed inside the & { } scriptblock below. PSReviewUnusedParameter does not walk nested scriptblock scopes, so it false-flags the parameter.')]
+            param([string]$Path)
+            $out = & { $script:LastResult = Invoke-VeriHashHotPath -Path $Path } 6>&1 | Out-String
+            return (($out -replace "`r`n", "`n") | Remove-Ansi)
+        }
+    }
+    AfterAll {
+        Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
+        Restore-VeriHashColorEnv -Saved $script:SavedColorEnv
+    }
+    BeforeEach {
+        # A fresh directory per test: the sidecar written by one test must not
+        # turn the next test's 'created' into 'matched'.
+        $script:WorkDir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $null = New-Item -ItemType Directory -Path $script:WorkDir
+        $script:Target  = Join-Path $script:WorkDir 'render-target.bin'
+        [System.IO.File]::WriteAllBytes($script:Target, [byte[]](1..64))
+    }
+
+    It 'Renders one checklist and no second signature or sidecar line' {
+        $out = script:RenderHotPath -Path $script:Target
+        ([regex]::Matches($out, '(?m)^signature\s')).Count | Should -Be 1
+        $out | Should -Not -Match 'Signature:'
+        $out | Should -Not -Match 'Sidecar:'
+    }
+
+    It 'Carries the real signature verdict into the checklist row' {
+        $out = script:RenderHotPath -Path $script:Target
+        $out | Should -Match ([regex]::Escape('skipped (not a PE file)'))
+        $out | Should -Not -Match 'not checked'
+    }
+
+    It 'Writes a sidecar and reports it as created in the checklist' {
+        $out = script:RenderHotPath -Path $script:Target
+        Test-Path -LiteralPath "$($script:Target).sha256" | Should -BeTrue
+        $out | Should -Match ([regex]::Escape('created — render-target.bin.sha256'))
+    }
+
+    It 'Suppresses the sidecar write when the clipboard verdict is MISMATCH' {
+        Mock -ModuleName VeriHash.Core Get-Clipboard { '0' * 64 }
+        Mock -ModuleName VeriHash.Core Get-VeriHashPlatform { 'Windows' }
+        $null = script:RenderHotPath -Path $script:Target
+        Test-Path -LiteralPath "$($script:Target).sha256" | Should -BeFalse
+    }
+
+    It 'Explains the suppressed sidecar in the checklist row' {
+        Mock -ModuleName VeriHash.Core Get-Clipboard { '0' * 64 }
+        Mock -ModuleName VeriHash.Core Get-VeriHashPlatform { 'Windows' }
+        $out = script:RenderHotPath -Path $script:Target
+        $out | Should -Match ([regex]::Escape('none found · not written on mismatch'))
+    }
+
+    It 'Leaves the HotPathResult shape unchanged' {
+        $null = script:RenderHotPath -Path $script:Target
+        foreach ($prop in @('FilePath', 'Hash', 'HashAlgorithm', 'HashElapsedMs', 'Signature',
+                            'SignatureReason', 'SigElapsedMs', 'WallClockMs', 'IsPE', 'MatchResult')) {
+            $script:LastResult.PSObject.Properties.Name | Should -Contain $prop
+        }
+    }
+}
+
+Describe 'Invoke-VeriHashHotPath: MatchResult reflects the sidecar verdict' {
+    BeforeAll {
+        # Expected hashes come from Get-FileHash, NOT Get-VeriHashResult: an
+        # oracle independent of the system under test cannot agree with it by
+        # sharing a bug.
+        function script:TrueHash {
+            param([string]$Path, [string]$Algorithm = 'SHA256')
+            return (Get-FileHash -LiteralPath $Path -Algorithm $Algorithm).Hash.ToLowerInvariant()
+        }
+    }
+    BeforeEach {
+        # The clipboard outranks the sidecar in the comparator rule, so a real
+        # hash left on the developer's clipboard would decide these tests.
+        # Mocking Get-Clipboard pins it without destroying their clipboard.
+        Mock -ModuleName VeriHash.Core Get-Clipboard { $null }
+
+        $script:WorkDir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $null = New-Item -ItemType Directory -Path $script:WorkDir
+        $script:Target = Join-Path $script:WorkDir 'verdict-target.bin'
+        [System.IO.File]::WriteAllBytes($script:Target, [byte[]](1..64))
+    }
+
+    It 'Reports mismatch when the sidecar disagrees with the file' {
+        Set-Content "$($script:Target).sha256" (('0' * 64) + ' *verdict-target.bin')
+        $r = Invoke-VeriHashHotPath -Path $script:Target -Algorithm SHA256 6>$null
+        $r.MatchResult | Should -Be 'mismatch'
+    }
+
+    It 'Reports matched when the sidecar agrees with the file' {
+        Set-Content "$($script:Target).sha256" ((script:TrueHash $script:Target) + ' *verdict-target.bin')
+        $r = Invoke-VeriHashHotPath -Path $script:Target -Algorithm SHA256 6>$null
+        $r.MatchResult | Should -Be 'matched'
+    }
+
+    It 'Ignores a sidecar written for a different algorithm' {
+        # A .sha512 sidecar is not evidence about a SHA256 run. It outranks
+        # .sha256 in Get-PreferredSidecar, so without the algorithm guard its
+        # hash would be compared against a SHA256 digest and always disagree.
+        Set-Content "$($script:Target).sha512" ((script:TrueHash $script:Target 'SHA512') + ' *verdict-target.bin')
+        $r = Invoke-VeriHashHotPath -Path $script:Target -Algorithm SHA256 6>$null
+        $r.MatchResult | Should -Be 'matched'
+    }
+
+    It 'Counts a sidecar mismatch in the batch tally' {
+        # The user-visible symptom: a corrupted file tallied as green.
+        Set-Content "$($script:Target).sha256" (('0' * 64) + ' *verdict-target.bin')
+        $b = Invoke-VeriHashBatch -FilePath @($script:Target) -Algorithm SHA256 6>$null
+        $b.Tally.Mismatch | Should -Be 1
+        $b.Tally.Matched  | Should -Be 0
     }
 }

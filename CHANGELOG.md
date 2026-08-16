@@ -7,6 +7,107 @@
 
 ---
 
+### [Unreleased] — v3.0
+
+> UX Polish & Smart Routing
+
+Numbered 3.0 rather than 2.1: the default algorithm, the sidecar extension policy, and the
+entire console surface changed behaviour. A script written against v2.0 can observe different
+output for the same invocation, so the major version moves.
+
+**BREAKING CHANGES:**
+
+- 💥 **The clipboard can change which algorithm runs.** A run that previously always computed
+  SHA256 now computes whatever algorithm a hash on the clipboard implies. Precedence is
+  explicit `-Algorithm` > clipboard > SHA256. Pass `-Algorithm SHA256` to pin the old behaviour.
+- 💥 **`.md5` and `.sha1` sidecars are never written.** Sidecars are always `.sha256`, or
+  `.sha512` under an explicit `-Algorithm SHA512`. Tooling that expected a sidecar matching the
+  requested algorithm will not find one for the weak algorithms.
+- 💥 **Console output was redesigned.** Anything scraping stdout must be re-checked.
+  `BatchResult.TallyLine` remains byte-locked as the machine-readable seam.
+- 💥 **A new `UNVERIFIED` verdict exists.** When a pasted hash cannot be answered, the banner
+  abstains instead of falling through to the sidecar's verdict. Consumers that assumed
+  MATCH/MISMATCH/HASHED were exhaustive must handle a fourth state.
+- 💥 **The CLI pins `[Console]::OutputEncoding` to UTF-8.** Anything capturing its output must
+  decode UTF-8.
+
+**LICENSE CHANGE:**
+
+- 📜 **License Update**: Changed from AGPL-3.0 to MIT
+  - Reason: VeriHash is a small local-first utility; the network-copyleft protections AGPL
+    exists to provide do not apply to it, and the permissive terms remove friction for anyone
+    vendoring the modules
+  - Previous versions (v2.0.0 and earlier) remain available under AGPL-3.0, and v1.2.1 and
+    earlier under CC-BY-SA-4.0
+  - Sole copyright holder, so no contributor relicensing consent was required
+
+**ADDED:**
+
+- 🔍 **The clipboard drives the algorithm**: paste the hash a vendor published and VeriHash
+  hashes with *that* algorithm instead of refusing to answer. Precedence is
+  explicit `-Algorithm` > clipboard > SHA256.
+- 🤝 **A weak hash gets a SHA256 companion**: an MD5 or SHA1 question is answered *and*
+  SHA256 is computed in the same run, in a parallel thread. Vendors who publish only MD5
+  no longer cost the user the digest worth keeping, and the sidecar is always the SHA256.
+- 🆕 **SHA1 is supported**: hashable, comparable, and inferred from a 40-character paste.
+  Weak, so it is answered but never recorded.
+- 🎛️ **`-Algorithm` on the CLI**: `MD5 | SHA1 | SHA256 | SHA512`, forwarded only when bound
+  so it can outrank the clipboard without a default silently doing the same.
+- 🔬 **An unsupported hash is named, not ignored**: a 56- or 96-character paste is reported as
+  a likely SHA-224 or SHA-384 that VeriHash does not implement, instead of being reported as
+  an empty clipboard. Telling a user who deliberately copied a digest that they copied
+  nothing invites them to read silence as approval. Other lengths report the count. The
+  record carries no algorithm and no hash, so nothing can ever be compared against it.
+- 🧾 **Manifest verify counts rejected entries**: `Summary` gains a `Rejected` bucket and the
+  tally line gains a `N rejected` field, always rendered — including as a zero, so nothing
+  has to parse two shapes of the same line.
+
+**CHANGED:**
+
+- 🔐 **Sidecars are always `.sha256`** (or `.sha512` under an explicit SHA512). `.md5` and
+  `.sha1` are never written. `Get-PreferredSidecar` ranks `.sha512 > .sha256 > .md5`, so a
+  `.md5` written once would become a weak file a later run could promote to the trusted
+  comparator — never writing it closes that path.
+- 🎨 **Console output redesigned**: verdict banner, stacked 8-char-group hash comparison with
+  divergence highlighting, four-row checklist grid, and a compact batch summary.
+  Truecolor ANSI with `NO_COLOR` and ASCII-glyph fallbacks.
+  - The banner is reversed video (coloured background), so MATCH / MISMATCH / HASHED reads at a glance
+  - A mismatch highlights the diverging hash groups on both lines and names the divergence character
+  - `BatchResult.TallyLine` keeps its byte-locked `X/N matched, Y mismatch, Z missing` format for scripts;
+    only the console display changed
+  - The CLI now pins `[Console]::OutputEncoding` to UTF-8 so glyphs render instead of mojibake
+
+**PERFORMANCE:**
+
+- ⚡ **One hash pass per run**: a sidecar check no longer re-hashes a file the hot path
+  has already hashed. The elapsed row now names both scopes — total and hashing.
+
+**BUG FIXES:**
+
+- 🔧 **A sidecar is no longer created when the file fails clipboard verification**:
+  recording a hash for a file the user was just told not to trust would manufacture false assurance.
+- 🔧 **A spaced or labelled hash on the clipboard is recognised**: VeriHash printed hashes in
+  8-character groups but could only read a contiguous run, so copying its own output back in
+  reported an empty clipboard. Vendor labels (`SHA-256: …`), `sha256sum` lines (`<hex> *name`),
+  and `certutil`'s 2-character groups now parse too. Whitespace is never joined across what
+  may be two separate digests — two 64-hex hashes would otherwise concatenate into a
+  plausible "SHA512" and be compared against the file.
+- 🔧 **The manifest summary adds up**: `Test-VeriHashManifest` produced five entry statuses
+  and counted three. `parse-error` and `traversal-rejected` entries were included in `Total`
+  but in no bucket, so a 10-entry manifest with two rejected paths reported
+  `8/10 passed, 0 mismatch, 0 missing` — and the two unaccounted-for entries were precisely
+  the ones a security guard had rejected. Counts are now taken by walking the entries once
+  and incrementing exactly one bucket each, and a status that maps to no bucket throws
+  instead of vanishing.
+- 🔧 **The test harness can fail**: `Test-All.ps1` built its Pester configuration without
+  `Run.PassThru`, so `Invoke-Pester` returned nothing. The harness read `FailedCount` off
+  `$null`, compared `$null -gt 0`, got `$false`, and reported "All tests PASSED" on every
+  run — exiting 0 even with failing tests. It now requests the result object, and treats a
+  null result as inconclusive rather than as success. Verified by running the suite with a
+  deliberately failing test: exit 1, where the same scenario previously exited 0.
+
+---
+
 ### [v2.0.0] (Current)
 
 Version: 2.0.0
@@ -64,8 +165,8 @@ Version: 2.0.0
 
 ---
 
-<details>
-<summary>📜 Version 1.x History</summary>
+`<details>`
+`<summary>📜 Version 1.x History</summary>`
 
 ### [Unreleased]
 
