@@ -10,6 +10,8 @@ BeforeAll {
     $script:F3 = Join-Path $TestDrive 'extra.bin'
     [IO.File]::WriteAllBytes($script:F3, [byte[]](1..16))
 
+    $script:ProfilerScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'Profile-VeriHashTiming.ps1'
+
     Remove-Item Env:VERIHASH_LOG -ErrorAction SilentlyContinue
 }
 AfterAll {
@@ -104,11 +106,10 @@ Describe 'Invoke-VeriHashBatch preserves single-file features (MULTI-03)' {
 
 Describe 'Invoke-VeriHashBatch display vs contract (FMT-06)' {
     BeforeAll {
+        . "$PSScriptRoot/TestHelpers.ps1"
         # The tally's middot and glyphs are chosen from [Console]::OutputEncoding,
-        # so the assertions below only hold on a UTF-8 code page. Guarded: a
-        # redirected or absent console has no encoding to set.
-        $script:PrevEncoding = [Console]::OutputEncoding
-        try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch { }
+        # so the assertions below only hold on a UTF-8 code page.
+        $script:PrevEncoding = Set-VeriHashUtf8Console
 
         # Deliberately NOT named $script:F1/$script:F2 -- those are set by the
         # file-level BeforeAll and read by the Describes above; reusing the names
@@ -119,7 +120,7 @@ Describe 'Invoke-VeriHashBatch display vs contract (FMT-06)' {
         [System.IO.File]::WriteAllBytes($script:BatchB, [byte[]](33..64))
     }
     AfterAll {
-        try { [Console]::OutputEncoding = $script:PrevEncoding } catch { }
+        Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
     }
 
     It 'Displays the new middot tally on the console' {
@@ -141,18 +142,15 @@ Describe 'Invoke-VeriHashBatch display vs contract (FMT-06)' {
 
 Describe 'Profile-VeriHashTiming.ps1 -Strict gate (D-A7-1)' {
     It 'Without -Strict: existing callers (Test-All.ps1 step 3/3) keep working' {
-        $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'
-        { & $script -FilePath $script:F1 -Algorithm SHA256 -Quiet } | Should -Not -Throw
+        { & $script:ProfilerScript -FilePath $script:F1 -Algorithm SHA256 -Quiet } | Should -Not -Throw
     }
 
     It 'With -Strict: completes without throwing on a fast path (no false positives)' {
-        $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'
-        { & $script -FilePath $script:F1 -Algorithm SHA256 -Quiet -Strict } | Should -Not -Throw
+        { & $script:ProfilerScript -FilePath $script:F1 -Algorithm SHA256 -Quiet -Strict } | Should -Not -Throw
     }
 
     It '-Strict parameter exists in the script' {
-        $script = Join-Path $PSScriptRoot '..' 'Profile-VeriHashTiming.ps1'
-        $cmd = Get-Command $script
+        $cmd = Get-Command $script:ProfilerScript
         $cmd.Parameters.Keys | Should -Contain 'Strict'
     }
 }

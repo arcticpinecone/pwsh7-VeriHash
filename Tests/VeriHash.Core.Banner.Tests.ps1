@@ -4,11 +4,10 @@ BeforeAll {
     $script:SavedColorEnv = Save-VeriHashColorEnv
     Set-VeriHashColorEnv -Mode Truecolor
     # Banner text asserts on Unicode glyphs, which need a UTF-8 code page.
-    $script:PrevEncoding = [Console]::OutputEncoding
-    try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch { }
+    $script:PrevEncoding = Set-VeriHashUtf8Console
 }
 AfterAll {
-    try { [Console]::OutputEncoding = $script:PrevEncoding } catch { }
+    Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
     Restore-VeriHashColorEnv -Saved $script:SavedColorEnv
     Remove-Module VeriHash.Core -ErrorAction SilentlyContinue
 }

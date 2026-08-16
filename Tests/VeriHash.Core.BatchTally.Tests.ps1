@@ -3,8 +3,7 @@ BeforeAll {
     . "$PSScriptRoot/TestHelpers.ps1"
     $script:SavedColorEnv = Save-VeriHashColorEnv
     Set-VeriHashColorEnv -Mode Truecolor
-    $script:PrevEncoding = [Console]::OutputEncoding
-    try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch { }
+    $script:PrevEncoding = Set-VeriHashUtf8Console
 
     $script:Results = @(
         [pscustomobject]@{ FilePath = '/d/setup-x64.exe';   MatchResult = 'matched';  Signature = 'valid'    }
@@ -18,7 +17,7 @@ BeforeAll {
     }
 }
 AfterAll {
-    try { [Console]::OutputEncoding = $script:PrevEncoding } catch { }
+    Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
     Restore-VeriHashColorEnv -Saved $script:SavedColorEnv
     Remove-Module VeriHash.Core -ErrorAction SilentlyContinue
 }

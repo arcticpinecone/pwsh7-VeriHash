@@ -60,6 +60,56 @@ function Restore-VeriHashColorEnv {
     }
 }
 
+function Set-VeriHashUtf8Console {
+    <#
+    .SYNOPSIS
+        Pins the console to UTF-8 and returns the previous encoding so the
+        caller can hand it to Restore-VeriHashUtf8Console.
+    .DESCRIPTION
+        Test files that assert on Unicode glyphs need a UTF-8 code page: the
+        renderers pick their glyphs from [Console]::OutputEncoding, so an
+        ASCII code page makes the product emit fallback characters the
+        assertions do not expect.
+
+        The setter throws IOException when the process has no console handle
+        -- redirected stdout, a CI runner, or a hosted PowerShell host. That
+        is environmental and outside any test's control, so it is logged to
+        the verbose stream rather than raised: throwing from a BeforeAll
+        aborts the whole container and reports the setup failure instead of
+        whichever assertion the code page actually affected.
+    .OUTPUTS
+        System.Text.Encoding -- pass to Restore-VeriHashUtf8Console.
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Text.Encoding])]
+    param()
+    $previous = [Console]::OutputEncoding
+    try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() }
+    catch { Write-Verbose "No console attached; output encoding left as-is: $_" }
+    return $previous
+}
+
+function Restore-VeriHashUtf8Console {
+    <#
+    .SYNOPSIS
+        Restores the console encoding captured by Set-VeriHashUtf8Console.
+    .DESCRIPTION
+        Null is accepted so a teardown block still runs cleanly when setup
+        failed before it could capture an encoding; swallowing the setter
+        failure is deliberate for the reasons given on Set-VeriHashUtf8Console.
+    #>
+    [CmdletBinding()]
+    [OutputType([void])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowNull()]
+        [System.Text.Encoding]$Encoding
+    )
+    if ($null -eq $Encoding) { return }
+    try { [Console]::OutputEncoding = $Encoding }
+    catch { Write-Verbose "No console attached; output encoding not restored: $_" }
+}
+
 function Set-VeriHashColorEnv {
     <#
     .SYNOPSIS

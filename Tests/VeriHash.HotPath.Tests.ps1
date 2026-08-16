@@ -105,20 +105,21 @@ Describe 'Invoke-VeriHashHotPath unified render (FMT-09)' {
         . "$PSScriptRoot/TestHelpers.ps1"
         $script:SavedColorEnv = Save-VeriHashColorEnv
         Set-VeriHashColorEnv -Mode Truecolor
-        $script:PrevEncoding = [Console]::OutputEncoding
-        try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch { }
+        $script:PrevEncoding = Set-VeriHashUtf8Console
 
         # Captures the host stream WITHOUT the returned object: the assignment
         # inside the scriptblock swallows the success stream, so Out-String sees
         # only the rendered report. The result is parked for shape assertions.
         function script:RenderHotPath {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Path',
+                Justification = 'Consumed inside the & { } scriptblock below. PSReviewUnusedParameter does not walk nested scriptblock scopes, so it false-flags the parameter.')]
             param([string]$Path)
             $out = & { $script:LastResult = Invoke-VeriHashHotPath -Path $Path } 6>&1 | Out-String
             return (($out -replace "`r`n", "`n") | Remove-Ansi)
         }
     }
     AfterAll {
-        try { [Console]::OutputEncoding = $script:PrevEncoding } catch { }
+        Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
         Restore-VeriHashColorEnv -Saved $script:SavedColorEnv
     }
     BeforeEach {

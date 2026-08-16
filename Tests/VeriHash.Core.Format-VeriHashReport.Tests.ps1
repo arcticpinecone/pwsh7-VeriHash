@@ -3,8 +3,7 @@ BeforeAll {
     . "$PSScriptRoot/TestHelpers.ps1"
     $script:SavedColorEnv = Save-VeriHashColorEnv
     Set-VeriHashColorEnv -Mode Truecolor
-    $script:PrevEncoding = [Console]::OutputEncoding
-    try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch { }
+    $script:PrevEncoding = Set-VeriHashUtf8Console
 
     $script:Sha256    = '71792c028e07b0fdd30f4e2a9c1b3d5e8a46f1c29d073bb5e6c48d90a2f1e3b7'
     # Diverges from $Sha256 at index 16 (start of group 2).
@@ -29,7 +28,7 @@ BeforeAll {
     }
 }
 AfterAll {
-    try { [Console]::OutputEncoding = $script:PrevEncoding } catch { }
+    Restore-VeriHashUtf8Console -Encoding $script:PrevEncoding
     Restore-VeriHashColorEnv -Saved $script:SavedColorEnv
     Remove-Module VeriHash.Core -ErrorAction SilentlyContinue
 }
